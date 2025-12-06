@@ -161,8 +161,8 @@ App.pages.users = async function() {
                                 <h3 class="card-title">${user.name}</h3>
                                 <p class="card-subtitle">${user.bio || ''}</p>
                                 <div class="user-meta">
-                                    <span>📍 ${user.location?.name || user.region || 'No location'}</span>
-                                    ${user.candidate ? '<span class="badge-small">⭐ Candidate</span>' : ''}
+                                    <span>${user.location?.name || user.region || 'No location'}</span>
+                                    ${user.candidate ? '<span class="badge-small">Candidate</span>' : ''}
                                 </div>
                             </div>
                         </div>

@@ -38,6 +38,9 @@ App.navigate = function(page) {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize theme
+    App.initTheme();
+    
     // Initialize user selector
     await App.initUserSelector();
     

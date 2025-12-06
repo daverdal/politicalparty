@@ -6,6 +6,33 @@
 window.App = window.App || {};
 
 // ============================================
+// THEME STATE
+// ============================================
+
+App.currentTheme = localStorage.getItem('theme') || 'vt100';
+
+App.initTheme = function() {
+    const savedTheme = localStorage.getItem('theme');
+    // VT100 is default - only disable if explicitly set to 'default'
+    if (savedTheme !== 'default') {
+        document.documentElement.setAttribute('data-theme', 'vt100');
+        App.currentTheme = 'vt100';
+    }
+};
+
+App.toggleTheme = function(useVT100) {
+    if (useVT100) {
+        document.documentElement.setAttribute('data-theme', 'vt100');
+        localStorage.setItem('theme', 'vt100');
+        App.currentTheme = 'vt100';
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem('theme', 'default');
+        App.currentTheme = 'default';
+    }
+};
+
+// ============================================
 // CURRENT USER STATE
 // ============================================
 

@@ -16,6 +16,21 @@ App.pages.profile = async function() {
         content.innerHTML = `
             <header class="page-header"><h1 class="page-title">👤 My Profile</h1></header>
             <div class="card"><div class="card-body"><p class="empty-text">Please select a user from the dropdown above to view your profile.</p></div></div>
+            <div class="card">
+                <div class="card-header"><h3 class="card-title">⚙️ Settings</h3></div>
+                <div class="card-body">
+                    <div class="theme-toggle-row">
+                        <div class="theme-toggle-info">
+                            <h4>🖥️ VT100 Mode</h4>
+                            <p>Classic 1980s green phosphor terminal</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="theme-toggle" ${App.currentTheme === 'vt100' ? 'checked' : ''} onchange="App.toggleTheme(this.checked)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
         `;
         return;
     }
@@ -80,6 +95,20 @@ App.pages.profile = async function() {
                         </div>
                         <div id="location-feedback" class="location-feedback"></div>
                         ${userDetails.location ? `<p class="current-location">Current: <strong>${userDetails.location.name}</strong></p>` : ''}
+                    </div>
+                    
+                    <!-- Theme Toggle -->
+                    <div class="theme-toggle-section">
+                        <div class="theme-toggle-row">
+                            <div class="theme-toggle-info">
+                                <h4>🖥️ VT100 Mode</h4>
+                                <p>Classic 1980s green phosphor terminal</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="theme-toggle" ${App.currentTheme === 'vt100' ? 'checked' : ''} onchange="App.toggleTheme(this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>

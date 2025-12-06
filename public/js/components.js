@@ -24,7 +24,6 @@ App.renderLocationTree = async function(countries) {
                             <path d="M9 18l6-6-6-6"/>
                         </svg>
                     </span>
-                    <span class="tree-icon">${App.locationIcons.country}</span>
                     <span class="tree-label">${country.name}</span>
                 </div>
                 <div class="tree-children ${isExpanded ? 'expanded' : ''}" id="${countryId}">
@@ -54,7 +53,6 @@ App.renderProvinces = async function(countryId, containerEl) {
                                 <path d="M9 18l6-6-6-6"/>
                             </svg>
                         </span>
-                        <span class="tree-icon">${App.locationIcons.province}</span>
                         <span class="tree-label">${province.name}</span>
                     </div>
                     <div class="tree-children ${isExpanded ? 'expanded' : ''}" id="${provId}">
@@ -81,7 +79,6 @@ App.renderCollapsibleCategory = function(categoryId, title, icon, items, itemTyp
         itemsHtml += `
             <div class="tree-item">
                 <div class="tree-header" data-selectable="true" data-type="${itemType}" data-location-id="${item.id}">
-                    <span class="tree-icon">${icon}</span>
                     <span class="tree-label">${item.name}</span>
                 </div>
             </div>
@@ -96,7 +93,6 @@ App.renderCollapsibleCategory = function(categoryId, title, icon, items, itemTyp
                         <path d="M9 18l6-6-6-6"/>
                     </svg>
                 </span>
-                <span class="tree-icon">${icon}</span>
                 <span class="tree-label">${title}</span>
                 <span class="tree-count">${items.length}</span>
             </div>
@@ -235,7 +231,6 @@ App.loadIdeasForLocation = async function(type, id, locationName) {
     ideasList.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     badge.innerHTML = `
         <div class="selected-location">
-            <span class="selected-location-icon">${App.locationIcons[type.replace('-', '')] || '📍'}</span>
             <span>${locationName}</span>
         </div>
     `;
@@ -328,7 +323,6 @@ App.renderLocationTreeForCandidates = async function(countries) {
                             <path d="M9 18l6-6-6-6"/>
                         </svg>
                     </span>
-                    <span class="tree-icon">${App.locationIcons.country}</span>
                     <span class="tree-label">${country.name}</span>
                 </div>
                 <div class="tree-children ${isExpanded ? 'expanded' : ''}" id="${countryId}">
@@ -358,7 +352,6 @@ App.renderProvincesForCandidates = async function(countryId, containerEl) {
                                 <path d="M9 18l6-6-6-6"/>
                             </svg>
                         </span>
-                        <span class="tree-icon">${App.locationIcons.province}</span>
                         <span class="tree-label">${province.name}</span>
                     </div>
                     <div class="tree-children ${isExpanded ? 'expanded' : ''}" id="${provId}">
@@ -385,7 +378,6 @@ App.renderCollapsibleCategoryForCandidates = function(categoryId, title, icon, i
         itemsHtml += `
             <div class="tree-item">
                 <div class="tree-header" data-cand-selectable="true" data-cand-type="${itemType}" data-cand-location-id="${item.id}">
-                    <span class="tree-icon">${icon}</span>
                     <span class="tree-label">${item.name}</span>
                 </div>
             </div>
@@ -400,7 +392,6 @@ App.renderCollapsibleCategoryForCandidates = function(categoryId, title, icon, i
                         <path d="M9 18l6-6-6-6"/>
                     </svg>
                 </span>
-                <span class="tree-icon">${icon}</span>
                 <span class="tree-label">${title}</span>
                 <span class="tree-count">${items.length}</span>
             </div>
@@ -535,7 +526,6 @@ App.loadCandidatesForLocation = async function(type, id, locationName) {
     candidatesList.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     badge.innerHTML = `
         <div class="selected-location">
-            <span class="selected-location-icon">${App.locationIcons[type.replace('-', '')] || '📍'}</span>
             <span>${locationName}</span>
         </div>
     `;

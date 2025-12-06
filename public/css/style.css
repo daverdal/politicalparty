@@ -32,6 +32,158 @@
   --radius-xl: 24px;
 }
 
+/* ============================================
+   VT100 GREEN SCREEN THEME (1980s Terminal)
+   ============================================ */
+[data-theme="vt100"] {
+  /* Deep black CRT background with subtle green tint */
+  --bg-primary: #0a0d0a;
+  --bg-secondary: #0d120d;
+  --bg-tertiary: #111611;
+  --bg-card: #0c100c;
+  --bg-hover: #141a14;
+  
+  /* Phosphor green - not too bright, authentic CRT look */
+  --accent-primary: #33ff33;
+  --accent-secondary: #22cc22;
+  --accent-gradient: linear-gradient(135deg, #33ff33 0%, #22aa22 100%);
+  
+  /* Text colors - varying phosphor intensity */
+  --text-primary: #33ff33;
+  --text-secondary: #28cc28;
+  --text-muted: #1a801a;
+  
+  /* Borders - subtle green glow */
+  --border-color: #1a331a;
+  --border-light: #224422;
+  
+  /* Status colors - all green variations */
+  --success: #33ff33;
+  --warning: #99ff33;
+  --danger: #ff3333;
+  
+  /* Monospace font for authentic terminal feel */
+  --font-sans: 'JetBrains Mono', 'Courier New', monospace;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+  
+  /* Sharper corners for retro look */
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+}
+
+/* VT100 specific styles */
+[data-theme="vt100"] body {
+  text-shadow: 0 0 2px rgba(51, 255, 51, 0.3);
+}
+
+[data-theme="vt100"] .card,
+[data-theme="vt100"] .stat-card {
+  border: 1px solid var(--border-color);
+  box-shadow: 0 0 10px rgba(51, 255, 51, 0.05), inset 0 0 30px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="vt100"] .avatar,
+[data-theme="vt100"] .profile-avatar,
+[data-theme="vt100"] .candidate-avatar,
+[data-theme="vt100"] .candidate-detail-avatar {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+[data-theme="vt100"] .btn-primary {
+  background: transparent;
+  border: 1px solid var(--accent-primary);
+  color: var(--accent-primary);
+  text-shadow: 0 0 5px rgba(51, 255, 51, 0.5);
+}
+
+[data-theme="vt100"] .btn-primary:hover {
+  background: rgba(51, 255, 51, 0.1);
+  box-shadow: 0 0 10px rgba(51, 255, 51, 0.3);
+}
+
+[data-theme="vt100"] .nav-link:hover,
+[data-theme="vt100"] .nav-link.active {
+  background: rgba(51, 255, 51, 0.1);
+  border-left-color: var(--accent-primary);
+}
+
+[data-theme="vt100"] .badge {
+  border: 1px solid currentColor;
+  background: transparent;
+}
+
+[data-theme="vt100"] .logo-icon {
+  background: transparent;
+  border: 1px solid var(--accent-primary);
+  text-shadow: 0 0 8px rgba(51, 255, 51, 0.5);
+}
+
+[data-theme="vt100"] input,
+[data-theme="vt100"] select,
+[data-theme="vt100"] .form-select {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme="vt100"] input:focus,
+[data-theme="vt100"] select:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 5px rgba(51, 255, 51, 0.3);
+}
+
+/* CRT scanline effect (subtle) */
+[data-theme="vt100"] .main-content::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.1) 0px,
+    rgba(0, 0, 0, 0.1) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* CRT screen curvature effect (very subtle) */
+[data-theme="vt100"] .main-content {
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.5);
+}
+
+/* Theme toggle in profile */
+.theme-toggle-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-color);
+}
+
+.theme-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+}
+
+.theme-toggle-info h4 {
+  margin-bottom: 4px;
+  color: var(--text-primary);
+}
+
+.theme-toggle-info p {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -631,7 +783,7 @@ a:hover {
 }
 
 .idea-list-title {
-  font-weight: 600;
+  font-weight: 400;
   color: var(--text-primary);
   margin-bottom: 4px;
 }
