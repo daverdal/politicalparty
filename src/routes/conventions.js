@@ -7,6 +7,74 @@ const express = require('express');
 const router = express.Router();
 const { getDriver, getDatabase } = require('../config/db');
 
+// Helper to convert Neo4j DateTime to ISO string
+function toISODate(neo4jDate) {
+    if (!neo4jDate) return null;
+    if (typeof neo4jDate === 'string') return neo4jDate;
+    if (neo4jDate.toStandardDate) {
+        return neo4jDate.toStandardDate().toISOString();
+    }
+    // Handle raw integer year
+    if (typeof neo4jDate === 'object' && neo4jDate.year) {
+        const year = neo4jDate.year.low || neo4jDate.year;
+        const month = (neo4jDate.month?.low || neo4jDate.month || 1);
+        const day = (neo4jDate.day?.low || neo4jDate.day || 1);
+        const hour = (neo4jDate.hour?.low || neo4jDate.hour || 0);
+        const minute = (neo4jDate.minute?.low || neo4jDate.minute || 0);
+        const second = (neo4jDate.second?.low || neo4jDate.second || 0);
+        return new Date(year, month - 1, day, hour, minute, second).toISOString();
+    }
+    return null;
+}
+
+// Helper to convert Neo4j Integer to number
+function toNumber(neo4jInt) {
+    if (neo4jInt === null || neo4jInt === undefined) return 0;
+    if (typeof neo4jInt === 'number') return neo4jInt;
+    if (neo4jInt.toNumber) return neo4jInt.toNumber();
+    if (neo4jInt.low !== undefined) return neo4jInt.low;
+    return parseInt(neo4jInt) || 0;
+}
+
+// Convention wave definitions
+const WAVES = [
+    { wave: 1, name: 'Pacific', provinces: ['BC', 'YT'], color: '#00d4aa' },
+    { wave: 2, name: 'Mountain', provinces: ['AB', 'NT'], color: '#00c4ff' },
+    { wave: 3, name: 'Prairie', provinces: ['SK', 'MB', 'NU'], color: '#ffb347' },
+    { wave: 4, name: 'Central', provinces: ['ON'], color: '#ff6b6b' },
+    { wave: 5, name: 'Quebec', provinces: ['QC'], color: '#a855f7' },
+    { wave: 6, name: 'Atlantic', provinces: ['NB', 'NS', 'PE', 'NL'], color: '#3b82f6' }
+];
+
+// Helper to serialize convention properties
+function serializeConvention(props) {
+    return {
+        id: props.id,
+        name: props.name,
+        year: toNumber(props.year),
+        status: props.status,
+        currentWave: toNumber(props.currentWave) || 0,
+        description: props.description,
+        nominationStart: toISODate(props.nominationStart),
+        nominationEnd: toISODate(props.nominationEnd),
+        // Wave dates
+        wave1Start: toISODate(props.wave1Start),
+        wave1End: toISODate(props.wave1End),
+        wave2Start: toISODate(props.wave2Start),
+        wave2End: toISODate(props.wave2End),
+        wave3Start: toISODate(props.wave3Start),
+        wave3End: toISODate(props.wave3End),
+        wave4Start: toISODate(props.wave4Start),
+        wave4End: toISODate(props.wave4End),
+        wave5Start: toISODate(props.wave5Start),
+        wave5End: toISODate(props.wave5End),
+        wave6Start: toISODate(props.wave6Start),
+        wave6End: toISODate(props.wave6End),
+        createdAt: toISODate(props.createdAt),
+        waves: WAVES
+    };
+}
+
 // GET /api/conventions - List all conventions
 router.get('/', async (req, res) => {
     const driver = getDriver();
@@ -25,9 +93,9 @@ router.get('/', async (req, res) => {
         const conventions = result.records.map(record => {
             const c = record.get('c').properties;
             return {
-                ...c,
+                ...serializeConvention(c),
                 countryName: record.get('countryName'),
-                raceCount: record.get('raceCount').toNumber()
+                raceCount: toNumber(record.get('raceCount'))
             };
         });
         

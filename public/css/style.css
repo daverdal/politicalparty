@@ -971,7 +971,110 @@ a:hover {
   font-size: 1.5rem;
 }
 
-/* Convention Timeline */
+/* Convention Wave Timeline */
+.wave-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 16px 0;
+  position: relative;
+}
+
+.wave-timeline::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 32px;
+  bottom: 32px;
+  width: 3px;
+  background: linear-gradient(
+    to bottom,
+    var(--border-color) 0%,
+    #00d4aa 16%,
+    #00c4ff 33%,
+    #ffb347 50%,
+    #ff6b6b 66%,
+    #a855f7 83%,
+    #3b82f6 100%
+  );
+  border-radius: 2px;
+  opacity: 0.3;
+}
+
+.wave-phase {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 12px 0;
+  position: relative;
+  opacity: 0.5;
+  transition: all 0.3s ease;
+}
+
+.wave-phase.active,
+.wave-phase.completed {
+  opacity: 1;
+}
+
+.wave-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 3px solid var(--bg-primary);
+  flex-shrink: 0;
+  z-index: 1;
+  transition: all 0.3s ease;
+}
+
+.wave-phase.active .wave-dot {
+  box-shadow: 0 0 12px currentColor;
+  transform: scale(1.1);
+}
+
+.wave-phase.completed .wave-dot {
+  opacity: 0.7;
+}
+
+.wave-info {
+  flex: 1;
+}
+
+.wave-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.wave-phase:not(.active):not(.completed) .wave-name {
+  color: var(--text-muted);
+}
+
+.wave-provinces {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+
+.wave-dates {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.wave-phase.active .wave-dates {
+  color: var(--accent-primary);
+  font-weight: 500;
+}
+
+/* Wave colors */
+.wave-phase[data-wave="1"] .wave-dot { background: #00d4aa; }
+.wave-phase[data-wave="2"] .wave-dot { background: #00c4ff; }
+.wave-phase[data-wave="3"] .wave-dot { background: #ffb347; }
+.wave-phase[data-wave="4"] .wave-dot { background: #ff6b6b; }
+.wave-phase[data-wave="5"] .wave-dot { background: #a855f7; }
+.wave-phase[data-wave="6"] .wave-dot { background: #3b82f6; }
+
+/* Legacy timeline (keeping for reference) */
 .convention-timeline {
   display: flex;
   align-items: center;

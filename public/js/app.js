@@ -1222,21 +1222,74 @@ const pages = {
       const uncontested = activeRaces.filter(r => r.candidateCount === 1).length;
       const vacant = activeRaces.filter(r => r.candidateCount === 0).length;
       
+      // Wave definitions
+      const waves = [
+        { wave: 1, name: 'Pacific', emoji: '🌊', provinces: 'BC, Yukon' },
+        { wave: 2, name: 'Mountain', emoji: '⛰️', provinces: 'Alberta, NWT' },
+        { wave: 3, name: 'Prairie', emoji: '🌾', provinces: 'SK, MB, Nunavut' },
+        { wave: 4, name: 'Central', emoji: '🏙️', provinces: 'Ontario' },
+        { wave: 5, name: 'Quebec', emoji: '⚜️', provinces: 'Quebec' },
+        { wave: 6, name: 'Atlantic', emoji: '🦞', provinces: 'NB, NS, PE, NL' }
+      ];
+      
       // Status badge helper
-      const getStatusBadge = (status) => {
-        const badges = {
-          'upcoming': '<span class="badge">🗓️ Upcoming</span>',
-          'nominations': '<span class="badge warning">📝 Nominations Open</span>',
-          'voting': '<span class="badge success">🗳️ Voting Active</span>',
-          'completed': '<span class="badge">✅ Completed</span>'
-        };
-        return badges[status] || `<span class="badge">${status}</span>`;
+      const getStatusBadge = (status, currentWave) => {
+        if (status === 'nominations') return '<span class="badge warning">📝 Nominations Open</span>';
+        if (status === 'completed') return '<span class="badge">✅ Completed</span>';
+        if (status === 'upcoming') return '<span class="badge">🗓️ Upcoming</span>';
+        // Check if it's a wave status
+        const waveNum = currentWave || 0;
+        if (waveNum > 0 && waveNum <= 6) {
+          return `<span class="badge success">🗳️ Wave ${waveNum} Voting</span>`;
+        }
+        return `<span class="badge">${status}</span>`;
+      };
+      
+      // Build wave timeline HTML
+      const buildWaveTimeline = (conv) => {
+        const currentWave = conv.currentWave || 0;
+        const isNominations = conv.status === 'nominations';
+        const isCompleted = conv.status === 'completed';
+        
+        let html = `
+          <div class="wave-timeline">
+            <!-- Nominations Phase -->
+            <div class="wave-phase ${isNominations ? 'active' : currentWave > 0 || isCompleted ? 'completed' : ''}">
+              <div class="wave-dot" style="background: var(--text-muted)"></div>
+              <div class="wave-info">
+                <div class="wave-name">📝 Nominations</div>
+                <div class="wave-dates">${formatDate(conv.nominationStart)} - ${formatDate(conv.nominationEnd)}</div>
+              </div>
+            </div>
+        `;
+        
+        // Add each wave
+        waves.forEach((w, i) => {
+          const waveStart = conv[`wave${w.wave}Start`];
+          const waveEnd = conv[`wave${w.wave}End`];
+          const isActive = currentWave === w.wave && !isCompleted;
+          const isWaveCompleted = currentWave > w.wave || isCompleted;
+          
+          html += `
+            <div class="wave-phase ${isActive ? 'active' : isWaveCompleted ? 'completed' : ''}" data-wave="${w.wave}">
+              <div class="wave-dot" style="background: ${isActive || isWaveCompleted ? `var(--wave-${w.wave}-color, #00d4aa)` : 'var(--border-color)'}"></div>
+              <div class="wave-info">
+                <div class="wave-name">${w.emoji} Wave ${w.wave}: ${w.name}</div>
+                <div class="wave-provinces">${w.provinces}</div>
+                <div class="wave-dates">${waveStart ? formatDate(waveStart) : ''} - ${waveEnd ? formatDate(waveEnd) : ''}</div>
+              </div>
+            </div>
+          `;
+        });
+        
+        html += '</div>';
+        return html;
       };
       
       content.innerHTML = `
         <header class="page-header">
           <h1 class="page-title">🏛️ Convention</h1>
-          <p class="page-subtitle">Party candidate selection process</p>
+          <p class="page-subtitle">West to East regional voting waves</p>
         </header>
         
         ${activeConv ? `
@@ -1247,28 +1300,10 @@ const pages = {
                 <h2 class="card-title">${activeConv.name}</h2>
                 <p class="card-subtitle">${activeConv.description || ''}</p>
               </div>
-              ${getStatusBadge(activeConv.status)}
+              ${getStatusBadge(activeConv.status, activeConv.currentWave)}
             </div>
             <div class="card-body">
-              <div class="convention-timeline">
-                <div class="timeline-phase ${activeConv.status === 'nominations' ? 'active' : activeConv.status === 'voting' || activeConv.status === 'completed' ? 'completed' : ''}">
-                  <div class="timeline-dot"></div>
-                  <div class="timeline-label">Nominations</div>
-                  <div class="timeline-date">${formatDate(activeConv.nominationStart)} - ${formatDate(activeConv.nominationEnd)}</div>
-                </div>
-                <div class="timeline-line"></div>
-                <div class="timeline-phase ${activeConv.status === 'voting' ? 'active' : activeConv.status === 'completed' ? 'completed' : ''}">
-                  <div class="timeline-dot"></div>
-                  <div class="timeline-label">Voting</div>
-                  <div class="timeline-date">${formatDate(activeConv.votingStart)} - ${formatDate(activeConv.votingEnd)}</div>
-                </div>
-                <div class="timeline-line"></div>
-                <div class="timeline-phase ${activeConv.status === 'completed' ? 'active' : ''}">
-                  <div class="timeline-dot"></div>
-                  <div class="timeline-label">Results</div>
-                  <div class="timeline-date">${formatDate(activeConv.votingEnd)}</div>
-                </div>
-              </div>
+              ${buildWaveTimeline(activeConv)}
             </div>
           </div>
           

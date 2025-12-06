@@ -218,19 +218,41 @@ const EVENT_PARTICIPANTS = [
 // CONVENTION SYSTEM DATA
 // ============================================
 
-// Convention - Annual party convention
+// Convention Waves - West to East across Canada
+const CONVENTION_WAVES = [
+    { wave: 1, name: 'Pacific', provinces: ['bc', 'yt'], color: '#00d4aa' },
+    { wave: 2, name: 'Mountain', provinces: ['ab', 'nt'], color: '#00c4ff' },
+    { wave: 3, name: 'Prairie', provinces: ['sk', 'mb', 'nu'], color: '#ffb347' },
+    { wave: 4, name: 'Central', provinces: ['on'], color: '#ff6b6b' },
+    { wave: 5, name: 'Quebec', provinces: ['qc'], color: '#a855f7' },
+    { wave: 6, name: 'Atlantic', provinces: ['nb', 'ns', 'pe', 'nl'], color: '#3b82f6' }
+];
+
+// Convention - Annual party convention with regional waves
 const CONVENTIONS = [
     {
         id: 'conv-2025',
         name: '2025 National Convention',
         year: 2025,
         countryId: 'ca',
-        status: 'nominations', // upcoming, nominations, voting, completed
-        nominationStart: '2025-01-01T00:00:00',
-        nominationEnd: '2025-03-01T23:59:59',
-        votingStart: '2025-06-01T00:00:00',
-        votingEnd: '2025-06-15T23:59:59',
-        description: 'Annual convention to select candidates for all federal ridings'
+        status: 'nominations', // upcoming, nominations, wave1, wave2, wave3, wave4, wave5, wave6, completed
+        currentWave: 0, // 0 = nominations, 1-6 = voting waves
+        nominationStart: '2025-01-15T00:00:00',
+        nominationEnd: '2025-02-15T23:59:59',
+        // Wave voting dates (each wave gets ~2 weeks)
+        wave1Start: '2025-02-22T00:00:00', // Pacific (BC, Yukon)
+        wave1End: '2025-03-08T23:59:59',
+        wave2Start: '2025-03-15T00:00:00', // Mountain (Alberta, NWT)
+        wave2End: '2025-03-29T23:59:59',
+        wave3Start: '2025-04-05T00:00:00', // Prairie (SK, MB, Nunavut)
+        wave3End: '2025-04-19T23:59:59',
+        wave4Start: '2025-04-26T00:00:00', // Central (Ontario) - "Super Saturday"
+        wave4End: '2025-05-10T23:59:59',
+        wave5Start: '2025-05-17T00:00:00', // Quebec
+        wave5End: '2025-05-31T23:59:59',
+        wave6Start: '2025-06-07T00:00:00', // Atlantic
+        wave6End: '2025-06-21T23:59:59',
+        description: 'Annual convention - West to East regional voting waves'
     },
     {
         id: 'conv-2024',
@@ -238,11 +260,22 @@ const CONVENTIONS = [
         year: 2024,
         countryId: 'ca',
         status: 'completed',
-        nominationStart: '2024-01-01T00:00:00',
-        nominationEnd: '2024-03-01T23:59:59',
-        votingStart: '2024-06-01T00:00:00',
-        votingEnd: '2024-06-15T23:59:59',
-        description: 'Annual convention to select candidates for all federal ridings'
+        currentWave: 6,
+        nominationStart: '2024-01-15T00:00:00',
+        nominationEnd: '2024-02-15T23:59:59',
+        wave1Start: '2024-02-22T00:00:00',
+        wave1End: '2024-03-08T23:59:59',
+        wave2Start: '2024-03-15T00:00:00',
+        wave2End: '2024-03-29T23:59:59',
+        wave3Start: '2024-04-05T00:00:00',
+        wave3End: '2024-04-19T23:59:59',
+        wave4Start: '2024-04-26T00:00:00',
+        wave4End: '2024-05-10T23:59:59',
+        wave5Start: '2024-05-17T00:00:00',
+        wave5End: '2024-05-31T23:59:59',
+        wave6Start: '2024-06-07T00:00:00',
+        wave6End: '2024-06-21T23:59:59',
+        description: 'Annual convention - West to East regional voting waves'
     }
 ];
 
@@ -626,6 +659,18 @@ async function seedConventions(driver) {
     const session = driver.session({ database: DATABASE });
     
     try {
+        // First, update provinces with their wave assignments
+        console.log('  Assigning provinces to waves...');
+        for (const wave of CONVENTION_WAVES) {
+            for (const provCode of wave.provinces) {
+                await session.run(`
+                    MATCH (p:Province {code: $code})
+                    SET p.wave = $wave, p.waveName = $waveName, p.waveColor = $color
+                `, { code: provCode.toUpperCase(), wave: wave.wave, waveName: wave.name, color: wave.color });
+            }
+        }
+        console.log(`  ✓ Assigned ${CONVENTION_WAVES.length} waves to provinces`);
+        
         // Create Conventions
         console.log('  Creating conventions...');
         for (const conv of CONVENTIONS) {
@@ -635,10 +680,21 @@ async function seedConventions(driver) {
                     name: $name,
                     year: $year,
                     status: $status,
+                    currentWave: $currentWave,
                     nominationStart: datetime($nominationStart),
                     nominationEnd: datetime($nominationEnd),
-                    votingStart: datetime($votingStart),
-                    votingEnd: datetime($votingEnd),
+                    wave1Start: datetime($wave1Start),
+                    wave1End: datetime($wave1End),
+                    wave2Start: datetime($wave2Start),
+                    wave2End: datetime($wave2End),
+                    wave3Start: datetime($wave3Start),
+                    wave3End: datetime($wave3End),
+                    wave4Start: datetime($wave4Start),
+                    wave4End: datetime($wave4End),
+                    wave5Start: datetime($wave5Start),
+                    wave5End: datetime($wave5End),
+                    wave6Start: datetime($wave6Start),
+                    wave6End: datetime($wave6End),
                     description: $description,
                     createdAt: datetime()
                 })

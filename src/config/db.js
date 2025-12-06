@@ -22,6 +22,10 @@ function getSession() {
     return getDriver().session({ database: DATABASE });
 }
 
+function getDatabase() {
+    return DATABASE;
+}
+
 async function verifyConnection() {
     try {
         const d = getDriver();
@@ -44,6 +48,7 @@ async function closeConnection() {
 module.exports = {
     getDriver,
     getSession,
+    getDatabase,
     verifyConnection,
     closeConnection,
     DATABASE
