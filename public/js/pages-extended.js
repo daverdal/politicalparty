@@ -340,9 +340,9 @@ App.pages.convention = async function() {
                                             <div class="race-province-name">${race.provinceName || ''}</div>
                                         </div>
                                         <div class="race-card-body">
-                                            ${race.candidateCount === 0 ? '<div class="race-empty">🚫 No candidates yet</div>' :
-                                              race.candidateCount === 1 ? '<div class="race-uncontested">👤 1 candidate</div>' :
-                                              `<div class="race-contested">👥 ${race.candidateCount} candidates</div>`}
+                                            ${race.candidateCount === 0 ? '<div class="race-empty">No candidates yet</div>' :
+                                              race.candidateCount === 1 ? '<div class="race-uncontested">1 candidate</div>' :
+                                              `<div class="race-contested">${race.candidateCount} candidates</div>`}
                                         </div>
                                         <div class="race-card-footer"><span class="view-race-btn">View Race →</span></div>
                                     </div>

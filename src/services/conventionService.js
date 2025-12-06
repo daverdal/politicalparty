@@ -145,8 +145,18 @@ async function getRacesForConvention(convId) {
     const session = driver.session({ database: getDatabase() });
     
     try {
+        // First get the current wave from the convention
+        const convResult = await session.run(`
+            MATCH (c:Convention {id: $convId})
+            RETURN c.currentWave as currentWave
+        `, { convId });
+        
+        const currentWave = toNumber(convResult.records[0]?.get('currentWave')) || 0;
+        
+        // Only return races for the current wave
         const result = await session.run(`
             MATCH (c:Convention {id: $convId})-[:HAS_RACE]->(race:NominationRace)-[:FOR_RIDING]->(riding)
+            WHERE race.wave = $currentWave
             OPTIONAL MATCH (riding)<-[:HAS_FEDERAL_RIDING|HAS_PROVINCIAL_RIDING|HAS_FIRST_NATION]-(province:Province)
             OPTIONAL MATCH (candidate:User)-[:RUNNING_IN]->(race)
             WITH race, riding, province, collect(candidate) as candidates
@@ -154,7 +164,7 @@ async function getRacesForConvention(convId) {
                    size(candidates) as candidateCount,
                    [c in candidates | {id: c.id, name: c.name}] as candidateList
             ORDER BY province.name, riding.name
-        `, { convId });
+        `, { convId, currentWave });
         
         return result.records.map(record => ({
             ...record.get('race').properties,

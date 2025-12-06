@@ -1907,7 +1907,7 @@ a:hover {
 }
 
 .race-card.vacant {
-  border-left: 4px solid var(--danger);
+  border-left: 4px solid #8b3a3a;
 }
 
 .race-card-header {
@@ -1916,9 +1916,9 @@ a:hover {
 }
 
 .race-riding-name {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--text-secondary);
 }
 
 .race-province-name {
