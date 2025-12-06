@@ -70,7 +70,9 @@ App.pages.profile = async function() {
                         <div class="profile-avatar">${App.getInitials(App.currentUser.name)}</div>
                         <div>
                             <h2 class="profile-name">${App.currentUser.name}</h2>
-                            <p class="profile-region">${userDetails.location?.name || App.currentUser.region || 'No location set'}</p>
+                            <p class="profile-region">${userDetails.locations?.length > 0 
+                                ? userDetails.locations.map(l => l.name).join(' • ') 
+                                : (App.currentUser.region || 'No locations set')}</p>
                         </div>
                     </div>
                     ${App.currentUser.candidate ? '<span class="badge success">⭐ Candidate</span>' : ''}
@@ -83,18 +85,52 @@ App.pages.profile = async function() {
                     </div>
                     
                     <div class="location-selector-section">
-                        <h4>📍 My Location (Riding)</h4>
-                        <p class="location-help">Set your riding to appear in local candidates list and receive nominations for your area.</p>
-                        <div class="location-selector-form">
+                        <h4>My Location</h4>
+                        <p class="location-help">Set your location to appear in local candidates list and receive nominations for your area.</p>
+                        
+                        <div class="location-selector-row">
+                            <label>Province</label>
                             <select id="province-select" class="form-select">
                                 <option value="">-- Select Province --</option>
                                 ${provinces.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
                             </select>
-                            <select id="riding-select" class="form-select" disabled><option value="">-- Select Riding --</option></select>
-                            <button class="btn btn-primary" id="save-location-btn" disabled>Save Location</button>
                         </div>
+                        
+                        <div class="location-selector-row">
+                            <label>Federal Riding</label>
+                            <select id="federal-riding-select" class="form-select" disabled><option value="">-- Select Federal Riding --</option></select>
+                        </div>
+                        
+                        <div class="location-selector-row">
+                            <label>Provincial Riding</label>
+                            <select id="provincial-riding-select" class="form-select" disabled><option value="">-- Select Provincial Riding --</option></select>
+                        </div>
+                        
+                        <div class="location-selector-row">
+                            <label>Town</label>
+                            <select id="town-select" class="form-select" disabled><option value="">-- Select Town --</option></select>
+                        </div>
+                        
+                        <div class="location-selector-row">
+                            <label>First Nation</label>
+                            <select id="first-nation-select" class="form-select" disabled><option value="">-- Select First Nation --</option></select>
+                        </div>
+                        
+                        <div class="location-selector-row">
+                            <label>Group</label>
+                            <select id="group-select" class="form-select" disabled><option value="">-- Select Group --</option></select>
+                        </div>
+                        
+                        <button class="btn btn-primary" id="save-location-btn" disabled style="margin-top: 12px;">Save Locations</button>
                         <div id="location-feedback" class="location-feedback"></div>
-                        ${userDetails.location ? `<p class="current-location">Current: <strong>${userDetails.location.name}</strong></p>` : ''}
+                        ${userDetails.locations && userDetails.locations.length > 0 ? `
+                            <div class="current-locations">
+                                <strong>Current Locations:</strong>
+                                <ul class="locations-list">
+                                    ${userDetails.locations.map(loc => `<li>${loc.name} <span class="location-type">(${loc.type})</span></li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
                     </div>
                     
                     <!-- Theme Toggle -->
@@ -159,69 +195,118 @@ App.pages.profile = async function() {
         
         // Location selector handlers
         const provinceSelect = document.getElementById('province-select');
-        const ridingSelect = document.getElementById('riding-select');
+        const federalSelect = document.getElementById('federal-riding-select');
+        const provincialSelect = document.getElementById('provincial-riding-select');
+        const townSelect = document.getElementById('town-select');
+        const firstNationSelect = document.getElementById('first-nation-select');
+        const groupSelect = document.getElementById('group-select');
         const saveBtn = document.getElementById('save-location-btn');
         const feedback = document.getElementById('location-feedback');
         
+        // Helper to populate a dropdown
+        const populateDropdown = (select, items, placeholder, type) => {
+            let options = `<option value="">${placeholder}</option>`;
+            items.forEach(item => {
+                options += `<option value="${item.id}" data-type="${type}">${item.name}</option>`;
+            });
+            select.innerHTML = options;
+            select.disabled = items.length === 0;
+        };
+        
+        // Check if any dropdown has a selection
+        const hasAnySelection = () => {
+            return [federalSelect, provincialSelect, townSelect, firstNationSelect, groupSelect].some(sel => 
+                sel && sel.value
+            );
+        };
+        
+        // Province change - load all location types
         provinceSelect?.addEventListener('change', async (e) => {
             const provinceId = e.target.value;
-            ridingSelect.innerHTML = '<option value="">Loading...</option>';
-            ridingSelect.disabled = true;
             saveBtn.disabled = true;
             
+            // Reset all dropdowns
+            [federalSelect, provincialSelect, townSelect, firstNationSelect, groupSelect].forEach(sel => {
+                if (sel) {
+                    sel.innerHTML = '<option value="">Loading...</option>';
+                    sel.disabled = true;
+                }
+            });
+            
             if (!provinceId) {
-                ridingSelect.innerHTML = '<option value="">-- Select Riding --</option>';
+                populateDropdown(federalSelect, [], '-- Select Federal Riding --', 'FederalRiding');
+                populateDropdown(provincialSelect, [], '-- Select Provincial Riding --', 'ProvincialRiding');
+                populateDropdown(townSelect, [], '-- Select Town --', 'Town');
+                populateDropdown(firstNationSelect, [], '-- Select First Nation --', 'FirstNation');
+                populateDropdown(groupSelect, [], '-- Select Group --', 'AdhocGroup');
                 return;
             }
             
             try {
-                const ridings = await App.api(`/locations/provinces/${provinceId}/ridings`);
-                const grouped = {};
-                ridings.forEach(r => {
-                    const cat = r.category || 'Other';
-                    if (!grouped[cat]) grouped[cat] = [];
-                    grouped[cat].push(r);
-                });
+                // Load all location types in parallel
+                const [federal, provincial, towns, firstNations, groups] = await Promise.all([
+                    App.api(`/locations/provinces/${provinceId}/federal-ridings`),
+                    App.api(`/locations/provinces/${provinceId}/provincial-ridings`),
+                    App.api(`/locations/provinces/${provinceId}/towns`),
+                    App.api(`/locations/provinces/${provinceId}/first-nations`),
+                    App.api(`/locations/provinces/${provinceId}/adhoc-groups`)
+                ]);
                 
-                let options = '<option value="">-- Select Riding --</option>';
-                for (const [category, items] of Object.entries(grouped)) {
-                    options += `<optgroup label="${category}">`;
-                    items.forEach(r => { options += `<option value="${r.id}" data-type="${r.type}">${r.name}</option>`; });
-                    options += '</optgroup>';
-                }
-                
-                ridingSelect.innerHTML = options;
-                ridingSelect.disabled = false;
+                populateDropdown(federalSelect, federal, '-- Select Federal Riding --', 'FederalRiding');
+                populateDropdown(provincialSelect, provincial, '-- Select Provincial Riding --', 'ProvincialRiding');
+                populateDropdown(townSelect, towns, '-- Select Town --', 'Town');
+                populateDropdown(firstNationSelect, firstNations, '-- Select First Nation --', 'FirstNation');
+                populateDropdown(groupSelect, groups, '-- Select Group --', 'AdhocGroup');
             } catch (err) {
-                ridingSelect.innerHTML = '<option value="">Error loading ridings</option>';
+                feedback.innerHTML = `<span class="error">Error loading locations</span>`;
             }
         });
         
-        ridingSelect?.addEventListener('change', (e) => { saveBtn.disabled = !e.target.value; });
+        // Enable save button when any dropdown changes
+        [federalSelect, provincialSelect, townSelect, firstNationSelect, groupSelect].forEach(sel => {
+            sel?.addEventListener('change', () => {
+                saveBtn.disabled = !hasAnySelection();
+            });
+        });
         
+        // Save button - save ALL selected locations
         saveBtn?.addEventListener('click', async () => {
-            const ridingOption = ridingSelect.options[ridingSelect.selectedIndex];
-            const locationId = ridingOption.value;
-            const locationType = ridingOption.dataset.type || 'FederalRiding';
+            const locations = [];
             
-            if (!locationId) return;
+            if (federalSelect?.value) {
+                locations.push({ id: federalSelect.value, type: 'FederalRiding' });
+            }
+            if (provincialSelect?.value) {
+                locations.push({ id: provincialSelect.value, type: 'ProvincialRiding' });
+            }
+            if (townSelect?.value) {
+                locations.push({ id: townSelect.value, type: 'Town' });
+            }
+            if (firstNationSelect?.value) {
+                locations.push({ id: firstNationSelect.value, type: 'FirstNation' });
+            }
+            if (groupSelect?.value) {
+                locations.push({ id: groupSelect.value, type: 'AdhocGroup' });
+            }
+            
+            if (locations.length === 0) return;
             
             saveBtn.disabled = true;
             saveBtn.textContent = 'Saving...';
             
             try {
-                const { response, data } = await App.apiPut(`/users/${App.currentUser.id}/location`, { locationId, locationType });
+                const { response, data } = await App.apiPut(`/users/${App.currentUser.id}/locations`, { locations });
                 
                 if (response.ok) {
-                    feedback.innerHTML = `<span class="success">✅ Location set to ${data.location?.name || locationId}</span>`;
+                    feedback.innerHTML = `<span class="success">Saved ${locations.length} location(s)</span>`;
                     setTimeout(() => App.pages.profile(), 1500);
                 } else {
-                    feedback.innerHTML = `<span class="error">❌ ${data.error}</span>`;
+                    feedback.innerHTML = `<span class="error">${data.error}</span>`;
                     saveBtn.disabled = false;
                     saveBtn.textContent = 'Save Location';
                 }
             } catch (err) {
-                feedback.innerHTML = `<span class="error">❌ Error: ${err.message}</span>`;
+                feedback.innerHTML = `<span class="error">Error: ${err.message}</span>`;
                 saveBtn.disabled = false;
                 saveBtn.textContent = 'Save Location';
             }

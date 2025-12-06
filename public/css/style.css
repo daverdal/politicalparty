@@ -355,6 +355,13 @@ a:hover {
   margin-bottom: 32px;
 }
 
+.page-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
 .page-title {
   font-size: 32px;
   font-weight: 700;
@@ -365,6 +372,60 @@ a:hover {
 .page-subtitle {
   color: var(--text-secondary);
   font-size: 16px;
+}
+
+/* Form Elements */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.form-feedback {
+  margin-top: 12px;
+  font-size: 0.9rem;
+}
+
+.form-feedback .success {
+  color: var(--success);
+}
+
+.form-feedback .error {
+  color: var(--danger);
 }
 
 /* Cards Grid */
@@ -1397,6 +1458,24 @@ a:hover {
   min-width: 180px;
 }
 
+.location-selector-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.location-selector-row label {
+  width: 120px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.location-selector-row .form-select {
+  flex: 1;
+}
+
 .location-feedback {
   margin-top: 10px;
   font-size: 0.9rem;
@@ -1414,6 +1493,36 @@ a:hover {
   margin-top: 12px;
   font-size: 0.9rem;
   color: var(--text-secondary);
+}
+
+.current-locations {
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+}
+
+.current-locations strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.locations-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.locations-list li {
+  padding: 4px 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.locations-list .location-type {
+  color: var(--text-muted);
+  font-size: 0.8rem;
 }
 
 /* Current Race */

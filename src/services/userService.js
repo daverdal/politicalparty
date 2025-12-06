@@ -52,21 +52,40 @@ async function getUserById(userId) {
             OPTIONAL MATCH (u)-[:LOCATED_IN]->(loc)
             OPTIONAL MATCH (u)-[:POSTED]->(idea:Idea)<-[:SUPPORTED]-(supporter:User)
             OPTIONAL MATCH (endorser:User)-[:ENDORSED]->(u)
-            WITH u, loc, 
+            WITH u, collect(DISTINCT {node: loc, labels: labels(loc)}) as locations,
                  count(DISTINCT supporter) as points,
                  count(DISTINCT endorser) as endorsementCount
-            RETURN u, loc, points, endorsementCount
+            RETURN u, locations, points, endorsementCount
         `, { userId });
         
         if (result.records.length === 0) return null;
         
         const record = result.records[0];
         const user = record.get('u').properties;
-        const location = record.get('loc')?.properties;
+        const rawLocations = record.get('locations');
+        
+        // Process locations with their types
+        const locations = rawLocations
+            .filter(loc => loc.node)
+            .map(loc => {
+                const labels = loc.labels || [];
+                // Find the specific location type (not generic labels)
+                const type = labels.find(l => 
+                    ['FederalRiding', 'ProvincialRiding', 'Town', 'FirstNation', 'AdhocGroup'].includes(l)
+                ) || 'Unknown';
+                return {
+                    ...loc.node.properties,
+                    type
+                };
+            });
+        
+        // Keep backward compatibility with single location
+        const primaryLocation = locations[0] || null;
         
         return {
             ...user,
-            location,
+            location: primaryLocation,  // backward compat
+            locations,                  // all locations
             points: toNumber(record.get('points')),
             endorsementCount: toNumber(record.get('endorsementCount'))
         };
@@ -141,6 +160,58 @@ async function removeUserLocation(userId) {
 }
 
 /**
+ * Set multiple locations for a user (one of each type)
+ */
+async function setUserLocations({ userId, locations }) {
+    const validTypes = ['Town', 'FederalRiding', 'ProvincialRiding', 'FirstNation', 'AdhocGroup'];
+    
+    // Validate all location types
+    for (const loc of locations) {
+        if (!validTypes.includes(loc.type)) {
+            throw new Error(`Invalid location type: ${loc.type}`);
+        }
+    }
+    
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+    
+    try {
+        // Remove ALL existing location relationships
+        await session.run(`
+            MATCH (u:User {id: $userId})-[r:LOCATED_IN]->()
+            DELETE r
+        `, { userId });
+        
+        // Create new relationships for each location
+        const savedLocations = [];
+        
+        for (const loc of locations) {
+            const result = await session.run(`
+                MATCH (u:User {id: $userId}), (location:${loc.type} {id: $locationId})
+                CREATE (u)-[:LOCATED_IN {createdAt: datetime()}]->(location)
+                RETURN location
+            `, { userId, locationId: loc.id });
+            
+            if (result.records.length > 0) {
+                const savedLoc = result.records[0].get('location').properties;
+                savedLocations.push({
+                    ...savedLoc,
+                    type: loc.type
+                });
+            }
+        }
+        
+        return {
+            success: true,
+            message: `Saved ${savedLocations.length} location(s)`,
+            locations: savedLocations
+        };
+    } finally {
+        await session.close();
+    }
+}
+
+/**
  * Create an endorsement
  */
 async function endorseUser({ fromUserId, toUserId, message }) {
@@ -201,6 +272,7 @@ module.exports = {
     getAllUsers,
     getUserById,
     setUserLocation,
+    setUserLocations,
     removeUserLocation,
     endorseUser,
     getEndorsements

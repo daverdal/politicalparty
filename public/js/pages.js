@@ -193,9 +193,38 @@ App.pages.ideas = async function() {
         
         content.innerHTML = `
             <header class="page-header">
-                <h1 class="page-title">Ideas</h1>
-                <p class="page-subtitle">${ideas.length} community proposals</p>
+                <div class="page-header-row">
+                    <div>
+                        <h1 class="page-title">Ideas</h1>
+                        <p class="page-subtitle">${ideas.length} community proposals</p>
+                    </div>
+                    ${App.currentUser ? `<button class="btn btn-primary" id="add-idea-btn">+ New Idea</button>` : ''}
+                </div>
             </header>
+            
+            <!-- Add Idea Form (hidden by default) -->
+            <div id="add-idea-form" class="card" style="display: none; margin-bottom: 20px;">
+                <div class="card-header"><h3 class="card-title">Submit New Idea</h3></div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label>Title</label>
+                        <input type="text" id="idea-title" class="form-input" placeholder="Your idea title...">
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="idea-description" class="form-textarea" rows="4" placeholder="Describe your idea..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Tags (comma separated)</label>
+                        <input type="text" id="idea-tags" class="form-input" placeholder="policy, environment, education">
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn btn-primary" id="submit-idea-btn">Submit Idea</button>
+                        <button class="btn btn-secondary" id="cancel-idea-btn">Cancel</button>
+                    </div>
+                    <div id="idea-feedback" class="form-feedback"></div>
+                </div>
+            </div>
             
             <div class="cards-grid">
                 ${ideas.map(idea => `
@@ -210,6 +239,67 @@ App.pages.ideas = async function() {
                 `).join('')}
             </div>
         `;
+        
+        // Add idea form handlers
+        const addBtn = document.getElementById('add-idea-btn');
+        const form = document.getElementById('add-idea-form');
+        const cancelBtn = document.getElementById('cancel-idea-btn');
+        const submitBtn = document.getElementById('submit-idea-btn');
+        const feedback = document.getElementById('idea-feedback');
+        
+        addBtn?.addEventListener('click', () => {
+            form.style.display = 'block';
+            addBtn.style.display = 'none';
+        });
+        
+        cancelBtn?.addEventListener('click', () => {
+            form.style.display = 'none';
+            addBtn.style.display = 'block';
+        });
+        
+        submitBtn?.addEventListener('click', async () => {
+            const title = document.getElementById('idea-title').value.trim();
+            const description = document.getElementById('idea-description').value.trim();
+            const tagsStr = document.getElementById('idea-tags').value.trim();
+            
+            if (!title || !description) {
+                feedback.innerHTML = '<span class="error">Title and description are required</span>';
+                return;
+            }
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+            
+            try {
+                const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t) : [];
+                const response = await fetch('/api/ideas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: 'idea-' + Date.now(),
+                        title,
+                        description,
+                        tags,
+                        authorId: App.currentUser.id,
+                        region: App.currentUser.region || 'Unknown'
+                    })
+                });
+                
+                if (response.ok) {
+                    feedback.innerHTML = '<span class="success">Idea submitted!</span>';
+                    setTimeout(() => App.pages.ideas(), 1000);
+                } else {
+                    const data = await response.json();
+                    feedback.innerHTML = `<span class="error">${data.error || 'Failed to submit'}</span>`;
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Submit Idea';
+                }
+            } catch (err) {
+                feedback.innerHTML = `<span class="error">${err.message}</span>`;
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Idea';
+            }
+        });
     } catch (err) {
         content.innerHTML = `<div class="card"><div class="card-body">Error: ${err.message}</div></div>`;
     }

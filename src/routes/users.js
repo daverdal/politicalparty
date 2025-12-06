@@ -136,7 +136,7 @@ router.post('/:id/endorse', async (req, res) => {
     }
 });
 
-// PUT /api/users/:id/location - Set user's location
+// PUT /api/users/:id/location - Set user's single location
 router.put('/:id/location', async (req, res) => {
     const { locationId, locationType } = req.body;
     
@@ -145,6 +145,25 @@ router.put('/:id/location', async (req, res) => {
             userId: req.params.id,
             locationId,
             locationType
+        });
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// PUT /api/users/:id/locations - Set multiple locations
+router.put('/:id/locations', async (req, res) => {
+    const { locations } = req.body;
+    
+    if (!locations || !Array.isArray(locations)) {
+        return res.status(400).json({ error: 'locations must be an array' });
+    }
+    
+    try {
+        const result = await userService.setUserLocations({
+            userId: req.params.id,
+            locations
         });
         res.json(result);
     } catch (error) {
