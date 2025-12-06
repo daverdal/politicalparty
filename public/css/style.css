@@ -1697,6 +1697,16 @@ a:hover {
   opacity: 0.9;
 }
 
+.admin-btn.warning {
+  background: var(--warning);
+  color: var(--bg-primary);
+  border: none;
+}
+
+.admin-btn.warning:hover {
+  opacity: 0.9;
+}
+
 .admin-table {
   width: 100%;
   border-collapse: collapse;
@@ -2499,5 +2509,335 @@ a:hover {
   .browse-panel {
     max-height: 50vh;
   }
+}
+
+/* ============================================
+   VOTING UI
+   ============================================ */
+
+.voting-section {
+  margin-top: 24px;
+}
+
+.voting-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.voting-province-section {
+  margin-bottom: 32px;
+}
+
+.voting-province-section .province-header {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.voting-races-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.voting-race-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  transition: all 0.2s;
+}
+
+.voting-race-card:hover {
+  border-color: var(--accent-primary);
+}
+
+.voting-race-card.completed {
+  opacity: 0.7;
+  border-color: var(--success);
+}
+
+.voting-race-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.voting-race-riding {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.voting-race-candidates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  min-height: 32px;
+}
+
+.voting-candidate-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 4px;
+  background: var(--bg-tertiary);
+  border-radius: 20px;
+  font-size: 0.85rem;
+}
+
+.candidate-avatar-sm {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  color: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.candidate-name-sm {
+  color: var(--text-secondary);
+}
+
+.no-candidates {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.voting-race-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.btn-ghost:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* Voting Modal */
+.voting-modal,
+.results-modal {
+  width: 90%;
+  max-width: 500px;
+}
+
+.voting-instructions {
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.round-info {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.voting-candidates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.voting-candidate-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.voting-candidate-option:hover {
+  background: var(--bg-hover);
+}
+
+.voting-candidate-option.selected {
+  border-color: var(--accent-primary);
+  background: rgba(var(--accent-primary-rgb, 0, 255, 136), 0.1);
+}
+
+.voting-candidate-option .candidate-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  color: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.voting-candidate-option .candidate-info {
+  flex: 1;
+}
+
+.voting-candidate-option .candidate-name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.voting-candidate-option .candidate-region {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.vote-radio {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-color);
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.voting-candidate-option.selected .vote-radio {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary);
+  box-shadow: inset 0 0 0 4px var(--bg-tertiary);
+}
+
+.voting-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.already-voted,
+.no-active-round,
+.no-results {
+  text-align: center;
+  padding: 20px;
+}
+
+/* Results Modal */
+.results-round-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.round-badge {
+  background: var(--accent-primary);
+  color: var(--bg-primary);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.total-votes {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.result-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.result-row.leading {
+  background: rgba(var(--accent-primary-rgb, 0, 255, 136), 0.1);
+  border: 1px solid var(--accent-primary);
+}
+
+.result-rank {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.result-row.leading .result-rank {
+  background: var(--accent-primary);
+  color: var(--bg-primary);
+}
+
+.result-candidate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+}
+
+.result-bar-container {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.result-bar {
+  height: 100%;
+  background: var(--accent-primary);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.result-votes {
+  min-width: 80px;
+  text-align: right;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.results-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Empty/Error states */
+.empty-state,
+.error-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+
+.error-state {
+  color: var(--danger);
 }
 

@@ -408,36 +408,59 @@ App.pages.convention = async function() {
                     <div class="stat-card vacant"><div class="stat-label">Need Candidates</div><div class="stat-value">${vacant}</div></div>
                 </div>
                 
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">🏁 Active Races - Wave ${activeConv.currentWave || 1}</h3>
-                        <span class="badge">${activeRaces.length} ridings</span>
-                    </div>
-                    <div class="card-body">
-                        <p class="races-help">Click a riding to see candidates and nominate someone</p>
-                        <div class="races-grid">
-                            ${activeRaces.length === 0 ? '<p class="empty-text">No races created yet. Use Admin panel to create races.</p>' : 
-                                activeRaces.map(race => `
-                                    <div class="race-card ${race.candidateCount > 1 ? 'contested' : race.candidateCount === 1 ? 'uncontested' : 'vacant'}" 
-                                         data-race-id="${race.id}" onclick="App.showRaceDetail('${race.id}')">
-                                        <div class="race-card-header">
-                                            <div class="race-riding-name">${race.riding?.name || 'Unknown'}</div>
-                                            <div class="race-province-name">${race.provinceName || ''}</div>
-                                        </div>
-                                        <div class="race-card-body">
-                                            ${race.candidateCount === 0 ? '<div class="race-empty">No candidates yet</div>' :
-                                              race.candidateCount === 1 ? '<div class="race-uncontested">1 candidate</div>' :
-                                              `<div class="race-contested">${race.candidateCount} candidates</div>`}
-                                        </div>
-                                        <div class="race-card-footer"><span class="view-race-btn">View Race →</span></div>
-                                    </div>
-                                `).join('')
-                            }
+                ${activeConv.status?.includes('-voting') ? `
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">🗳️ Voting - Wave ${activeConv.currentWave || 1}</h3>
+                            <span class="badge success">${activeRaces.length} ridings</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="races-help">Cast your vote for candidates in each riding</p>
+                            <div id="voting-races-container">
+                                <div class="loading"><div class="spinner"></div></div>
+                            </div>
                         </div>
                     </div>
-                </div>
+                ` : `
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">🏁 Active Races - Wave ${activeConv.currentWave || 1}</h3>
+                            <span class="badge">${activeRaces.length} ridings</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="races-help">Click a riding to see candidates and nominate someone</p>
+                            <div class="races-grid">
+                                ${activeRaces.length === 0 ? '<p class="empty-text">No races created yet. Use Admin panel to create races.</p>' : 
+                                    activeRaces.map(race => `
+                                        <div class="race-card ${race.candidateCount > 1 ? 'contested' : race.candidateCount === 1 ? 'uncontested' : 'vacant'}" 
+                                             data-race-id="${race.id}" onclick="App.showRaceDetail('${race.id}')">
+                                            <div class="race-card-header">
+                                                <div class="race-riding-name">${race.riding?.name || 'Unknown'}</div>
+                                                <div class="race-province-name">${race.provinceName || ''}</div>
+                                            </div>
+                                            <div class="race-card-body">
+                                                ${race.candidateCount === 0 ? '<div class="race-empty">No candidates yet</div>' :
+                                                  race.candidateCount === 1 ? '<div class="race-uncontested">1 candidate</div>' :
+                                                  `<div class="race-contested">${race.candidateCount} candidates</div>`}
+                                            </div>
+                                            <div class="race-card-footer"><span class="view-race-btn">View Race →</span></div>
+                                        </div>
+                                    `).join('')
+                                }
+                            </div>
+                        </div>
+                    </div>
+                `}
             ` : '<div class="card"><div class="card-body"><p>No conventions available yet.</p></div></div>'}
         `;
+        
+        // Load voting UI if in voting phase
+        if (activeConv?.status?.includes('-voting')) {
+            const votingContainer = document.getElementById('voting-races-container');
+            if (votingContainer && App.voting) {
+                App.voting.loadVotingUI(activeConv.id, votingContainer);
+            }
+        }
     } catch (err) {
         content.innerHTML = `<div class="card"><div class="card-body">Error: ${err.message}</div></div>`;
     }
@@ -511,6 +534,12 @@ App.pages.admin = async function() {
                     <div class="card-body">
                         <button class="admin-btn primary" onclick="App.advanceConvention('${activeConv?.id}')">⏩ Advance to Next Phase</button>
                         <button class="admin-btn" onclick="App.createWaveRaces('${activeConv?.id}')" style="margin-top: 12px;">🏁 Create Races for Current Wave</button>
+                        ${activeConv?.status?.includes('-voting') ? `
+                            <hr style="margin: 16px 0; border-color: var(--border-color);">
+                            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 12px;">🗳️ Voting Phase Controls:</p>
+                            <button class="admin-btn" onclick="App.startAllVoting('${activeConv?.id}')" style="margin-bottom: 8px;">▶️ Start Voting on All Races</button>
+                            <button class="admin-btn warning" onclick="App.closeAllRounds('${activeConv?.id}')">⏭️ Close All Rounds (Eliminate Lowest)</button>
+                        ` : ''}
                         <div id="admin-result" style="margin-top: 16px; padding: 12px; background: var(--bg-secondary); border-radius: 8px; display: none;"></div>
                     </div>
                 </div>
@@ -559,6 +588,63 @@ App.createWaveRaces = async function(convId) {
     try {
         const { data } = await App.apiPost(`/admin/convention/${convId}/create-wave-races`, {});
         App.showAdminResult(data.message || data.error);
+    } catch (err) {
+        App.showAdminResult('Error: ' + err.message);
+    }
+};
+
+App.startAllVoting = async function(convId) {
+    try {
+        const races = await App.api(`/voting/races/${convId}`);
+        let started = 0;
+        let skipped = 0;
+        
+        for (const race of races) {
+            if (race.candidates.length > 0 && race.currentRound === 0) {
+                const response = await fetch(`/api/voting/race/${race.race.id}/start`, { method: 'POST' });
+                if (response.ok) started++;
+            } else {
+                skipped++;
+            }
+        }
+        
+        App.showAdminResult(`Started voting on ${started} races. Skipped ${skipped} (already started or no candidates).`);
+        setTimeout(() => App.pages.admin(), 2000);
+    } catch (err) {
+        App.showAdminResult('Error: ' + err.message);
+    }
+};
+
+App.closeAllRounds = async function(convId) {
+    if (!confirm('This will close all active rounds and eliminate the lowest candidate in each. Continue?')) return;
+    
+    try {
+        const races = await App.api(`/voting/races/${convId}`);
+        let closed = 0;
+        let winners = [];
+        let eliminated = [];
+        
+        for (const race of races) {
+            if (race.currentRound > 0 && !race.race.winnerId) {
+                const response = await fetch(`/api/voting/race/${race.race.id}/close-round`, { method: 'POST' });
+                if (response.ok) {
+                    const result = await response.json();
+                    closed++;
+                    if (result.result === 'winner') {
+                        winners.push(`${race.riding.name}: ${result.winner.name}`);
+                    } else if (result.eliminated) {
+                        eliminated.push(`${race.riding.name}: ${result.eliminated.name} eliminated`);
+                    }
+                }
+            }
+        }
+        
+        let message = `Closed ${closed} rounds.\n`;
+        if (winners.length) message += `\n🏆 Winners:\n${winners.join('\n')}`;
+        if (eliminated.length) message += `\n\n❌ Eliminated:\n${eliminated.join('\n')}`;
+        
+        App.showAdminResult(message);
+        setTimeout(() => App.pages.admin(), 3000);
     } catch (err) {
         App.showAdminResult('Error: ' + err.message);
     }

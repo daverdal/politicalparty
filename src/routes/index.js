@@ -14,6 +14,7 @@ const prioritiesRouter = require('./priorities');
 const locationsRouter = require('./locations');
 const conventionsRouter = require('./conventions');
 const adminRouter = require('./admin');
+const votingRouter = require('./voting');
 
 // Register all routes
 router.use('/users', usersRouter);
@@ -24,6 +25,7 @@ router.use('/priorities', prioritiesRouter);
 router.use('/locations', locationsRouter);
 router.use('/conventions', conventionsRouter);
 router.use('/admin', adminRouter);
+router.use('/voting', votingRouter);
 
 // Health check endpoint
 router.get('/health', (req, res) => {
