@@ -295,32 +295,23 @@ router.get('/races/:raceId', async (req, res) => {
     }
 });
 
-// POST /api/conventions/:convId/nominate - Nominate self for a race
+// POST /api/conventions/:convId/nominate - Nominate SOMEONE ELSE for a race (grassroots nominations)
 router.post('/:convId/nominate', async (req, res) => {
-    const { userId, ridingId, ridingType } = req.body;
+    const { nominatorId, nomineeId, ridingId, ridingType, message } = req.body;
     const convId = req.params.convId;
     
-    if (!userId || !ridingId || !ridingType) {
-        return res.status(400).json({ error: 'userId, ridingId, and ridingType are required' });
+    if (!nominatorId || !nomineeId || !ridingId || !ridingType) {
+        return res.status(400).json({ error: 'nominatorId, nomineeId, ridingId, and ridingType are required' });
+    }
+    
+    if (nominatorId === nomineeId) {
+        return res.status(400).json({ error: 'You cannot nominate yourself! Ask someone else to nominate you.' });
     }
     
     const driver = getDriver();
     const session = driver.session({ database: getDatabase() });
     
     try {
-        // Check if user is already running in another race this convention
-        const existingRace = await session.run(`
-            MATCH (u:User {id: $userId})-[:RUNNING_IN]->(race:NominationRace)<-[:HAS_RACE]-(c:Convention {id: $convId})
-            RETURN race
-        `, { userId, convId });
-        
-        if (existingRace.records.length > 0) {
-            return res.status(400).json({ 
-                error: 'Already running in another race',
-                message: 'You can only run in one riding per convention'
-            });
-        }
-        
         // Check if convention is in nominations phase
         const convCheck = await session.run(`
             MATCH (c:Convention {id: $convId})
@@ -346,20 +337,222 @@ router.post('/:convId/nominate', async (req, res) => {
             MERGE (race)-[:FOR_RIDING]->(riding)
         `, { raceId, convId, ridingId });
         
-        // Add user to race
+        // Check if this nomination already exists
+        const existingNom = await session.run(`
+            MATCH (nominator:User {id: $nominatorId})-[n:NOMINATED_FOR_RACE]->(nominee:User {id: $nomineeId})
+            WHERE n.raceId = $raceId
+            RETURN n
+        `, { nominatorId, nomineeId, raceId });
+        
+        if (existingNom.records.length > 0) {
+            return res.status(400).json({ error: 'You have already nominated this person for this riding' });
+        }
+        
+        // Create the nomination
         await session.run(`
-            MATCH (u:User {id: $userId}), (race:NominationRace {id: $raceId})
-            CREATE (u)-[:RUNNING_IN {nominatedAt: datetime()}]->(race)
-        `, { userId, raceId });
+            MATCH (nominator:User {id: $nominatorId}), (nominee:User {id: $nomineeId})
+            CREATE (nominator)-[:NOMINATED_FOR_RACE {
+                raceId: $raceId,
+                ridingId: $ridingId,
+                conventionId: $convId,
+                message: $message,
+                createdAt: datetime()
+            }]->(nominee)
+        `, { nominatorId, nomineeId, raceId, ridingId, convId, message: message || '' });
+        
+        // Get nomination count for this person in this race
+        const countResult = await session.run(`
+            MATCH (nominator:User)-[n:NOMINATED_FOR_RACE]->(nominee:User {id: $nomineeId})
+            WHERE n.raceId = $raceId
+            RETURN count(n) as nominationCount
+        `, { nomineeId, raceId });
+        
+        const nominationCount = toNumber(countResult.records[0].get('nominationCount'));
         
         res.json({ 
             success: true, 
-            message: 'Successfully nominated',
-            raceId 
+            message: `Successfully nominated! They now have ${nominationCount} nomination(s) for this riding.`,
+            raceId,
+            nominationCount
         });
     } catch (error) {
         console.error('Error nominating:', error);
         res.status(500).json({ error: 'Failed to nominate' });
+    } finally {
+        await session.close();
+    }
+});
+
+// GET /api/conventions/:convId/nominations/:userId - Get all nominations for a user
+router.get('/:convId/nominations/:userId', async (req, res) => {
+    const { convId, userId } = req.params;
+    
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+    
+    try {
+        const result = await session.run(`
+            MATCH (nominator:User)-[n:NOMINATED_FOR_RACE]->(nominee:User {id: $userId})
+            WHERE n.conventionId = $convId
+            WITH n.raceId as raceId, collect({
+                nominatorId: nominator.id,
+                nominatorName: nominator.name,
+                message: n.message,
+                createdAt: n.createdAt
+            }) as nominations
+            MATCH (race:NominationRace {id: raceId})-[:FOR_RIDING]->(riding)
+            OPTIONAL MATCH (riding)<-[:HAS_FEDERAL_RIDING|HAS_PROVINCIAL_RIDING|HAS_FIRST_NATION]-(province:Province)
+            OPTIONAL MATCH (nominee:User {id: $userId})-[r:RUNNING_IN]->(race)
+            RETURN race, riding, province, nominations, r IS NOT NULL as hasAccepted
+            ORDER BY size(nominations) DESC
+        `, { convId, userId });
+        
+        const pendingNominations = result.records.map(record => ({
+            race: record.get('race').properties,
+            riding: record.get('riding').properties,
+            province: record.get('province')?.properties,
+            nominations: record.get('nominations').map(n => ({
+                ...n,
+                createdAt: toISODate(n.createdAt)
+            })),
+            nominationCount: record.get('nominations').length,
+            hasAccepted: record.get('hasAccepted')
+        }));
+        
+        res.json(pendingNominations);
+    } catch (error) {
+        console.error('Error fetching nominations:', error);
+        res.status(500).json({ error: 'Failed to fetch nominations' });
+    } finally {
+        await session.close();
+    }
+});
+
+// POST /api/conventions/:convId/accept-nomination - Accept a nomination and become a candidate
+router.post('/:convId/accept-nomination', async (req, res) => {
+    const { userId, raceId } = req.body;
+    const convId = req.params.convId;
+    
+    if (!userId || !raceId) {
+        return res.status(400).json({ error: 'userId and raceId are required' });
+    }
+    
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+    
+    try {
+        // Check if user is already running in another race this convention
+        const existingRace = await session.run(`
+            MATCH (u:User {id: $userId})-[:RUNNING_IN]->(race:NominationRace)<-[:HAS_RACE]-(c:Convention {id: $convId})
+            RETURN race
+        `, { userId, convId });
+        
+        if (existingRace.records.length > 0) {
+            return res.status(400).json({ 
+                error: 'Already running in another race',
+                message: 'You can only accept one nomination per convention. Decline your current race first.'
+            });
+        }
+        
+        // Check if user actually has nominations for this race
+        const nominationCheck = await session.run(`
+            MATCH (nominator:User)-[n:NOMINATED_FOR_RACE]->(nominee:User {id: $userId})
+            WHERE n.raceId = $raceId
+            RETURN count(n) as count
+        `, { userId, raceId });
+        
+        const nominationCount = toNumber(nominationCheck.records[0].get('count'));
+        if (nominationCount === 0) {
+            return res.status(400).json({ error: 'You have not been nominated for this race' });
+        }
+        
+        // Accept the nomination - add user to race
+        await session.run(`
+            MATCH (u:User {id: $userId}), (race:NominationRace {id: $raceId})
+            MERGE (u)-[:RUNNING_IN {nominatedAt: datetime(), nominationCount: $nominationCount}]->(race)
+            SET u.candidate = true
+        `, { userId, raceId, nominationCount });
+        
+        // Get riding info for response
+        const ridingInfo = await session.run(`
+            MATCH (race:NominationRace {id: $raceId})-[:FOR_RIDING]->(riding)
+            RETURN riding.name as ridingName
+        `, { raceId });
+        
+        const ridingName = ridingInfo.records[0]?.get('ridingName') || 'Unknown';
+        
+        res.json({ 
+            success: true, 
+            message: `Congratulations! You are now a candidate for ${ridingName}!`,
+            raceId,
+            nominationCount
+        });
+    } catch (error) {
+        console.error('Error accepting nomination:', error);
+        res.status(500).json({ error: 'Failed to accept nomination' });
+    } finally {
+        await session.close();
+    }
+});
+
+// POST /api/conventions/:convId/decline-nomination - Decline a nomination
+router.post('/:convId/decline-nomination', async (req, res) => {
+    const { userId, raceId } = req.body;
+    const convId = req.params.convId;
+    
+    if (!userId || !raceId) {
+        return res.status(400).json({ error: 'userId and raceId are required' });
+    }
+    
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+    
+    try {
+        // Remove all nominations for this user in this race
+        await session.run(`
+            MATCH (nominator:User)-[n:NOMINATED_FOR_RACE]->(nominee:User {id: $userId})
+            WHERE n.raceId = $raceId
+            DELETE n
+        `, { userId, raceId });
+        
+        res.json({ 
+            success: true, 
+            message: 'Nomination declined'
+        });
+    } catch (error) {
+        console.error('Error declining nomination:', error);
+        res.status(500).json({ error: 'Failed to decline nomination' });
+    } finally {
+        await session.close();
+    }
+});
+
+// POST /api/conventions/:convId/withdraw - Withdraw from a race (after accepting)
+router.post('/:convId/withdraw', async (req, res) => {
+    const { userId, raceId } = req.body;
+    const convId = req.params.convId;
+    
+    if (!userId || !raceId) {
+        return res.status(400).json({ error: 'userId and raceId are required' });
+    }
+    
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+    
+    try {
+        // Remove RUNNING_IN relationship
+        await session.run(`
+            MATCH (u:User {id: $userId})-[r:RUNNING_IN]->(race:NominationRace {id: $raceId})
+            DELETE r
+        `, { userId, raceId });
+        
+        res.json({ 
+            success: true, 
+            message: 'Successfully withdrew from the race. You can now accept a different nomination.'
+        });
+    } catch (error) {
+        console.error('Error withdrawing:', error);
+        res.status(500).json({ error: 'Failed to withdraw' });
     } finally {
         await session.close();
     }

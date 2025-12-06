@@ -361,6 +361,28 @@ const ADDITIONAL_CANDIDATES = [
     { raceId: 'race-2025-fr-on-toronto-centre', candidateId: 'u12', nominatedAt: '2025-01-30T14:00:00' }  // Ahmed Hassan
 ];
 
+// Grassroots nominations - people nominating others for races
+// These are PENDING nominations that the nominee can accept/decline
+const GRASSROOTS_NOMINATIONS = [
+    // Multiple people nominating Sofia Rodriguez (u3) for Vancouver Centre - she hasn't accepted yet
+    { nominatorId: 'u15', nomineeId: 'u3', raceId: 'race-2025-fr-bc-vancouver-centre', ridingId: 'fr-bc-vancouver-centre', message: 'Sofia would be amazing for Vancouver!' },
+    { nominatorId: 'u17', nomineeId: 'u3', raceId: 'race-2025-fr-bc-vancouver-centre', ridingId: 'fr-bc-vancouver-centre', message: 'We need her business expertise!' },
+    { nominatorId: 'u4', nomineeId: 'u3', raceId: 'race-2025-fr-bc-vancouver-centre', ridingId: 'fr-bc-vancouver-centre', message: 'A proven community leader' },
+    
+    // People nominating Pierre Gagnon (u14) for Quebec ridings - he's not a declared candidate
+    { nominatorId: 'u7', nomineeId: 'u14', raceId: 'race-2025-fr-qc-louis-h-bert', ridingId: 'fr-qc-louis-h-bert', message: 'Pierre knows our heritage!' },
+    { nominatorId: 'u2', nomineeId: 'u14', raceId: 'race-2025-fr-qc-louis-h-bert', ridingId: 'fr-qc-louis-h-bert', message: 'Great advocate for preservation' },
+    
+    // Daniel Blackwood (u16) being nominated for Saskatoon - he's a researcher, not a declared candidate
+    { nominatorId: 'u9', nomineeId: 'u16', raceId: 'race-2025-fr-sk-saskatoon-university', ridingId: 'fr-sk-saskatoon-university', message: 'His research on rural development is exactly what we need' },
+    { nominatorId: 'u13', nomineeId: 'u16', raceId: 'race-2025-fr-sk-saskatoon-university', ridingId: 'fr-sk-saskatoon-university', message: 'Daniel understands prairie issues' },
+    { nominatorId: 'u1', nomineeId: 'u16', raceId: 'race-2025-fr-sk-saskatoon-university', ridingId: 'fr-sk-saskatoon-university', message: 'We need academics in politics!' },
+    
+    // Sarah Greenberg (u11) being nominated for multiple ridings - popular but hasn't declared
+    { nominatorId: 'u6', nomineeId: 'u11', raceId: 'race-2025-fr-on-kitchener-centre', ridingId: 'fr-on-kitchener-centre', message: 'Tech sector needs representation!' },
+    { nominatorId: 'u12', nomineeId: 'u11', raceId: 'race-2025-fr-on-kitchener-centre', ridingId: 'fr-on-kitchener-centre', message: 'Sarah is a digital inclusion champion' }
+];
+
 // ============================================
 // LOCATION SEED DATA
 // ============================================
@@ -788,6 +810,39 @@ async function seedConventions(driver) {
             MATCH (nr:NominationRace {id: 'race-2025-fr-bc-richmond'}), (r:FederalRiding {id: 'fr-bc-richmond'})
             MERGE (nr)-[:FOR_RIDING]->(r)
         `);
+        
+        // Add grassroots nominations (people nominating others)
+        console.log('  Adding grassroots nominations...');
+        for (const nom of GRASSROOTS_NOMINATIONS) {
+            try {
+                // Create the race if it doesn't exist
+                await session.run(`
+                    MERGE (nr:NominationRace {id: $raceId})
+                    ON CREATE SET nr.status = 'open', nr.currentRound = 0, nr.createdAt = datetime()
+                    WITH nr
+                    MATCH (conv:Convention {id: 'conv-2025'})
+                    MERGE (conv)-[:HAS_RACE]->(nr)
+                    WITH nr
+                    MATCH (r:FederalRiding {id: $ridingId})
+                    MERGE (nr)-[:FOR_RIDING]->(r)
+                `, { raceId: nom.raceId, ridingId: nom.ridingId });
+                
+                // Create the nomination relationship
+                await session.run(`
+                    MATCH (nominator:User {id: $nominatorId}), (nominee:User {id: $nomineeId})
+                    CREATE (nominator)-[:NOMINATED_FOR_RACE {
+                        raceId: $raceId,
+                        ridingId: $ridingId,
+                        conventionId: 'conv-2025',
+                        message: $message,
+                        createdAt: datetime()
+                    }]->(nominee)
+                `, nom);
+            } catch (err) {
+                console.log(`    ⚠ Could not create nomination: ${err.message}`);
+            }
+        }
+        console.log(`  ✓ Added ${GRASSROOTS_NOMINATIONS.length} grassroots nominations`);
         
     } finally {
         await session.close();
