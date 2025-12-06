@@ -229,30 +229,46 @@ const CONVENTION_WAVES = [
 ];
 
 // Convention - Annual party convention with regional waves
+// Each wave has its own nomination period followed by voting period
 const CONVENTIONS = [
     {
         id: 'conv-2025',
         name: '2025 National Convention',
         year: 2025,
         countryId: 'ca',
-        status: 'nominations', // upcoming, nominations, wave1, wave2, wave3, wave4, wave5, wave6, completed
-        currentWave: 0, // 0 = nominations, 1-6 = voting waves
-        nominationStart: '2025-01-15T00:00:00',
-        nominationEnd: '2025-02-15T23:59:59',
-        // Wave voting dates (each wave gets ~2 weeks)
-        wave1Start: '2025-02-22T00:00:00', // Pacific (BC, Yukon)
-        wave1End: '2025-03-08T23:59:59',
-        wave2Start: '2025-03-15T00:00:00', // Mountain (Alberta, NWT)
-        wave2End: '2025-03-29T23:59:59',
-        wave3Start: '2025-04-05T00:00:00', // Prairie (SK, MB, Nunavut)
-        wave3End: '2025-04-19T23:59:59',
-        wave4Start: '2025-04-26T00:00:00', // Central (Ontario) - "Super Saturday"
-        wave4End: '2025-05-10T23:59:59',
-        wave5Start: '2025-05-17T00:00:00', // Quebec
-        wave5End: '2025-05-31T23:59:59',
-        wave6Start: '2025-06-07T00:00:00', // Atlantic
-        wave6End: '2025-06-21T23:59:59',
-        description: 'Annual convention - West to East regional voting waves'
+        status: 'wave1-nominations', // wave1-nominations, wave1-voting, wave2-nominations, etc.
+        currentWave: 1,
+        // Wave 1 - Pacific (BC, Yukon) - First to vote!
+        wave1NominationStart: '2025-02-01T00:00:00',
+        wave1NominationEnd: '2025-02-15T23:59:59',
+        wave1VotingStart: '2025-02-22T00:00:00',
+        wave1VotingEnd: '2025-03-08T23:59:59',
+        // Wave 2 - Mountain (Alberta, NWT)
+        wave2NominationStart: '2025-03-01T00:00:00',
+        wave2NominationEnd: '2025-03-14T23:59:59',
+        wave2VotingStart: '2025-03-15T00:00:00',
+        wave2VotingEnd: '2025-03-29T23:59:59',
+        // Wave 3 - Prairie (SK, MB, Nunavut)
+        wave3NominationStart: '2025-03-22T00:00:00',
+        wave3NominationEnd: '2025-04-04T23:59:59',
+        wave3VotingStart: '2025-04-05T00:00:00',
+        wave3VotingEnd: '2025-04-19T23:59:59',
+        // Wave 4 - Central (Ontario) - "Super Saturday"
+        wave4NominationStart: '2025-04-12T00:00:00',
+        wave4NominationEnd: '2025-04-25T23:59:59',
+        wave4VotingStart: '2025-04-26T00:00:00',
+        wave4VotingEnd: '2025-05-10T23:59:59',
+        // Wave 5 - Quebec
+        wave5NominationStart: '2025-05-03T00:00:00',
+        wave5NominationEnd: '2025-05-16T23:59:59',
+        wave5VotingStart: '2025-05-17T00:00:00',
+        wave5VotingEnd: '2025-05-31T23:59:59',
+        // Wave 6 - Atlantic (NB, NS, PE, NL)
+        wave6NominationStart: '2025-05-24T00:00:00',
+        wave6NominationEnd: '2025-06-06T23:59:59',
+        wave6VotingStart: '2025-06-07T00:00:00',
+        wave6VotingEnd: '2025-06-21T23:59:59',
+        description: 'Annual convention - West to East regional waves with local nominations'
     },
     {
         id: 'conv-2024',
@@ -261,21 +277,31 @@ const CONVENTIONS = [
         countryId: 'ca',
         status: 'completed',
         currentWave: 6,
-        nominationStart: '2024-01-15T00:00:00',
-        nominationEnd: '2024-02-15T23:59:59',
-        wave1Start: '2024-02-22T00:00:00',
-        wave1End: '2024-03-08T23:59:59',
-        wave2Start: '2024-03-15T00:00:00',
-        wave2End: '2024-03-29T23:59:59',
-        wave3Start: '2024-04-05T00:00:00',
-        wave3End: '2024-04-19T23:59:59',
-        wave4Start: '2024-04-26T00:00:00',
-        wave4End: '2024-05-10T23:59:59',
-        wave5Start: '2024-05-17T00:00:00',
-        wave5End: '2024-05-31T23:59:59',
-        wave6Start: '2024-06-07T00:00:00',
-        wave6End: '2024-06-21T23:59:59',
-        description: 'Annual convention - West to East regional voting waves'
+        wave1NominationStart: '2024-02-01T00:00:00',
+        wave1NominationEnd: '2024-02-15T23:59:59',
+        wave1VotingStart: '2024-02-22T00:00:00',
+        wave1VotingEnd: '2024-03-08T23:59:59',
+        wave2NominationStart: '2024-03-01T00:00:00',
+        wave2NominationEnd: '2024-03-14T23:59:59',
+        wave2VotingStart: '2024-03-15T00:00:00',
+        wave2VotingEnd: '2024-03-29T23:59:59',
+        wave3NominationStart: '2024-03-22T00:00:00',
+        wave3NominationEnd: '2024-04-04T23:59:59',
+        wave3VotingStart: '2024-04-05T00:00:00',
+        wave3VotingEnd: '2024-04-19T23:59:59',
+        wave4NominationStart: '2024-04-12T00:00:00',
+        wave4NominationEnd: '2024-04-25T23:59:59',
+        wave4VotingStart: '2024-04-26T00:00:00',
+        wave4VotingEnd: '2024-05-10T23:59:59',
+        wave5NominationStart: '2024-05-03T00:00:00',
+        wave5NominationEnd: '2024-05-16T23:59:59',
+        wave5VotingStart: '2024-05-17T00:00:00',
+        wave5VotingEnd: '2024-05-31T23:59:59',
+        wave6NominationStart: '2024-05-24T00:00:00',
+        wave6NominationEnd: '2024-06-06T23:59:59',
+        wave6VotingStart: '2024-06-07T00:00:00',
+        wave6VotingEnd: '2024-06-21T23:59:59',
+        description: 'Annual convention - West to East regional waves with local nominations'
     }
 ];
 
@@ -703,20 +729,30 @@ async function seedConventions(driver) {
                     year: $year,
                     status: $status,
                     currentWave: $currentWave,
-                    nominationStart: datetime($nominationStart),
-                    nominationEnd: datetime($nominationEnd),
-                    wave1Start: datetime($wave1Start),
-                    wave1End: datetime($wave1End),
-                    wave2Start: datetime($wave2Start),
-                    wave2End: datetime($wave2End),
-                    wave3Start: datetime($wave3Start),
-                    wave3End: datetime($wave3End),
-                    wave4Start: datetime($wave4Start),
-                    wave4End: datetime($wave4End),
-                    wave5Start: datetime($wave5Start),
-                    wave5End: datetime($wave5End),
-                    wave6Start: datetime($wave6Start),
-                    wave6End: datetime($wave6End),
+                    wave1NominationStart: datetime($wave1NominationStart),
+                    wave1NominationEnd: datetime($wave1NominationEnd),
+                    wave1VotingStart: datetime($wave1VotingStart),
+                    wave1VotingEnd: datetime($wave1VotingEnd),
+                    wave2NominationStart: datetime($wave2NominationStart),
+                    wave2NominationEnd: datetime($wave2NominationEnd),
+                    wave2VotingStart: datetime($wave2VotingStart),
+                    wave2VotingEnd: datetime($wave2VotingEnd),
+                    wave3NominationStart: datetime($wave3NominationStart),
+                    wave3NominationEnd: datetime($wave3NominationEnd),
+                    wave3VotingStart: datetime($wave3VotingStart),
+                    wave3VotingEnd: datetime($wave3VotingEnd),
+                    wave4NominationStart: datetime($wave4NominationStart),
+                    wave4NominationEnd: datetime($wave4NominationEnd),
+                    wave4VotingStart: datetime($wave4VotingStart),
+                    wave4VotingEnd: datetime($wave4VotingEnd),
+                    wave5NominationStart: datetime($wave5NominationStart),
+                    wave5NominationEnd: datetime($wave5NominationEnd),
+                    wave5VotingStart: datetime($wave5VotingStart),
+                    wave5VotingEnd: datetime($wave5VotingEnd),
+                    wave6NominationStart: datetime($wave6NominationStart),
+                    wave6NominationEnd: datetime($wave6NominationEnd),
+                    wave6VotingStart: datetime($wave6VotingStart),
+                    wave6VotingEnd: datetime($wave6VotingEnd),
                     description: $description,
                     createdAt: datetime()
                 })

@@ -1066,6 +1066,51 @@ a:hover {
   font-weight: 500;
 }
 
+/* Wave schedule (nomination + voting rows) */
+.wave-schedule {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.wave-phase-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--bg-secondary);
+}
+
+.wave-phase-row.active-phase {
+  background: rgba(0, 212, 170, 0.15);
+  color: var(--accent-primary);
+}
+
+.phase-icon {
+  font-size: 0.8rem;
+}
+
+.phase-label {
+  font-weight: 500;
+  min-width: 80px;
+}
+
+.phase-dates {
+  color: inherit;
+}
+
+.wave-phase.future {
+  opacity: 0.4;
+}
+
+.wave-phase.future .wave-phase-row {
+  background: transparent;
+}
+
 /* Wave colors */
 .wave-phase[data-wave="1"] .wave-dot { background: #00d4aa; }
 .wave-phase[data-wave="2"] .wave-dot { background: #00c4ff; }

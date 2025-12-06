@@ -1245,38 +1245,45 @@ const pages = {
         return `<span class="badge">${status}</span>`;
       };
       
-      // Build wave timeline HTML
+      // Build wave timeline HTML - each wave has nomination + voting
       const buildWaveTimeline = (conv) => {
-        const currentWave = conv.currentWave || 0;
-        const isNominations = conv.status === 'nominations';
-        const isCompleted = conv.status === 'completed';
+        const currentWave = conv.currentWave || 1;
+        const status = conv.status || '';
+        const isCompleted = status === 'completed';
         
-        let html = `
-          <div class="wave-timeline">
-            <!-- Nominations Phase -->
-            <div class="wave-phase ${isNominations ? 'active' : currentWave > 0 || isCompleted ? 'completed' : ''}">
-              <div class="wave-dot" style="background: var(--text-muted)"></div>
-              <div class="wave-info">
-                <div class="wave-name">📝 Nominations</div>
-                <div class="wave-dates">${formatDate(conv.nominationStart)} - ${formatDate(conv.nominationEnd)}</div>
-              </div>
-            </div>
-        `;
+        let html = '<div class="wave-timeline">';
         
-        // Add each wave
-        waves.forEach((w, i) => {
-          const waveStart = conv[`wave${w.wave}Start`];
-          const waveEnd = conv[`wave${w.wave}End`];
-          const isActive = currentWave === w.wave && !isCompleted;
+        // Add each wave with nomination + voting phases
+        waves.forEach((w) => {
+          const nomStart = conv[`wave${w.wave}NominationStart`];
+          const nomEnd = conv[`wave${w.wave}NominationEnd`];
+          const voteStart = conv[`wave${w.wave}VotingStart`];
+          const voteEnd = conv[`wave${w.wave}VotingEnd`];
+          
+          const isNominating = status === `wave${w.wave}-nominations`;
+          const isVoting = status === `wave${w.wave}-voting`;
+          const isActive = isNominating || isVoting;
           const isWaveCompleted = currentWave > w.wave || isCompleted;
+          const isFuture = currentWave < w.wave && !isCompleted;
           
           html += `
-            <div class="wave-phase ${isActive ? 'active' : isWaveCompleted ? 'completed' : ''}" data-wave="${w.wave}">
+            <div class="wave-phase ${isActive ? 'active' : isWaveCompleted ? 'completed' : 'future'}" data-wave="${w.wave}">
               <div class="wave-dot" style="background: ${isActive || isWaveCompleted ? `var(--wave-${w.wave}-color, #00d4aa)` : 'var(--border-color)'}"></div>
               <div class="wave-info">
                 <div class="wave-name">${w.emoji} Wave ${w.wave}: ${w.name}</div>
                 <div class="wave-provinces">${w.provinces}</div>
-                <div class="wave-dates">${waveStart ? formatDate(waveStart) : ''} - ${waveEnd ? formatDate(waveEnd) : ''}</div>
+                <div class="wave-schedule">
+                  <div class="wave-phase-row ${isNominating ? 'active-phase' : ''}">
+                    <span class="phase-icon">📝</span>
+                    <span class="phase-label">Nominations:</span>
+                    <span class="phase-dates">${nomStart ? formatDate(nomStart) : ''} - ${nomEnd ? formatDate(nomEnd) : ''}</span>
+                  </div>
+                  <div class="wave-phase-row ${isVoting ? 'active-phase' : ''}">
+                    <span class="phase-icon">🗳️</span>
+                    <span class="phase-label">Voting:</span>
+                    <span class="phase-dates">${voteStart ? formatDate(voteStart) : ''} - ${voteEnd ? formatDate(voteEnd) : ''}</span>
+                  </div>
+                </div>
               </div>
             </div>
           `;
