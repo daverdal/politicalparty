@@ -1,0 +1,486 @@
+def iran = new test5.Country(name:"Iran").save()
+def azer= new test5.Province(name:"East Azerbaijan").save()
+iran.addToProvinces(azer)		
+azer.addToFedRidings(new test5.FedRiding(name:"Ahar, Heris"))
+azer.addToFedRidings(new test5.FedRiding(name:"Bostanabad"))
+azer.addToFedRidings(new test5.FedRiding(name:"Bonab"))
+azer.addToFedRidings(new test5.FedRiding(name:"Tabriz, Azarshahr, Osku"))
+azer.addToFedRidings(new test5.FedRiding(name:"Sarab"))
+          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }
+def shab= new test5.Province(name:"Shabestar").save()
+iran.addToProvinces(shab)		
+shab.addToFedRidings(new test5.FedRiding(name:"Kaleybar, Hurand, Khoda Afarin"))
+shab.addToFedRidings(new test5.FedRiding(name:"Maragheh, Ajab Shir"))
+shab.addToFedRidings(new test5.FedRiding(name:"Marand, Jolfa"))
+shab.addToFedRidings(new test5.FedRiding(name:"Malekan"))
+shab.addToFedRidings(new test5.FedRiding(name:"Mianeh"))
+shab.addToFedRidings(new test5.FedRiding(name:"Hashtrud, Chrymaq"))
+shab.addToFedRidings(new test5.FedRiding(name:"Varzaqan"))
+          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }				
+def waz= new test5.Province(name:"	West Azerbaijan	").save()
+iran.addToProvinces(waz)		
+waz.addToFedRidings(new test5.FedRiding(name:"Urmia"))
+waz.addToFedRidings(new test5.FedRiding(name:"Bukan"))
+waz.addToFedRidings(new test5.FedRiding(name:"Piranshahr, Sardasht"))
+waz.addToFedRidings(new test5.FedRiding(name:"Khoy, Chaypareh"))
+waz.addToFedRidings(new test5.FedRiding(name:"Salmas"))
+waz.addToFedRidings(new test5.FedRiding(name:"Maku, Chaldoran, Poldasht, Showt"))
+waz.addToFedRidings(new test5.FedRiding(name:"Mahabad"))
+waz.addToFedRidings(new test5.FedRiding(name:"Miandoab, Shahin Dezh, Takab"))
+waz.addToFedRidings(new test5.FedRiding(name:"Naqadeh, Oshnavieh"))
+          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }		
+def ard= new test5.Province(name:"Ardabil").save()
+iran.addToProvinces(ard)		
+ard.addToFedRidings(new test5.FedRiding(name:"Ardabil, Namin, Nir, Sareyn"))
+ard.addToFedRidings(new test5.FedRiding(name:"Parsabad, Bileh Savar"))
+ard.addToFedRidings(new test5.FedRiding(name:"Khalkhal, Kowsar"))
+ard.addToFedRidings(new test5.FedRiding(name:"Germi"))
+ard.addToFedRidings(new test5.FedRiding(name:"Meshgin Shahr"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def esf= new test5.Province(name:"Esfahan").save()
+iran.addToProvinces(esf)		
+esf.addToFedRidings(new test5.FedRiding(name:"Ardestan"))
+esf.addToFedRidings(new test5.FedRiding(name:"Esfahan"))
+esf.addToFedRidings(new test5.FedRiding(name:"Shahin Shahr, Meymeh, Borkhar"))
+esf.addToFedRidings(new test5.FedRiding(name:"Khomeyni Shahr"))
+esf.addToFedRidings(new test5.FedRiding(name:"Semirom"))
+esf.addToFedRidings(new test5.FedRiding(name:"Shahreza, Dehaqan, Dare Shoor"))
+esf.addToFedRidings(new test5.FedRiding(name:"Faridan, Chadegan, Fereydounshahr, Buin and Miandasht"))
+esf.addToFedRidings(new test5.FedRiding(name:"Falavarjan"))
+esf.addToFedRidings(new test5.FedRiding(name:"Kashan, Aran and Bidgol"))
+esf.addToFedRidings(new test5.FedRiding(name:"Golpayegan, Khvansar"))
+esf.addToFedRidings(new test5.FedRiding(name:"Lenjan"))
+esf.addToFedRidings(new test5.FedRiding(name:"Mobarakeh"))
+esf.addToFedRidings(new test5.FedRiding(name:"Nain, Khur, Biabanak"))
+esf.addToFedRidings(new test5.FedRiding(name:"Najafabad, Tiran and Karvan"))
+esf.addToFedRidings(new test5.FedRiding(name:"Natanz, Qamsar"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def min= new test5.Province(name:"Minorities").save()
+iran.addToProvinces(min)		
+min.addToFedRidings(new test5.FedRiding(name:"Zoroastrians"))
+min.addToFedRidings(new test5.FedRiding(name:"Jews	"))
+min.addToFedRidings(new test5.FedRiding(name:"Assyrians and Chaldean Christians"))
+min.addToFedRidings(new test5.FedRiding(name:"Armenians- Southern part of Iran"))
+min.addToFedRidings(new test5.FedRiding(name:"Armenians- Northern part of Iran"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def alb= new test5.Province(name:"Alborz").save()
+iran.addToProvinces(alb)		
+alb.addToFedRidings(new test5.FedRiding(name:"Savojbolagh, Nazarabad, Taleqan"))
+alb.addToFedRidings(new test5.FedRiding(name:"Karaj, Eshtehard, Fardis"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def sav= new test5.Province(name:"Ilam").save()
+iran.addToProvinces(sav)		
+sav.addToFedRidings(new test5.FedRiding(name:"Ilam, Eyvan, Mehran, Malekshahi, Shirvan"))
+sav.addToFedRidings(new test5.FedRiding(name:"Dehloran, Darreh Shahr, Badreh"))
+          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }		
+def bus= new test5.Province(name:"Bushehr").save()
+iran.addToProvinces(bus)		
+bus.addToFedRidings(new test5.FedRiding(name:"Bushehr, Ganaveh, Deylam"))
+bus.addToFedRidings(new test5.FedRiding(name:"Dashtestan"))
+bus.addToFedRidings(new test5.FedRiding(name:"Dashti, Tangestan"))
+bus.addToFedRidings(new test5.FedRiding(name:"Kangan, Deyr, Jam, Asaluyeh"))
+          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }		
+def teh= new test5.Province(name:"Tehran").save()
+iran.addToProvinces(teh)
+teh.addToFedRidings(new test5.FedRiding(name:"Pakdasht"))
+teh.addToFedRidings(new test5.FedRiding(name:"Tehran, Rey, Shemiranat, Islamshahr, Pardis"))
+teh.addToFedRidings(new test5.FedRiding(name:"Damavand, Firuzkuh"))
+teh.addToFedRidings(new test5.FedRiding(name:"Robat Karim, Baharestan"))
+teh.addToFedRidings(new test5.FedRiding(name:"Shahriar, Qods, Malard"))
+teh.addToFedRidings(new test5.FedRiding(name:"Varamin, Pishva, Qarchak"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def cha= new test5.Province(name:"Chahar Mahal and Bakhtiari").save()
+iran.addToProvinces(cha)		
+cha.addToFedRidings(new test5.FedRiding(name:"Ardal, Farsan, Kuhrang, Kiar, Dastgerd"))
+cha.addToFedRidings(new test5.FedRiding(name:"Borujen"))
+cha.addToFedRidings(new test5.FedRiding(name:"Shahr-e-Kurd, Ben, Saman"))
+cha.addToFedRidings(new test5.FedRiding(name:"Lordegan"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def souk= new test5.Province(name:"South Khorasan").save()
+iran.addToProvinces(souk)	
+souk.addToFedRidings(new test5.FedRiding(name:"Birjand, Darmian, Khusf"))
+souk.addToFedRidings(new test5.FedRiding(name:"Qaenat, Zirkuh"))
+souk.addToFedRidings(new test5.FedRiding(name:"Nehbandan, Sarbisheh"))
+souk.addToFedRidings(new test5.FedRiding(name:"Ferdows, Sarayan, Tabas, Boshruyeh"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def raz= new test5.Province(name:"Razavi Khorasan").save()
+iran.addToProvinces(raz)		
+raz.addToFedRidings(new test5.FedRiding(name:"Torbat-e Jam, Taybad, Bakharz"))
+raz.addToFedRidings(new test5.FedRiding(name:"Torbat-e Heydarieh, Mahvelat, Zaveh"))
+raz.addToFedRidings(new test5.FedRiding(name:"Chenaran, Binaloud"))
+raz.addToFedRidings(new test5.FedRiding(name:"Khvaf, Rashtkhvar"))
+raz.addToFedRidings(new test5.FedRiding(name:"Dargaz"))
+raz.addToFedRidings(new test5.FedRiding(name:"Sabzevar, Joghatai, Jowayin, Khoshab, Davarzan"))
+raz.addToFedRidings(new test5.FedRiding(name:"Fariman, Sarakhs, Ahmad Abad, Razavi"))
+raz.addToFedRidings(new test5.FedRiding(name:"Quchan, Faruj"))
+raz.addToFedRidings(new test5.FedRiding(name:"Kashmar, Khalil Abad, Bardeskan"))
+raz.addToFedRidings(new test5.FedRiding(name:"Gonabad, Bejestan"))
+raz.addToFedRidings(new test5.FedRiding(name:"Mashhad, Kalat"))
+raz.addToFedRidings(new test5.FedRiding(name:"Neyshabur, Firuzeh"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def northk= new test5.Province(name:"North Khorasan").save()
+iran.addToProvinces(northk)		
+northk.addToFedRidings(new test5.FedRiding(name:"Esfarayen"))
+northk.addToFedRidings(new test5.FedRiding(name:"Bojnourd, Maneh and Samalqan, Jajarm, Garmeh, Raz and Jargalan"))
+northk.addToFedRidings(new test5.FedRiding(name:"Shirvan"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def khuz= new test5.Province(name:"Khuzestan").save()
+iran.addToProvinces(khuz)		
+khuz.addToFedRidings(new test5.FedRiding(name:"Abadan"))
+khuz.addToFedRidings(new test5.FedRiding(name:"Andimeshk"))
+khuz.addToFedRidings(new test5.FedRiding(name:"Ahvaz, Bavi, Hamidieh, Karun"))
+khuz.addToFedRidings(new test5.FedRiding(name:"Izeh, Bagh-e Malek"))
+khuz.addToFedRidings(new test5.FedRiding(name:"Mahshahr, Omidiyeh, Hendijan, Joulaki"))
+khuz.addToFedRidings(new test5.FedRiding(name:"Behbahan, Aghajari"))
+khuz.addToFedRidings(new test5.FedRiding(name:"Khorramshahr"))
+khuz.addToFedRidings(new test5.FedRiding(name:"Dezful"))
+khuz.addToFedRidings(new test5.FedRiding(name:"Dasht-e Azadegan"))
+khuz.addToFedRidings(new test5.FedRiding(name:"Ramhormoz, Ramshir"))
+khuz.addToFedRidings(new test5.FedRiding(name:"Shadegan"))
+khuz.addToFedRidings(new test5.FedRiding(name:"Shush"))
+khuz.addToFedRidings(new test5.FedRiding(name:"Shushtar, Gotvand"))
+khuz.addToFedRidings(new test5.FedRiding(name:"Masjed Soleyman, Lali, Haftkel, Andika"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def zanj= new test5.Province(name:"Zanjan").save()
+iran.addToProvinces(zanj)		
+zanj.addToFedRidings(new test5.FedRiding(name:"Abhar, Khorramdareh, Soltaniyeh"))
+zanj.addToFedRidings(new test5.FedRiding(name:"Khodabandeh"))
+zanj.addToFedRidings(new test5.FedRiding(name:"Zanjan, Tarom"))
+zanj.addToFedRidings(new test5.FedRiding(name:"Mahneshan, Ijrud, Bughda Kandi, Qoltuq"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def sem= new test5.Province(name:"Semnan").save()
+iran.addToProvinces(sem)		
+sem.addToFedRidings(new test5.FedRiding(name:"Damghan"))
+sem.addToFedRidings(new test5.FedRiding(name:"Semnan, Mehdishahr, Sorkhez, Shahmirzad"))
+sem.addToFedRidings(new test5.FedRiding(name:"Shahrud, Meyami, Bastam"))
+sem.addToFedRidings(new test5.FedRiding(name:"Garmsar, Aradan"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def sistan= new test5.Province(name:"Sistan and Baluchestan").save()
+iran.addToProvinces(sistan)		
+sistan.addToFedRidings(new test5.FedRiding(name:"Iranshahr, Sarbaz, Delgan, Fanuj, Bent, Lashar, Ashar, Ahoran"))
+sistan.addToFedRidings(new test5.FedRiding(name:"Chabahr, Nik Shahar, Konarak, Qasr-e Qand"))
+sistan.addToFedRidings(new test5.FedRiding(name:"Khash, Mirjaveh, Nosrat Abad, Kurin"))
+sistan.addToFedRidings(new test5.FedRiding(name:"Zabol, Zahak, Hirmand, Nimrouz, Hamun"))
+sistan.addToFedRidings(new test5.FedRiding(name:"Zahedan"))
+sistan.addToFedRidings(new test5.FedRiding(name:"Saravan, Sib and Suran, Mehrestan"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def fars= new test5.Province(name:"Fars").save()
+iran.addToProvinces(fars)		
+fars.addToFedRidings(new test5.FedRiding(name:"Abadeh, Bavanat, Khorrambid"))
+fars.addToFedRidings(new test5.FedRiding(name:"Neyriz, Estahban"))
+fars.addToFedRidings(new test5.FedRiding(name:"Eqlid"))
+fars.addToFedRidings(new test5.FedRiding(name:"Jahrom"))
+fars.addToFedRidings(new test5.FedRiding(name:"Darab, Zarrin Dasht"))
+fars.addToFedRidings(new test5.FedRiding(name:"Sepidan"))
+fars.addToFedRidings(new test5.FedRiding(name:"Sarvestan, Kherameh, Kavar"))
+fars.addToFedRidings(new test5.FedRiding(name:"Shiraz"))
+fars.addToFedRidings(new test5.FedRiding(name:"Fasa"))
+fars.addToFedRidings(new test5.FedRiding(name:"Firuzabad, Farashband, Qir and Karzin"))
+fars.addToFedRidings(new test5.FedRiding(name:"Kazerun"))
+fars.addToFedRidings(new test5.FedRiding(name:"Larestan, Khonj, Gerash"))
+fars.addToFedRidings(new test5.FedRiding(name:"Lamerd, Mohr"))
+fars.addToFedRidings(new test5.FedRiding(name:"Marvdasht, Pasargad, Arsanjan"))
+fars.addToFedRidings(new test5.FedRiding(name:"Mamasani, Rostam"))
+	    Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }    
+def qazv= new test5.Province(name:"Qazvin").save()
+iran.addToProvinces(qazv)		
+qazv.addToFedRidings(new test5.FedRiding(name:"Buin Zahra, Avaj"))
+qazv.addToFedRidings(new test5.FedRiding(name:"Takestan"))
+qazv.addToFedRidings(new test5.FedRiding(name:"Qazvin, Abyek, Alborz"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def sqom= new test5.Province(name:"Qom").save()
+iran.addToProvinces(sqom)		
+sqom.addToFedRidings(new test5.FedRiding(name:"Qom"))
+	     Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def kurd= new test5.Province(name:"Kurdistan").save()
+iran.addToProvinces(kurd)		
+kurd.addToFedRidings(new test5.FedRiding(name:"Bijar"))
+kurd.addToFedRidings(new test5.FedRiding(name:"Saqqez, Baneh"))
+kurd.addToFedRidings(new test5.FedRiding(name:"Sanandaj, Divandarreh, Kamyaran"))
+kurd.addToFedRidings(new test5.FedRiding(name:"Qorveh, Dehgolan"))
+kurd.addToFedRidings(new test5.FedRiding(name:"Marivan, Sarvabad"))
+	Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }
+def kerm= new test5.Province(name:"Kerman").save()
+iran.addToProvinces(kerm)		
+kerm.addToFedRidings(new test5.FedRiding(name:"Baft, Rabor, Arzuiyeh"))
+kerm.addToFedRidings(new test5.FedRiding(name:"Bam, Rigan, Fahraj, Narmashir"))
+kerm.addToFedRidings(new test5.FedRiding(name:"Jiroft, Anbarabad"))
+kerm.addToFedRidings(new test5.FedRiding(name:"Rafsanjan, Anar"))
+kerm.addToFedRidings(new test5.FedRiding(name:"Zarand, Kuhbanan"))
+kerm.addToFedRidings(new test5.FedRiding(name:"Sirjan, Bardsir"))
+kerm.addToFedRidings(new test5.FedRiding(name:"Shahr-e-Babak"))
+kerm.addToFedRidings(new test5.FedRiding(name:"Kerman, Ravar"))
+kerm.addToFedRidings(new test5.FedRiding(name:"Kahnuj, Manujan, South Rudbar, Qaleh Ganj, Faryab"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def kermans= new test5.Province(name:"Kermanshah").save()
+iran.addToProvinces(kermans)		
+kermans.addToFedRidings(new test5.FedRiding(name:"West Islam Abad, Dalahu"))
+kermans.addToFedRidings(new test5.FedRiding(name:"Paveh, Javanrud, Salas-e- Babajani, Ravansar, Sar Qaleh, Jeygaran	"))
+kermans.addToFedRidings(new test5.FedRiding(name:"Sonqor"))
+kermans.addToFedRidings(new test5.FedRiding(name:"Qasr-e Shirin, Sarpol-e Zahab, Gilan-e Gharb"))
+kermans.addToFedRidings(new test5.FedRiding(name:"Kermanshah"))
+kermans.addToFedRidings(new test5.FedRiding(name:"Kangavar, Sahneh, Harsin"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def kohg= new test5.Province(name:"Kohgiluyeh and Buyer Ahmad").save()
+iran.addToProvinces(kohg)		
+kohg.addToFedRidings(new test5.FedRiding(name:"Buyer Ahamad, Dena"))
+kohg.addToFedRidings(new test5.FedRiding(name:"Kohgiluyeh, Bahmai"))
+kohg.addToFedRidings(new test5.FedRiding(name:"Gachsaran, Basht"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def gole= new test5.Province(name:"Golestan").save()
+iran.addToProvinces(gole)		
+gole.addToFedRidings(new test5.FedRiding(name:"Ramian, Azadshahr"))
+gole.addToFedRidings(new test5.FedRiding(name:"Aliabad"))
+gole.addToFedRidings(new test5.FedRiding(name:"Kordkuy, Torkaman, Bandar-e Gaz, Gomishan"))
+gole.addToFedRidings(new test5.FedRiding(name:"Gorgan, Aqqala"))
+gole.addToFedRidings(new test5.FedRiding(name:"Gonbad-e Kavus"))
+gole.addToFedRidings(new test5.FedRiding(name:"Minudasht, Kalaleh, Maraveh Tappeh, Galikash"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def gilan= new test5.Province(name:"Gilan").save()
+iran.addToProvinces(gilan)		
+gilan.addToFedRidings(new test5.FedRiding(name:"Astara"))
+gilan.addToFedRidings(new test5.FedRiding(name:"Astaneh-ye Ashrafiyeh"))
+gilan.addToFedRidings(new test5.FedRiding(name:"Bandar-e Anzali"))
+gilan.addToFedRidings(new test5.FedRiding(name:"Rasht"))
+gilan.addToFedRidings(new test5.FedRiding(name:"Rudbar"))
+gilan.addToFedRidings(new test5.FedRiding(name:"Rudsar, Omlesh"))
+gilan.addToFedRidings(new test5.FedRiding(name:"Sowme’eh Sara"))
+gilan.addToFedRidings(new test5.FedRiding(name:"Talesh, Rezvanshahr, Masal"))
+gilan.addToFedRidings(new test5.FedRiding(name:"Fuman, Shaft"))
+gilan.addToFedRidings(new test5.FedRiding(name:"Lahijan, Siahkal"))
+gilan.addToFedRidings(new test5.FedRiding(name:"Langarud"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def lore= new test5.Province(name:"Lorestan").save()
+iran.addToProvinces(lore)		
+lore.addToFedRidings(new test5.FedRiding(name:"Aligudarz"))
+lore.addToFedRidings(new test5.FedRiding(name:"Borujerd"))
+lore.addToFedRidings(new test5.FedRiding(name:"Pol-e Dokhtar"))
+lore.addToFedRidings(new test5.FedRiding(name:"Khorramabad, Dowreh"))
+lore.addToFedRidings(new test5.FedRiding(name:"Delfan, Selseleh"))
+lore.addToFedRidings(new test5.FedRiding(name:"Dorud, Azna"))
+lore.addToFedRidings(new test5.FedRiding(name:"Kuhdasht, Rumeshkhan"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def mazan= new test5.Province(name:"Mazandaran").save()
+iran.addToProvinces(mazan)		
+mazan.addToFedRidings(new test5.FedRiding(name:"Amol"))
+mazan.addToFedRidings(new test5.FedRiding(name:"Babol"))
+mazan.addToFedRidings(new test5.FedRiding(name:"Babolsar, Fereydunkenar"))
+mazan.addToFedRidings(new test5.FedRiding(name:"Behshahr, Neka, Galugah"))
+mazan.addToFedRidings(new test5.FedRiding(name:"Tonekabon, Ramsar, Abbasabad"))
+mazan.addToFedRidings(new test5.FedRiding(name:"Sari, Miandorud"))
+mazan.addToFedRidings(new test5.FedRiding(name:"Qaem Shahr, Savadkuh, Juybar, Simorgh,North Savadkuh	"))
+mazan.addToFedRidings(new test5.FedRiding(name:"Nur, Mahmudabad"))
+mazan.addToFedRidings(new test5.FedRiding(name:"Nowshahr, Chalus, Kelardasht"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def mark= new test5.Province(name:"Markazi").save()
+iran.addToProvinces(mark)		
+mark.addToFedRidings(new test5.FedRiding(name:"Arak, Komijan, Khondab"))
+mark.addToFedRidings(new test5.FedRiding(name:"Tafresh, Ashtian, Farahan"))
+mark.addToFedRidings(new test5.FedRiding(name:"Khomeyn"))
+mark.addToFedRidings(new test5.FedRiding(name:"Saveh, Zarandieh"))
+mark.addToFedRidings(new test5.FedRiding(name:"Shazand"))
+mark.addToFedRidings(new test5.FedRiding(name:"Mahallat, Delijan"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def horm= new test5.Province(name:"Hormozgan").save()
+iran.addToProvinces(horm)		
+horm.addToFedRidings(new test5.FedRiding(name:"Bandar Abbas,Qeshm, Abumusa, Hajiabad, Khamir"))
+horm.addToFedRidings(new test5.FedRiding(name:"Bandar Lengeh, Bastak, Parsian"))
+horm.addToFedRidings(new test5.FedRiding(name:"Minab, Rudan, Jask, Sirik, Bashagard"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def hama= new test5.Province(name:"Hamadan").save()
+iran.addToProvinces(hama)		
+hama.addToFedRidings(new test5.FedRiding(name:"Asadabad"))
+hama.addToFedRidings(new test5.FedRiding(name:"Bahar, Kabudarahang"))
+hama.addToFedRidings(new test5.FedRiding(name:"Tuyserkan"))
+hama.addToFedRidings(new test5.FedRiding(name:"Razan"))
+hama.addToFedRidings(new test5.FedRiding(name:"Malayer"))
+hama.addToFedRidings(new test5.FedRiding(name:"Nahavand"))
+hama.addToFedRidings(new test5.FedRiding(name:"Hamadan, Famenin"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+def yazd= new test5.Province(name:"Yazd").save()
+iran.addToProvinces(yazd)		
+yazd.addToFedRidings(new test5.FedRiding(name:"Ardakan"))
+yazd.addToFedRidings(new test5.FedRiding(name:"Taft, Meybod"))
+yazd.addToFedRidings(new test5.FedRiding(name:"Mehriz, Bafq, Abarkuh, Khatam, Bahabad"))
+yazd.addToFedRidings(new test5.FedRiding(name:"Yazd, Ashkezar, Nadushan, Sourck"))
+          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }

@@ -1,0 +1,858 @@
+package test5
+
+class BootStrap {
+
+
+
+    def init = { servletContext ->
+
+
+ def usa = new test5.Country(name:'America').save()
+
+            def alabama  = new test5.Province(name:'Alabama').save()
+            usa.addToProvinces(alabama)
+            alabama.addToFedRidings(new test5.FedRiding(name:"Alabama 1st Congressional House District"))
+            alabama.addToFedRidings(new test5.FedRiding(name:"Alabama 2nd Congressional House District"))
+            alabama.addToFedRidings(new test5.FedRiding(name:"Alabama 3rd Congressional House District"))
+            alabama.addToFedRidings(new test5.FedRiding(name:"Alabama 4th Congressional House District"))
+            alabama.addToFedRidings(new test5.FedRiding(name:"Alabama 5th Congressional House District"))
+            alabama.addToFedRidings(new test5.FedRiding(name:"Alabama 6th Congressional House District"))
+            alabama.addToFedRidings(new test5.FedRiding(name:"Alabama 7th Congressional House District"))
+
+            alabama.addToFirstNations(new test5.FirstNation(name:"Cher-O-Creek Intra Tribal Indians"))
+			alabama.addToFirstNations(new test5.FirstNation(name:"Cherokee Tribe of Northeast Alabama"))
+			alabama.addToFirstNations(new test5.FirstNation(name:"Cherokees of Southeast Alabama"))
+			alabama.addToFirstNations(new test5.FirstNation(name:"Echota Cherokee Tribe of Alabama"))
+			alabama.addToFirstNations(new test5.FirstNation(name:"Ma-Chis Lower Creek Indian Tribe of Alabama"))
+			alabama.addToFirstNations(new test5.FirstNation(name:"Mowa Band of Choctaw Indians"))
+			alabama.addToFirstNations(new test5.FirstNation(name:"Piqua Shawnee Tribe"))
+			alabama.addToFirstNations(new test5.FirstNation(name:"Star Clan of Muscogee Creeks"))
+			alabama.addToFirstNations(new test5.FirstNation(name:"United Cherokee Ani-Yun-Wiya Nation"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def alaska  = new test5.Province(name:'Alaska').save()
+            usa.addToProvinces(alaska)
+            alaska.addToFedRidings(new test5.FedRiding(name:"Alaska 1st Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def arizona  = new test5.Province(name:'Arizona').save()
+            usa.addToProvinces(arizona)
+            arizona.addToFedRidings(new test5.FedRiding(name:"Arizona 1st Congressional House District"))
+            arizona.addToFedRidings(new test5.FedRiding(name:"Arizona 2nd Congressional House District"))
+            arizona.addToFedRidings(new test5.FedRiding(name:"Arizona 3rd Congressional House District"))
+            arizona.addToFedRidings(new test5.FedRiding(name:"Arizona 4th Congressional House District"))
+            arizona.addToFedRidings(new test5.FedRiding(name:"Arizona 5th Congressional House District"))
+            arizona.addToFedRidings(new test5.FedRiding(name:"Arizona 6th Congressional House District"))
+            arizona.addToFedRidings(new test5.FedRiding(name:"Arizona 7th Congressional House District"))
+            arizona.addToFedRidings(new test5.FedRiding(name:"Arizona 8th Congressional House District"))
+            arizona.addToFedRidings(new test5.FedRiding(name:"Arizona 9th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def arkansa  = new test5.Province(name:'Arkansa').save()
+            usa.addToProvinces(arkansa)
+            arkansa.addToFedRidings(new test5.FedRiding(name:"Arkansa 1st Congressional House District"))
+            arkansa.addToFedRidings(new test5.FedRiding(name:"Arkansa 2nd Congressional House District"))
+            arkansa.addToFedRidings(new test5.FedRiding(name:"Arkansa 3rd Congressional House District"))
+            arkansa.addToFedRidings(new test5.FedRiding(name:"Arkansa 4th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def california  = new test5.Province(name:'California').save()
+            usa.addToProvinces(california)
+            california.addToFedRidings(new test5.FedRiding(name:"California 1st Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 2nd Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 3rd Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 4th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 5th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 6th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 7th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 8th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 9th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 10th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 11th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 12th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 13th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 14th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 15th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 16th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 17th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 18th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 19th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 20th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 21st Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 22nd Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 23rd Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 24th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 25th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 26th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 27th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 28th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 29th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 30th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 31st Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 32nd Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 33rd Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 34th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 35th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 36th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 37th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 38th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 39th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 40th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 41st Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 42nd Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 43rd Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 44th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 45th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 46th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 47th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 48th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 49th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 50th Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 51st Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 52nd Congressional House District"))
+            california.addToFedRidings(new test5.FedRiding(name:"California 53rd Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def colorodo  = new test5.Province(name:'Colorodo').save()
+            usa.addToProvinces(colorodo)
+            colorodo.addToFedRidings(new test5.FedRiding(name:"Colorodo 1st Congressional House District"))
+            colorodo.addToFedRidings(new test5.FedRiding(name:"Colorodo 2nd Congressional House District"))
+            colorodo.addToFedRidings(new test5.FedRiding(name:"Colorodo 3rd Congressional House District"))
+            colorodo.addToFedRidings(new test5.FedRiding(name:"Colorodo 4th Congressional House District"))
+            colorodo.addToFedRidings(new test5.FedRiding(name:"Colorodo 5th Congressional House District"))
+            colorodo.addToFedRidings(new test5.FedRiding(name:"Colorodo 6th Congressional House District"))
+            colorodo.addToFedRidings(new test5.FedRiding(name:"Colorodo 7th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def connecticut  = new test5.Province(name:'Connecticut').save()
+            usa.addToProvinces(connecticut)
+            connecticut.addToFedRidings(new test5.FedRiding(name:"Connecticut 1st Congressional House District"))
+            connecticut.addToFedRidings(new test5.FedRiding(name:"Connecticut 2nd Congressional House District"))
+            connecticut.addToFedRidings(new test5.FedRiding(name:"Connecticut 3rd Congressional House District"))
+            connecticut.addToFedRidings(new test5.FedRiding(name:"Connecticut 4th Congressional House District"))
+            connecticut.addToFedRidings(new test5.FedRiding(name:"Connecticut 5th Congressional House District"))
+            connecticut.addToFedRidings(new test5.FedRiding(name:"Connecticut 6th Congressional House District"))
+          Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def delaware  = new test5.Province(name:'Delaware').save()
+            usa.addToProvinces(delaware)
+            delaware.addToFedRidings(new test5.FedRiding(name:"Delaware 1st Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def florida  = new test5.Province(name:'Florida').save()
+            usa.addToProvinces(florida)
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 1st Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 2nd Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 3rd Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 4th Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 5th Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 6th Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 7th Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 8th Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 9th Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 10th Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 11th Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 12th Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 13th Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 14th Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 15th Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 16th Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 17th Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 18th Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 19th Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 20th Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 21st Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 22nd Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 23rd Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 24th Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 25th Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 26th Congressional House District"))
+            florida.addToFedRidings(new test5.FedRiding(name:"Florida 27th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def georgia  = new test5.Province(name:'Georgia').save()
+            usa.addToProvinces(georgia)
+            georgia.addToFedRidings(new test5.FedRiding(name:"Georgia 1st Congressional House District"))
+            georgia.addToFedRidings(new test5.FedRiding(name:"Georgia 2nd Congressional House District"))
+            georgia.addToFedRidings(new test5.FedRiding(name:"Georgia 3rd Congressional House District"))
+            georgia.addToFedRidings(new test5.FedRiding(name:"Georgia 4th Congressional House District"))
+            georgia.addToFedRidings(new test5.FedRiding(name:"Georgia 5th Congressional House District"))
+            georgia.addToFedRidings(new test5.FedRiding(name:"Georgia 6th Congressional House District"))
+            georgia.addToFedRidings(new test5.FedRiding(name:"Georgia 7th Congressional House District"))
+            georgia.addToFedRidings(new test5.FedRiding(name:"Georgia 8th Congressional House District"))
+            georgia.addToFedRidings(new test5.FedRiding(name:"Georgia 9th Congressional House District"))
+            georgia.addToFedRidings(new test5.FedRiding(name:"Georgia 10th Congressional House District"))
+            georgia.addToFedRidings(new test5.FedRiding(name:"Georgia 11th Congressional House District"))
+            georgia.addToFedRidings(new test5.FedRiding(name:"Georgia 12th Congressional House District"))
+            georgia.addToFedRidings(new test5.FedRiding(name:"Georgia 13th Congressional House District"))
+            georgia.addToFedRidings(new test5.FedRiding(name:"Georgia 14th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def hawaii  = new test5.Province(name:'Hawaii').save()
+            usa.addToProvinces(hawaii)
+            hawaii.addToFedRidings(new test5.FedRiding(name:"Hawaii 1st Congressional House District"))
+            hawaii.addToFedRidings(new test5.FedRiding(name:"Hawaii 2nd Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def idaho  = new test5.Province(name:'Idaho').save()
+            usa.addToProvinces(idaho)
+            idaho.addToFedRidings(new test5.FedRiding(name:"Idaho 1st Congressional House District"))
+            idaho.addToFedRidings(new test5.FedRiding(name:"Idaho 2nd Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def illinois  = new test5.Province(name:'Illinois').save()
+            usa.addToProvinces(illinois)
+            illinois.addToFedRidings(new test5.FedRiding(name:"Illinois 1st Congressional House District"))
+            illinois.addToFedRidings(new test5.FedRiding(name:"Illinois 2nd Congressional House District"))
+            illinois.addToFedRidings(new test5.FedRiding(name:"Illinois 3rd Congressional House District"))
+            illinois.addToFedRidings(new test5.FedRiding(name:"Illinois 4th Congressional House District"))
+            illinois.addToFedRidings(new test5.FedRiding(name:"Illinois 5th Congressional House District"))
+            illinois.addToFedRidings(new test5.FedRiding(name:"Illinois 6th Congressional House District"))
+            illinois.addToFedRidings(new test5.FedRiding(name:"Illinois 7th Congressional House District"))
+            illinois.addToFedRidings(new test5.FedRiding(name:"Illinois 8th Congressional House District"))
+            illinois.addToFedRidings(new test5.FedRiding(name:"Illinois 9th Congressional House District"))
+            illinois.addToFedRidings(new test5.FedRiding(name:"Illinois 10th Congressional House District"))
+            illinois.addToFedRidings(new test5.FedRiding(name:"Illinois 11th Congressional House District"))
+            illinois.addToFedRidings(new test5.FedRiding(name:"Illinois 12th Congressional House District"))
+            illinois.addToFedRidings(new test5.FedRiding(name:"Illinois 13th Congressional House District"))
+            illinois.addToFedRidings(new test5.FedRiding(name:"Illinois 14th Congressional House District"))
+            illinois.addToFedRidings(new test5.FedRiding(name:"Illinois 15th Congressional House District"))
+            illinois.addToFedRidings(new test5.FedRiding(name:"Illinois 16th Congressional House District"))
+            illinois.addToFedRidings(new test5.FedRiding(name:"Illinois 17th Congressional House District"))
+            illinois.addToFedRidings(new test5.FedRiding(name:"Illinois 18th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def indiana  = new test5.Province(name:'Indiana').save()
+            usa.addToProvinces(indiana)
+            indiana.addToFedRidings(new test5.FedRiding(name:"Indiana 1st Congressional House District"))
+            indiana.addToFedRidings(new test5.FedRiding(name:"Indiana 2nd Congressional House District"))
+            indiana.addToFedRidings(new test5.FedRiding(name:"Indiana 3rd Congressional House District"))
+            indiana.addToFedRidings(new test5.FedRiding(name:"Indiana 4th Congressional House District"))
+            indiana.addToFedRidings(new test5.FedRiding(name:"Indiana 5th Congressional House District"))
+            indiana.addToFedRidings(new test5.FedRiding(name:"Indiana 6th Congressional House District"))
+            indiana.addToFedRidings(new test5.FedRiding(name:"Indiana 7th Congressional House District"))
+            indiana.addToFedRidings(new test5.FedRiding(name:"Indiana 8th Congressional House District"))
+            indiana.addToFedRidings(new test5.FedRiding(name:"Indiana 9th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def iowa  = new test5.Province(name:'Iowa').save()
+            usa.addToProvinces(iowa)
+            iowa.addToFedRidings(new test5.FedRiding(name:"Iowa 1st Congressional House District"))
+            iowa.addToFedRidings(new test5.FedRiding(name:"Iowa 2nd Congressional House District"))
+            iowa.addToFedRidings(new test5.FedRiding(name:"Iowa 3rd Congressional House District"))
+            iowa.addToFedRidings(new test5.FedRiding(name:"Iowa 4th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def kansas  = new test5.Province(name:'Kansas').save()
+            usa.addToProvinces(kansas)
+            kansas.addToFedRidings(new test5.FedRiding(name:"Kansas 1st Congressional House District"))
+            kansas.addToFedRidings(new test5.FedRiding(name:"Kansas 2nd Congressional House District"))
+            kansas.addToFedRidings(new test5.FedRiding(name:"Kansas 3rd Congressional House District"))
+            kansas.addToFedRidings(new test5.FedRiding(name:"Kansas 4th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def kentucky  = new test5.Province(name:'Kentucky').save()
+            usa.addToProvinces(kentucky)
+            kentucky.addToFedRidings(new test5.FedRiding(name:"Kentucky 1st Congressional House District"))
+            kentucky.addToFedRidings(new test5.FedRiding(name:"Kentucky 2nd Congressional House District"))
+            kentucky.addToFedRidings(new test5.FedRiding(name:"Kentucky 3rd Congressional House District"))
+            kentucky.addToFedRidings(new test5.FedRiding(name:"Kentucky 4th Congressional House District"))
+            kentucky.addToFedRidings(new test5.FedRiding(name:"Kentucky 5th Congressional House District"))
+            kentucky.addToFedRidings(new test5.FedRiding(name:"Kentucky 6th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def louisiana  = new test5.Province(name:'Louisiana').save()
+            usa.addToProvinces(louisiana)
+            louisiana.addToFedRidings(new test5.FedRiding(name:"Louisiana 1st Congressional House District"))
+            louisiana.addToFedRidings(new test5.FedRiding(name:"Louisiana 2nd Congressional House District"))
+            louisiana.addToFedRidings(new test5.FedRiding(name:"Louisiana 3rd Congressional House District"))
+            louisiana.addToFedRidings(new test5.FedRiding(name:"Louisiana 4th Congressional House District"))
+            louisiana.addToFedRidings(new test5.FedRiding(name:"Louisiana 5th Congressional House District"))
+            louisiana.addToFedRidings(new test5.FedRiding(name:"Louisiana 6th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def maine  = new test5.Province(name:'Maine').save()
+            usa.addToProvinces(maine)
+            maine.addToFedRidings(new test5.FedRiding(name:"Maine 1st Congressional House District"))
+            maine.addToFedRidings(new test5.FedRiding(name:"Maine 2nd Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def maryland  = new test5.Province(name:'Maryland').save()
+            usa.addToProvinces(maryland)
+            maryland.addToFedRidings(new test5.FedRiding(name:"Maryland 1st Congressional House District"))
+            maryland.addToFedRidings(new test5.FedRiding(name:"Maryland 2nd Congressional House District"))
+            maryland.addToFedRidings(new test5.FedRiding(name:"Maryland 3rd Congressional House District"))
+            maryland.addToFedRidings(new test5.FedRiding(name:"Maryland 4th Congressional House District"))
+            maryland.addToFedRidings(new test5.FedRiding(name:"Maryland 5th Congressional House District"))
+            maryland.addToFedRidings(new test5.FedRiding(name:"Maryland 6th Congressional House District"))
+            maryland.addToFedRidings(new test5.FedRiding(name:"Maryland 7th Congressional House District"))
+            maryland.addToFedRidings(new test5.FedRiding(name:"Maryland 8th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def massachusetts  = new test5.Province(name:'Massachusetts').save()
+            usa.addToProvinces(massachusetts)
+            massachusetts.addToFedRidings(new test5.FedRiding(name:"Massachusetts 1st Congressional House District"))
+            massachusetts.addToFedRidings(new test5.FedRiding(name:"Massachusetts 2nd Congressional House District"))
+            massachusetts.addToFedRidings(new test5.FedRiding(name:"Massachusetts 3rd Congressional House District"))
+            massachusetts.addToFedRidings(new test5.FedRiding(name:"Massachusetts 4th Congressional House District"))
+            massachusetts.addToFedRidings(new test5.FedRiding(name:"Massachusetts 5th Congressional House District"))
+            massachusetts.addToFedRidings(new test5.FedRiding(name:"Massachusetts 6th Congressional House District"))
+            massachusetts.addToFedRidings(new test5.FedRiding(name:"Massachusetts 7th Congressional House District"))
+            massachusetts.addToFedRidings(new test5.FedRiding(name:"Massachusetts 8th Congressional House District"))
+            massachusetts.addToFedRidings(new test5.FedRiding(name:"Massachusetts 9th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def michigan  = new test5.Province(name:'Michigan').save()
+            usa.addToProvinces(michigan)
+            michigan.addToFedRidings(new test5.FedRiding(name:"Michigan 1st Congressional House District"))
+            michigan.addToFedRidings(new test5.FedRiding(name:"Michigan 2nd Congressional House District"))
+            michigan.addToFedRidings(new test5.FedRiding(name:"Michigan 3rd Congressional House District"))
+            michigan.addToFedRidings(new test5.FedRiding(name:"Michigan 4th Congressional House District"))
+            michigan.addToFedRidings(new test5.FedRiding(name:"Michigan 5th Congressional House District"))
+            michigan.addToFedRidings(new test5.FedRiding(name:"Michigan 6th Congressional House District"))
+            michigan.addToFedRidings(new test5.FedRiding(name:"Michigan 7th Congressional House District"))
+            michigan.addToFedRidings(new test5.FedRiding(name:"Michigan 8th Congressional House District"))
+            michigan.addToFedRidings(new test5.FedRiding(name:"Michigan 9th Congressional House District"))
+            michigan.addToFedRidings(new test5.FedRiding(name:"Michigan 10th Congressional House District"))
+            michigan.addToFedRidings(new test5.FedRiding(name:"Michigan 11th Congressional House District"))
+            michigan.addToFedRidings(new test5.FedRiding(name:"Michigan 12th Congressional House District"))
+            michigan.addToFedRidings(new test5.FedRiding(name:"Michigan 13th Congressional House District"))
+            michigan.addToFedRidings(new test5.FedRiding(name:"Michigan 14th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def minnesota  = new test5.Province(name:'Minnesota').save()
+            usa.addToProvinces(minnesota)
+            minnesota.addToFedRidings(new test5.FedRiding(name:"Minnesota 1st Congressional House District"))
+            minnesota.addToFedRidings(new test5.FedRiding(name:"Minnesota 2nd Congressional House District"))
+            minnesota.addToFedRidings(new test5.FedRiding(name:"Minnesota 3rd Congressional House District"))
+            minnesota.addToFedRidings(new test5.FedRiding(name:"Minnesota 4th Congressional House District"))
+            minnesota.addToFedRidings(new test5.FedRiding(name:"Minnesota 5th Congressional House District"))
+            minnesota.addToFedRidings(new test5.FedRiding(name:"Minnesota 6th Congressional House District"))
+            minnesota.addToFedRidings(new test5.FedRiding(name:"Minnesota 7th Congressional House District"))
+            minnesota.addToFedRidings(new test5.FedRiding(name:"Minnesota 8th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def missouri  = new test5.Province(name:'Missouri').save()
+            usa.addToProvinces(missouri)
+            missouri.addToFedRidings(new test5.FedRiding(name:"Missouri 1st Congressional House District"))
+            missouri.addToFedRidings(new test5.FedRiding(name:"Missouri 2nd Congressional House District"))
+            missouri.addToFedRidings(new test5.FedRiding(name:"Missouri 3rd Congressional House District"))
+            missouri.addToFedRidings(new test5.FedRiding(name:"Missouri 4th Congressional House District"))
+            missouri.addToFedRidings(new test5.FedRiding(name:"Missouri 5th Congressional House District"))
+            missouri.addToFedRidings(new test5.FedRiding(name:"Missouri 6th Congressional House District"))
+            missouri.addToFedRidings(new test5.FedRiding(name:"Missouri 7th Congressional House District"))
+            missouri.addToFedRidings(new test5.FedRiding(name:"Missouri 8th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def mississippi  = new test5.Province(name:'Mississippi').save()
+            usa.addToProvinces(mississippi)
+            mississippi.addToFedRidings(new test5.FedRiding(name:"Mississippi 1st Congressional House District"))
+            mississippi.addToFedRidings(new test5.FedRiding(name:"Mississippi 2nd Congressional House District"))
+            mississippi.addToFedRidings(new test5.FedRiding(name:"Mississippi 3rd Congressional House District"))
+            mississippi.addToFedRidings(new test5.FedRiding(name:"Mississippi 4th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def montana  = new test5.Province(name:'Montana').save()
+            usa.addToProvinces(montana)
+            montana.addToFedRidings(new test5.FedRiding(name:"Montana 1st Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def nevada  = new test5.Province(name:'Nevada').save()
+            usa.addToProvinces(nevada)
+            nevada.addToFedRidings(new test5.FedRiding(name:"Nevada 1st Congressional House District"))
+            nevada.addToFedRidings(new test5.FedRiding(name:"Nevada 2nd Congressional House District"))
+            nevada.addToFedRidings(new test5.FedRiding(name:"Nevada 3rd Congressional House District"))
+            nevada.addToFedRidings(new test5.FedRiding(name:"Nevada 4th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def newHampshire  = new test5.Province(name:'New Hampshire').save()
+            usa.addToProvinces(newHampshire)
+            newHampshire.addToFedRidings(new test5.FedRiding(name:"New Hampshire 1st Congressional House District"))
+            newHampshire.addToFedRidings(new test5.FedRiding(name:"New Hampshire 2nd Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def newJersey  = new test5.Province(name:'New Jersey').save()
+            usa.addToProvinces(newJersey)
+            newJersey.addToFedRidings(new test5.FedRiding(name:"New Jersey 1st Congressional House District"))
+            newJersey.addToFedRidings(new test5.FedRiding(name:"New Jersey 2nd Congressional House District"))
+            newJersey.addToFedRidings(new test5.FedRiding(name:"New Jersey 3rd Congressional House District"))
+            newJersey.addToFedRidings(new test5.FedRiding(name:"New Jersey 4th Congressional House District"))
+            newJersey.addToFedRidings(new test5.FedRiding(name:"New Jersey 5th Congressional House District"))
+            newJersey.addToFedRidings(new test5.FedRiding(name:"New Jersey 6th Congressional House District"))
+            newJersey.addToFedRidings(new test5.FedRiding(name:"New Jersey 7th Congressional House District"))
+            newJersey.addToFedRidings(new test5.FedRiding(name:"New Jersey 8th Congressional House District"))
+            newJersey.addToFedRidings(new test5.FedRiding(name:"New Jersey 9th Congressional House District"))
+            newJersey.addToFedRidings(new test5.FedRiding(name:"New Jersey 10th Congressional House District"))
+            newJersey.addToFedRidings(new test5.FedRiding(name:"New Jersey 11th Congressional House District"))
+            newJersey.addToFedRidings(new test5.FedRiding(name:"New Jersey 12th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def newMexico  = new test5.Province(name:'New Mexico').save()
+            usa.addToProvinces(newMexico)
+            newMexico.addToFedRidings(new test5.FedRiding(name:"New Mexico 1st Congressional House District"))
+            newMexico.addToFedRidings(new test5.FedRiding(name:"New Mexico 2nd Congressional House District"))
+            newMexico.addToFedRidings(new test5.FedRiding(name:"New Mexico 3rd Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def newYork  = new test5.Province(name:'New York').save()
+            usa.addToProvinces(newYork)
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 1st Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 2nd Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 3rd Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 4th Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 5th Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 6th Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 7th Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 8th Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 9th Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 10th Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 11th Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 12th Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 13th Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 14th Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 15th Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 16th Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 17th Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 18th Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 19th Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 20th Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 21st Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 22nd Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 23rd Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 24th Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 25th Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 26th Congressional House District"))
+            newYork.addToFedRidings(new test5.FedRiding(name:"New York 27th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def northCarolina  = new test5.Province(name:'North Carolina').save()
+            usa.addToProvinces(northCarolina)
+            northCarolina.addToFedRidings(new test5.FedRiding(name:"North Carolina 1st Congressional House District"))
+            northCarolina.addToFedRidings(new test5.FedRiding(name:"North Carolina 2nd Congressional House District"))
+            northCarolina.addToFedRidings(new test5.FedRiding(name:"North Carolina 3rd Congressional House District"))
+            northCarolina.addToFedRidings(new test5.FedRiding(name:"North Carolina 4th Congressional House District"))
+            northCarolina.addToFedRidings(new test5.FedRiding(name:"North Carolina 5th Congressional House District"))
+            northCarolina.addToFedRidings(new test5.FedRiding(name:"North Carolina 6th Congressional House District"))
+            northCarolina.addToFedRidings(new test5.FedRiding(name:"North Carolina 7th Congressional House District"))
+            northCarolina.addToFedRidings(new test5.FedRiding(name:"North Carolina 8th Congressional House District"))
+            northCarolina.addToFedRidings(new test5.FedRiding(name:"North Carolina 9th Congressional House District"))
+            northCarolina.addToFedRidings(new test5.FedRiding(name:"North Carolina 10th Congressional House District"))
+            northCarolina.addToFedRidings(new test5.FedRiding(name:"North Carolina 11th Congressional House District"))
+            northCarolina.addToFedRidings(new test5.FedRiding(name:"North Carolina 12th Congressional House District"))
+            northCarolina.addToFedRidings(new test5.FedRiding(name:"North Carolina 13th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def northDakota  = new test5.Province(name:'North Dakota').save()
+            usa.addToProvinces(northDakota)
+            northDakota.addToFedRidings(new test5.FedRiding(name:"North Dakota 1st Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def ohio  = new test5.Province(name:'Ohio').save()
+            usa.addToProvinces(ohio)
+            ohio.addToFedRidings(new test5.FedRiding(name:"Ohio 1st Congressional House District"))
+            ohio.addToFedRidings(new test5.FedRiding(name:"Ohio 2nd Congressional House District"))
+            ohio.addToFedRidings(new test5.FedRiding(name:"Ohio 3rd Congressional House District"))
+            ohio.addToFedRidings(new test5.FedRiding(name:"Ohio 4th Congressional House District"))
+            ohio.addToFedRidings(new test5.FedRiding(name:"Ohio 5th Congressional House District"))
+            ohio.addToFedRidings(new test5.FedRiding(name:"Ohio 6th Congressional House District"))
+            ohio.addToFedRidings(new test5.FedRiding(name:"Ohio 7th Congressional House District"))
+            ohio.addToFedRidings(new test5.FedRiding(name:"Ohio 8th Congressional House District"))
+            ohio.addToFedRidings(new test5.FedRiding(name:"Ohio 9th Congressional House District"))
+            ohio.addToFedRidings(new test5.FedRiding(name:"Ohio 10th Congressional House District"))
+            ohio.addToFedRidings(new test5.FedRiding(name:"Ohio 11th Congressional House District"))
+            ohio.addToFedRidings(new test5.FedRiding(name:"Ohio 12th Congressional House District"))
+            ohio.addToFedRidings(new test5.FedRiding(name:"Ohio 13th Congressional House District"))
+            ohio.addToFedRidings(new test5.FedRiding(name:"Ohio 14th Congressional House District"))
+            ohio.addToFedRidings(new test5.FedRiding(name:"Ohio 15th Congressional House District"))
+            ohio.addToFedRidings(new test5.FedRiding(name:"Ohio 16th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def oklahoma  = new test5.Province(name:'Oklahoma').save()
+            usa.addToProvinces(oklahoma)
+            oklahoma.addToFedRidings(new test5.FedRiding(name:"Oklahoma 1st Congressional House District"))
+            oklahoma.addToFedRidings(new test5.FedRiding(name:"Oklahoma 2nd Congressional House District"))
+            oklahoma.addToFedRidings(new test5.FedRiding(name:"Oklahoma 3rd Congressional House District"))
+            oklahoma.addToFedRidings(new test5.FedRiding(name:"Oklahoma 4th Congressional House District"))
+            oklahoma.addToFedRidings(new test5.FedRiding(name:"Oklahoma 5th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def oregon  = new test5.Province(name:'Oregon').save()
+            usa.addToProvinces(oregon)
+            oregon.addToFedRidings(new test5.FedRiding(name:"Oregon 1st Congressional House District"))
+            oregon.addToFedRidings(new test5.FedRiding(name:"Oregon 2nd Congressional House District"))
+            oregon.addToFedRidings(new test5.FedRiding(name:"Oregon 3rd Congressional House District"))
+            oregon.addToFedRidings(new test5.FedRiding(name:"Oregon 4th Congressional House District"))
+            oregon.addToFedRidings(new test5.FedRiding(name:"Oregon 5th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def pennsylvania  = new test5.Province(name:'Pennsylvania').save()
+            usa.addToProvinces(pennsylvania)
+            pennsylvania.addToFedRidings(new test5.FedRiding(name:"Pennsylvania 1st Congressional House District"))
+            pennsylvania.addToFedRidings(new test5.FedRiding(name:"Pennsylvania 2nd Congressional House District"))
+            pennsylvania.addToFedRidings(new test5.FedRiding(name:"Pennsylvania 3rd Congressional House District"))
+            pennsylvania.addToFedRidings(new test5.FedRiding(name:"Pennsylvania 4th Congressional House District"))
+            pennsylvania.addToFedRidings(new test5.FedRiding(name:"Pennsylvania 5th Congressional House District"))
+            pennsylvania.addToFedRidings(new test5.FedRiding(name:"Pennsylvania 6th Congressional House District"))
+            pennsylvania.addToFedRidings(new test5.FedRiding(name:"Pennsylvania 7th Congressional House District"))
+            pennsylvania.addToFedRidings(new test5.FedRiding(name:"Pennsylvania 8th Congressional House District"))
+            pennsylvania.addToFedRidings(new test5.FedRiding(name:"Pennsylvania 9th Congressional House District"))
+            pennsylvania.addToFedRidings(new test5.FedRiding(name:"Pennsylvania 10th Congressional House District"))
+            pennsylvania.addToFedRidings(new test5.FedRiding(name:"Pennsylvania 11th Congressional House District"))
+            pennsylvania.addToFedRidings(new test5.FedRiding(name:"Pennsylvania 12th Congressional House District"))
+            pennsylvania.addToFedRidings(new test5.FedRiding(name:"Pennsylvania 13th Congressional House District"))
+            pennsylvania.addToFedRidings(new test5.FedRiding(name:"Pennsylvania 14th Congressional House District"))
+            pennsylvania.addToFedRidings(new test5.FedRiding(name:"Pennsylvania 15th Congressional House District"))
+            pennsylvania.addToFedRidings(new test5.FedRiding(name:"Pennsylvania 16th Congressional House District"))
+            pennsylvania.addToFedRidings(new test5.FedRiding(name:"Pennsylvania 17th Congressional House District"))
+            pennsylvania.addToFedRidings(new test5.FedRiding(name:"Pennsylvania 18th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def rhodeIsland  = new test5.Province(name:'Rhode Island').save()
+            usa.addToProvinces(rhodeIsland)
+            rhodeIsland.addToFedRidings(new test5.FedRiding(name:"Rhode Island 1st Congressional House District"))
+            rhodeIsland.addToFedRidings(new test5.FedRiding(name:"Rhode Island 2nd Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def southCarolina  = new test5.Province(name:'South Carolina').save()
+            usa.addToProvinces(southCarolina)
+            southCarolina.addToFedRidings(new test5.FedRiding(name:"South Carolina 1st Congressional House District"))
+            southCarolina.addToFedRidings(new test5.FedRiding(name:"South Carolina 2nd Congressional House District"))
+            southCarolina.addToFedRidings(new test5.FedRiding(name:"South Carolina 3rd Congressional House District"))
+            southCarolina.addToFedRidings(new test5.FedRiding(name:"South Carolina 4th Congressional House District"))
+            southCarolina.addToFedRidings(new test5.FedRiding(name:"South Carolina 5th Congressional House District"))
+            southCarolina.addToFedRidings(new test5.FedRiding(name:"South Carolina 6th Congressional House District"))
+            southCarolina.addToFedRidings(new test5.FedRiding(name:"South Carolina 7th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def southDakota  = new test5.Province(name:'South Dakota').save()
+            usa.addToProvinces(southDakota)
+            southDakota.addToFedRidings(new test5.FedRiding(name:"South Dakota 1st Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def tennessee  = new test5.Province(name:'Tennessee').save()
+            usa.addToProvinces(tennessee)
+            tennessee.addToFedRidings(new test5.FedRiding(name:"Tennessee 1st Congressional House District"))
+            tennessee.addToFedRidings(new test5.FedRiding(name:"Tennessee 2nd Congressional House District"))
+            tennessee.addToFedRidings(new test5.FedRiding(name:"Tennessee 3rd Congressional House District"))
+            tennessee.addToFedRidings(new test5.FedRiding(name:"Tennessee 4th Congressional House District"))
+            tennessee.addToFedRidings(new test5.FedRiding(name:"Tennessee 5th Congressional House District"))
+            tennessee.addToFedRidings(new test5.FedRiding(name:"Tennessee 6th Congressional House District"))
+            tennessee.addToFedRidings(new test5.FedRiding(name:"Tennessee 7th Congressional House District"))
+            tennessee.addToFedRidings(new test5.FedRiding(name:"Tennessee 8th Congressional House District"))
+            tennessee.addToFedRidings(new test5.FedRiding(name:"Tennessee 9th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def texas  = new test5.Province(name:'Texas').save()
+            usa.addToProvinces(texas)
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 1st Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 2nd Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 3rd Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 4th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 5th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 6th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 7th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 8th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 9th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 10th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 11th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 12th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 13th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 14th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 15th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 16th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 17th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 18th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 19th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 20th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 21st Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 22nd Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 23rd Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 24th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 25th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 26th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 27th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 28th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 29th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 30th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 31st Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 32nd Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 33rd Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 34th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 35th Congressional House District"))
+            texas.addToFedRidings(new test5.FedRiding(name:"Texas 36th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def utah  = new test5.Province(name:'Utah').save()
+            usa.addToProvinces(utah)
+            utah.addToFedRidings(new test5.FedRiding(name:"Utah 1st Congressional House District"))
+            utah.addToFedRidings(new test5.FedRiding(name:"Utah 2nd Congressional House District"))
+            utah.addToFedRidings(new test5.FedRiding(name:"Utah 3rd Congressional House District"))
+            utah.addToFedRidings(new test5.FedRiding(name:"Utah 4th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def vermont  = new test5.Province(name:'Vermont').save()
+            usa.addToProvinces(vermont)
+            vermont.addToFedRidings(new test5.FedRiding(name:"Vermont 1st Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def virginia  = new test5.Province(name:'Virginia').save()
+            usa.addToProvinces(virginia)
+            virginia.addToFedRidings(new test5.FedRiding(name:"Virginia 1st Congressional House District"))
+            virginia.addToFedRidings(new test5.FedRiding(name:"Virginia 2nd Congressional House District"))
+            virginia.addToFedRidings(new test5.FedRiding(name:"Virginia 3rd Congressional House District"))
+            virginia.addToFedRidings(new test5.FedRiding(name:"Virginia 4th Congressional House District"))
+            virginia.addToFedRidings(new test5.FedRiding(name:"Virginia 5th Congressional House District"))
+            virginia.addToFedRidings(new test5.FedRiding(name:"Virginia 6th Congressional House District"))
+            virginia.addToFedRidings(new test5.FedRiding(name:"Virginia 7th Congressional House District"))
+            virginia.addToFedRidings(new test5.FedRiding(name:"Virginia 8th Congressional House District"))
+            virginia.addToFedRidings(new test5.FedRiding(name:"Virginia 9th Congressional House District"))
+            virginia.addToFedRidings(new test5.FedRiding(name:"Virginia 10th Congressional House District"))
+            virginia.addToFedRidings(new test5.FedRiding(name:"Virginia 11th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def washington  = new test5.Province(name:'Washington').save()
+            usa.addToProvinces(washington)
+            washington.addToFedRidings(new test5.FedRiding(name:"Washington 1st Congressional House District"))
+            washington.addToFedRidings(new test5.FedRiding(name:"Washington 2nd Congressional House District"))
+            washington.addToFedRidings(new test5.FedRiding(name:"Washington 3rd Congressional House District"))
+            washington.addToFedRidings(new test5.FedRiding(name:"Washington 4th Congressional House District"))
+            washington.addToFedRidings(new test5.FedRiding(name:"Washington 5th Congressional House District"))
+            washington.addToFedRidings(new test5.FedRiding(name:"Washington 6th Congressional House District"))
+            washington.addToFedRidings(new test5.FedRiding(name:"Washington 7th Congressional House District"))
+            washington.addToFedRidings(new test5.FedRiding(name:"Washington 8th Congressional House District"))
+            washington.addToFedRidings(new test5.FedRiding(name:"Washington 9th Congressional House District"))
+            washington.addToFedRidings(new test5.FedRiding(name:"Washington 10th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def westVirginia  = new test5.Province(name:'West Virginia').save()
+            usa.addToProvinces(westVirginia)
+            westVirginia.addToFedRidings(new test5.FedRiding(name:"West Virginia 1st Congressional House District"))
+            westVirginia.addToFedRidings(new test5.FedRiding(name:"West Virginia 2nd Congressional House District"))
+            westVirginia.addToFedRidings(new test5.FedRiding(name:"West Virginia 3rd Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def wisconsin  = new test5.Province(name:'Wisconsin').save()
+            usa.addToProvinces(wisconsin)
+            wisconsin.addToFedRidings(new test5.FedRiding(name:"Wisconsin 1st Congressional House District"))
+            wisconsin.addToFedRidings(new test5.FedRiding(name:"Wisconsin 2nd Congressional House District"))
+            wisconsin.addToFedRidings(new test5.FedRiding(name:"Wisconsin 3rd Congressional House District"))
+            wisconsin.addToFedRidings(new test5.FedRiding(name:"Wisconsin 4th Congressional House District"))
+            wisconsin.addToFedRidings(new test5.FedRiding(name:"Wisconsin 5th Congressional House District"))
+            wisconsin.addToFedRidings(new test5.FedRiding(name:"Wisconsin 6th Congressional House District"))
+            wisconsin.addToFedRidings(new test5.FedRiding(name:"Wisconsin 7th Congressional House District"))
+            wisconsin.addToFedRidings(new test5.FedRiding(name:"Wisconsin 8th Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+            def wyoming  = new test5.Province(name:'Wyoming').save()
+            usa.addToProvinces(wyoming)
+            wyoming.addToFedRidings(new test5.FedRiding(name:"Wyoming 1st Congressional House District"))
+        Province.withTransaction { status ->
+            Province.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+       Country.withTransaction { status ->
+            Country.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+    println("this is America done.") 
+}
+
+    def destroy = {
+    }
+}

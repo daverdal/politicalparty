@@ -1,0 +1,292 @@
+package test5
+
+class BootStrap {
+    def init = { servletContext ->
+
+		def adminRole = new test5.Role(authority: 'ROLE_ADMIN').save()
+		def admin = new test5.User(username: 'admin', password: 'Xwall.123').save()
+		test5.UserRole.create admin, adminRole
+		Profile profile = new Profile()
+        profile.user = admin
+        profile.save()
+        Candidate candidate = new Candidate()
+        candidate.user = admin
+        candidate.save()
+     
+		def userRole = new Role(authority: 'ROLE_USER').save()
+		def regularUser = new User(username: 'Anon', password: 'Anon').save()
+		test5.UserRole.create regularUser, userRole
+	    Profile profile2 = new Profile()
+        profile2.user = regularUser
+        profile2.save()
+        Candidate candidate2 = new Candidate()
+        candidate2.user= regularUser
+        candidate2.save()
+        
+		UserRole.withTransaction { status ->
+		    UserRole.withSession {
+		        it.flush()
+		        it.clear()
+		    }
+		}
+     
+       assert Role.count() == 2
+       assert UserRole.count() == 2
+
+
+def france = new test5.Country(name:"France").save()
+def auvergne= new test5.Province(name:"Auvergne-Rhône-Alpes").save()
+france.addToProvinces(auvergne)		
+auvergne.addToFedRidings(new test5.FedRiding(name:"Ain"))
+auvergne.addToFedRidings(new test5.FedRiding(name:"Allier"))
+auvergne.addToFedRidings(new test5.FedRiding(name:"Ardèche"))
+auvergne.addToFedRidings(new test5.FedRiding(name:"Cantal"))
+auvergne.addToFedRidings(new test5.FedRiding(name:"Drôme"))
+auvergne.addToFedRidings(new test5.FedRiding(name:"Isère"))
+auvergne.addToFedRidings(new test5.FedRiding(name:"Loire"))
+auvergne.addToFedRidings(new test5.FedRiding(name:"Haute-Loire"))
+auvergne.addToFedRidings(new test5.FedRiding(name:"Puy-de-Dôme"))
+auvergne.addToFedRidings(new test5.FedRiding(name:"Rhône"))
+auvergne.addToFedRidings(new test5.FedRiding(name:"Lyon Metropolis"))
+auvergne.addToFedRidings(new test5.FedRiding(name:"Savoie"))
+auvergne.addToFedRidings(new test5.FedRiding(name:"Haute-Savoie"))
+          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }
+def bour= new test5.Province(name:"ourgogne-Franche-Comté").save()
+france.addToProvinces(bour)		
+bour.addToFedRidings(new test5.FedRiding(name:"Côte-d'Or"))
+bour.addToFedRidings(new test5.FedRiding(name:"Doubs	"))
+bour.addToFedRidings(new test5.FedRiding(name:"	Jura	"))
+bour.addToFedRidings(new test5.FedRiding(name:"Nièvre	"))
+bour.addToFedRidings(new test5.FedRiding(name:"Haute-Saône	"))
+bour.addToFedRidings(new test5.FedRiding(name:"Saône-et-Loire	"))
+bour.addToFedRidings(new test5.FedRiding(name:"Yonne	"))
+bour.addToFedRidings(new test5.FedRiding(name:"Territoire de Belfort	"))
+          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }
+def brit= new test5.Province(name:"Brittany").save()
+france.addToProvinces(brit)		
+brit.addToFedRidings(new test5.FedRiding(name:"Côtes-d'Armor"))
+brit.addToFedRidings(new test5.FedRiding(name:"Finistère"))
+brit.addToFedRidings(new test5.FedRiding(name:"Ille-et-Vilaine"))
+brit.addToFedRidings(new test5.FedRiding(name:"Morbihan"))
+          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }
+def cent= new test5.Province(name:"Centre-Val de Loire").save()
+france.addToProvinces(cent)		
+cent.addToFedRidings(new test5.FedRiding(name:"Cher"))
+cent.addToFedRidings(new test5.FedRiding(name:"Eure-et-Loir"))
+cent.addToFedRidings(new test5.FedRiding(name:"Indre"))
+cent.addToFedRidings(new test5.FedRiding(name:"Indre-et-Loire"))
+cent.addToFedRidings(new test5.FedRiding(name:"Loir-et-Cher"))
+cent.addToFedRidings(new test5.FedRiding(name:"Loiret"))
+          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }
+
+def cor= new test5.Province(name:"Corsica").save()
+france.addToProvinces(cor)		
+cor.addToFedRidings(new test5.FedRiding(name:"Corse-du-Sud"))
+cor.addToFedRidings(new test5.FedRiding(name:"Haute-Corse"))
+          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }
+def freg= new test5.Province(name:"French Guiana").save()
+france.addToProvinces(freg)		
+freg.addToFedRidings(new test5.FedRiding(name:"Guyane"))
+          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }
+def grand= new test5.Province(name:"Grand Est"	).save()
+france.addToProvinces(grand)		
+grand.addToFedRidings(new test5.FedRiding(name:"Ardennes"))
+grand.addToFedRidings(new test5.FedRiding(name:"Aube"))
+grand.addToFedRidings(new test5.FedRiding(name:"Marne"))
+grand.addToFedRidings(new test5.FedRiding(name:"Haute-Marne"))
+grand.addToFedRidings(new test5.FedRiding(name:"Meurthe-et-Moselle"))
+grand.addToFedRidings(new test5.FedRiding(name:"Meuse"))
+grand.addToFedRidings(new test5.FedRiding(name:"Moselle"))
+grand.addToFedRidings(new test5.FedRiding(name:"Bas-Rhin"))
+grand.addToFedRidings(new test5.FedRiding(name:"Haut-Rhin"))
+grand.addToFedRidings(new test5.FedRiding(name:"Vosges"))
+          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }
+def gaud= new test5.Province(name:"Guadeloupe").save()
+france.addToProvinces(gaud)		
+gaud.addToFedRidings(new test5.FedRiding(name:"Guadeloupe"))
+gaud.addToFedRidings(new test5.FedRiding(name:"Hauts-de-France"))
+gaud.addToFedRidings(new test5.FedRiding(name:"Aisne"))
+gaud.addToFedRidings(new test5.FedRiding(name:"Nord"))
+gaud.addToFedRidings(new test5.FedRiding(name:"Oise"))
+gaud.addToFedRidings(new test5.FedRiding(name:"as-de-Calais"))
+gaud.addToFedRidings(new test5.FedRiding(name:"Somme"))
+          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }
+def ill= new test5.Province(name:"Île-de-France").save()
+france.addToProvinces(ill)		
+ill.addToFedRidings(new test5.FedRiding(name:"Paris"))
+ill.addToFedRidings(new test5.FedRiding(name:"Seine-et-Marne"))
+ill.addToFedRidings(new test5.FedRiding(name:"Yvelines"))
+ill.addToFedRidings(new test5.FedRiding(name:"Essonne"))
+ill.addToFedRidings(new test5.FedRiding(name:"Hauts-de-Seine"))
+ill.addToFedRidings(new test5.FedRiding(name:"Seine-Saint-Denis"))
+ill.addToFedRidings(new test5.FedRiding(name:"Val-de-Marne"))
+ill.addToFedRidings(new test5.FedRiding(name:"Val-d'Oise"))
+          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }
+def mart= new test5.Province(name:"Martinique").save()
+france.addToProvinces(mart)		
+mart.addToFedRidings(new test5.FedRiding(name:"Martinique"))
+          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }
+def mayo= new test5.Province(name:"Mayotte").save()
+france.addToProvinces(mayo)		
+mayo.addToFedRidings(new test5.FedRiding(name:"Mayotte"))
+          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }
+def norman= new test5.Province(name:"Normandy").save()
+france.addToProvinces(norman)		
+norman.addToFedRidings(new test5.FedRiding(name:"Calvados"))
+norman.addToFedRidings(new test5.FedRiding(name:"Eure"))
+norman.addToFedRidings(new test5.FedRiding(name:"Manche"))
+norman.addToFedRidings(new test5.FedRiding(name:"Orne"))
+norman.addToFedRidings(new test5.FedRiding(name:"Seine-Maritime"))
+          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }
+def nou= new test5.Province(name:"Nouvelle-Aquitaine").save()
+france.addToProvinces(nou)		
+nou.addToFedRidings(new test5.FedRiding(name:"Charente"))
+nou.addToFedRidings(new test5.FedRiding(name:"Charente-Maritime"))
+nou.addToFedRidings(new test5.FedRiding(name:"Corrèze"))
+nou.addToFedRidings(new test5.FedRiding(name:"Creuse"))
+nou.addToFedRidings(new test5.FedRiding(name:"Dordogne"))
+nou.addToFedRidings(new test5.FedRiding(name:"Gironde"))
+nou.addToFedRidings(new test5.FedRiding(name:"Landes"))
+nou.addToFedRidings(new test5.FedRiding(name:"Lot-et-Garonne"))
+nou.addToFedRidings(new test5.FedRiding(name:"Pyrénées-Atlantiques"))
+nou.addToFedRidings(new test5.FedRiding(name:"Deux-Sèvres"))
+nou.addToFedRidings(new test5.FedRiding(name:"Vienne"))
+nou.addToFedRidings(new test5.FedRiding(name:"Haute-Vienne"))
+          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }
+def occ= new test5.Province(name:"Occitanie").save()
+france.addToProvinces(occ)	
+occ.addToFedRidings(new test5.FedRiding(name:"Ariège"))
+occ.addToFedRidings(new test5.FedRiding(name:"Aude"))
+occ.addToFedRidings(new test5.FedRiding(name:"Aveyron"))
+occ.addToFedRidings(new test5.FedRiding(name:"Gard"))
+occ.addToFedRidings(new test5.FedRiding(name:"Haute-Garonne"))
+occ.addToFedRidings(new test5.FedRiding(name:"Gers"))
+occ.addToFedRidings(new test5.FedRiding(name:"Hérault"))
+occ.addToFedRidings(new test5.FedRiding(name:"Lot"))
+occ.addToFedRidings(new test5.FedRiding(name:"Lozère"))
+occ.addToFedRidings(new test5.FedRiding(name:"Hautes-Pyrénées"))
+occ.addToFedRidings(new test5.FedRiding(name:"Pyrénées-Orientales"))
+occ.addToFedRidings(new test5.FedRiding(name:"Tarn"))
+occ.addToFedRidings(new test5.FedRiding(name:"Tarn-et-Garonne"))
+          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }
+def pays= new test5.Province(name:"Pays de la Loire").save()
+france.addToProvinces(pays)		
+pays.addToFedRidings(new test5.FedRiding(name:"Loire-Atlantique"))
+pays.addToFedRidings(new test5.FedRiding(name:"Maine-et-Loire"))
+pays.addToFedRidings(new test5.FedRiding(name:"Mayenne"))
+pays.addToFedRidings(new test5.FedRiding(name:"Sarthe"))
+pays.addToFedRidings(new test5.FedRiding(name:"Vendée"))
+          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }
+def prov= new test5.Province(name:"Provence-Alpes-Côte d'Azur").save()
+france.addToProvinces(prov)		
+prov.addToFedRidings(new test5.FedRiding(name:"Alpes-de-Haute-Provence"))
+prov.addToFedRidings(new test5.FedRiding(name:"Hautes-Alpes"))
+prov.addToFedRidings(new test5.FedRiding(name:"Alpes-Maritimes"))
+prov.addToFedRidings(new test5.FedRiding(name:"Bouches-du-Rhône"))
+prov.addToFedRidings(new test5.FedRiding(name:"Var"))
+prov.addToFedRidings(new test5.FedRiding(name:"Vaucluse	"))
+          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }
+def reu= new test5.Province(name:"Réunion").save()
+france.addToProvinces(reu)		
+reu.addToFedRidings(new test5.FedRiding(name:"La Réunion"))
+	          Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }	
+
+      Country.withTransaction { status ->
+            Country.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+    println("this is France done.") 
+
+		
+}
+
+    def destroy = {
+    }
+}

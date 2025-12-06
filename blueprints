@@ -1,0 +1,203 @@
+Perfect — Neo4j Desktop is the ideal choice for this kind of relationship-heavy platform.
+
+Since you're going to use Neo4j, I'll generate everything in Cypher-friendly graph schema format and give you:
+
+✔️ A clean conceptual graph schema
+
+✔️ Node definitions
+
+✔️ Relationship definitions
+
+✔️ Constraints + indexes
+
+✔️ Starter Cypher file you can paste into Neo4j Desktop immediately
+
+This will give you a working empty database with the correct structure.
+
+🚀 1. Conceptual Graph Schema Overview
+(:User)
+    -[:NOMINATED]-> (:User)
+    -[:ENDORSED]-> (:User)
+    -[:POSTED]-> (:Idea)
+    -[:SUPPORTED]-> (:Idea)
+    -[:PARTICIPATED_IN]-> (:AssemblyEvent)
+(:Idea)
+    -[:AMENDS]-> (:Idea)
+    -[:RELATED_TO]-> (:Idea)
+(:AssemblyEvent)
+    -[:HAS_VOTE]-> (:VoteSession)
+(:VoteSession)
+    -[:HAS_RESULT]-> (:VoteResult)
+(:CommunityPriority)
+    -[:DERIVED_FROM]-> (:Idea)
+    -[:APPLIES_TO]-> (:Region)
+
+💠 2. Node Types (Labels) & Properties
+User
+User {
+  id: ID!
+  name: string
+  region: string
+  bio: string
+  skills: list<string>
+  experience: list<string>
+  interests: list<string>
+  createdAt: datetime
+  updatedAt: datetime
+}
+
+Idea
+Idea {
+  id: ID!
+  title: string
+  description: string
+  tags: list<string>
+  region: string
+  createdAt: datetime
+  updatedAt: datetime
+}
+
+Nomination
+
+In Neo4j this will be a relationship with properties, not a node.
+
+NOMINATED {
+  message: string
+  createdAt: datetime
+}
+
+Endorsement
+ENDORSED {
+  message: string
+  createdAt: datetime
+}
+
+AssemblyEvent
+AssemblyEvent {
+  id: ID!
+  title: string
+  description: string
+  type: string
+  startTime: datetime
+  endTime: datetime
+  region: string
+  createdAt: datetime
+}
+
+VoteSession
+VoteSession {
+  id: ID!
+  question: string
+  type: string
+  createdAt: datetime
+}
+
+VoteResult
+VoteResult {
+  id: ID!
+  resultData: map
+  createdAt: datetime
+}
+
+CommunityPriority
+CommunityPriority {
+  id: ID!
+  name: string
+  description: string
+  region: string
+  createdAt: datetime
+}
+
+🔗 3. Relationship Definitions
+User → User
+(:User)-[:NOMINATED {message, createdAt}]->(:User)
+(:User)-[:ENDORSED {message, createdAt}]->(:User)
+
+User → Idea
+(:User)-[:POSTED]->(:Idea)
+(:User)-[:SUPPORTED {createdAt}]->(:Idea)
+
+Idea → Idea
+(:Idea)-[:AMENDS]->(:Idea)
+(:Idea)-[:RELATED_TO]->(:Idea)
+
+User → AssemblyEvent
+(:User)-[:PARTICIPATED_IN {createdAt}]->(:AssemblyEvent)
+
+AssemblyEvent → VoteSession
+(:AssemblyEvent)-[:HAS_VOTE]->(:VoteSession)
+
+VoteSession → VoteResult
+(:VoteSession)-[:HAS_RESULT]->(:VoteResult)
+
+Priority relationships
+(:CommunityPriority)-[:DERIVED_FROM]->(:Idea)
+(:CommunityPriority)-[:APPLIES_TO]->(:Region)
+
+🛠️ 4. Constraints & Indexes (Cypher)
+
+These are important — they prevent duplicate nodes and speed up queries.
+
+You can paste all of these into Neo4j Desktop.
+
+CREATE CONSTRAINT user_id IF NOT EXISTS
+FOR (u:User) REQUIRE u.id IS UNIQUE;
+
+CREATE CONSTRAINT idea_id IF NOT EXISTS
+FOR (i:Idea) REQUIRE i.id IS UNIQUE;
+
+CREATE CONSTRAINT assembly_id IF NOT EXISTS
+FOR (a:AssemblyEvent) REQUIRE a.id IS UNIQUE;
+
+CREATE CONSTRAINT voteSession_id IF NOT EXISTS
+FOR (v:VoteSession) REQUIRE v.id IS UNIQUE;
+
+CREATE CONSTRAINT voteResult_id IF NOT EXISTS
+FOR (r:VoteResult) REQUIRE r.id IS UNIQUE;
+
+CREATE CONSTRAINT priority_id IF NOT EXISTS
+FOR (p:CommunityPriority) REQUIRE p.id IS UNIQUE;
+
+📦 5. Full "Starter Schema" File (Pasteable into Neo4j Desktop)
+
+Here is a ready-to-import schema file:
+
+/* NODE CONSTRAINTS */
+CREATE CONSTRAINT user_id IF NOT EXISTS FOR (u:User) REQUIRE u.id IS UNIQUE;
+CREATE CONSTRAINT idea_id IF NOT EXISTS FOR (i:Idea) REQUIRE i.id IS UNIQUE;
+CREATE CONSTRAINT assembly_id IF NOT EXISTS FOR (a:AssemblyEvent) REQUIRE a.id IS UNIQUE;
+CREATE CONSTRAINT voteSession_id IF NOT EXISTS FOR (v:VoteSession) REQUIRE v.id IS UNIQUE;
+CREATE CONSTRAINT voteResult_id IF NOT EXISTS FOR (r:VoteResult) REQUIRE r.id IS UNIQUE;
+CREATE CONSTRAINT priority_id IF NOT EXISTS FOR (p:CommunityPriority) REQUIRE p.id IS UNIQUE;
+
+/* SAMPLE STRUCTURE CREATION (optional)
+CREATE (u:User {id: 'u1', name: 'Alice', region: 'North', createdAt: datetime()});
+CREATE (i:Idea {id: 'i1', title: 'Plant more trees', tags: ['environment'], createdAt: datetime()});
+MATCH (u:User {id: 'u1'}), (i:Idea {id:'i1'})
+CREATE (u)-[:POSTED {createdAt: datetime()}]->(i);
+*/
+
+
+You can paste the whole thing into Neo4j Desktop → Query tab → Run.
+
+🎉 Next Step (Your Choice)
+
+Which do you want next?
+
+A) Queries for creating nominations + listing nominators/nominated users
+
+(e.g., MATCH (u)-[:NOMINATED]->(x))
+
+B) Seed data generator
+
+(so you can demo a working network)
+
+C) API blueprint (REST or GraphQL)
+
+(so Cursor can code it)
+
+D) UI wireframes
+
+(so you can show what the screens will look like)
+
+Just tell me the next piece and I'll build it.

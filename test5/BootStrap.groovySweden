@@ -1,0 +1,34 @@
+package test5
+
+class BootStrap {
+
+    def init = { servletContext ->
+	def sweden = new test5.Country(name:"Sweden").save()
+
+            def blekinge  = new test5.Province(name:'Blekinge').save()
+            sweden.addToProvinces(blekinge)
+            blekinge.addToFedRidings(new test5.FedRiding(name:"Karlshamn"))
+            blekinge.addToFedRidings(new test5.FedRiding(name:"Karlskrona"))
+            blekinge.addToFedRidings(new test5.FedRiding(name:"Olofstrom"))
+            blekinge.addToFedRidings(new test5.FedRiding(name:"Ronneby"))
+            blekinge.addToFedRidings(new test5.FedRiding(name:"Solvesborg"))
+               Province.withTransaction { status ->
+                 Province.withSession {
+                     it.flush()
+                     it.clear()
+                 }
+             }
+ 
+
+        Country.withTransaction { status ->
+            Country.withSession {
+                it.flush()
+                it.clear()
+            }
+        }
+    println("this is Bangladesh done.") 
+  }
+
+    def destroy = {
+    }
+}

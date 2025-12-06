@@ -1,0 +1,30 @@
+def adminRole = new test5.Role(authority: 'ROLE_ADMIN').save()
+		def admin = new test5.User(username: 'admin', password: 'Xwall.123').save()
+		test5.UserRole.create admin, adminRole
+		Profile profile = new Profile()
+        profile.user = admin
+        profile.save()
+        Candidate candidate = new Candidate()
+        candidate.user = admin
+        candidate.save()
+     
+
+		def userRole = new Role(authority: 'ROLE_USER').save()
+		def regularUser = new User(username: 'Anon', password: 'Anon').save()
+		test5.UserRole.create regularUser, userRole
+	    Profile profile2 = new Profile()
+        profile2.user = regularUser
+        profile2.save()
+        Candidate candidate2 = new Candidate()
+        candidate2.user= regularUser
+        candidate2.save()
+        
+		UserRole.withTransaction { status ->
+		    UserRole.withSession {
+		        it.flush()
+		        it.clear()
+		    }
+		}
+     
+       assert Role.count() == 2
+       assert UserRole.count() == 2

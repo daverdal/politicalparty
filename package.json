@@ -1,0 +1,17 @@
+{
+  "name": "speakeasy",
+  "version": "1.0.0",
+  "description": "Political party community engagement platform with Neo4j",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "seed": "node test_neo4j.js",
+    "test": "node test_neo4j.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^4.18.2",
+    "neo4j-driver": "^5.14.0"
+  }
+}
