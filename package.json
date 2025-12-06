@@ -1,5 +1,5 @@
 {
-  "name": "speakeasy",
+  "name": "political-party",
   "version": "1.0.0",
   "description": "Political party community engagement platform with Neo4j",
   "main": "src/server.js",

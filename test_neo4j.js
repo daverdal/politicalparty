@@ -1037,7 +1037,7 @@ async function showSummary(driver) {
 
 async function main() {
     console.log('═'.repeat(50));
-    console.log('  SPEAKEASY - Neo4j Database Setup');
+    console.log('  POLITICAL PARTY - Neo4j Database Setup');
     console.log(`  Database: ${DATABASE}`);
     console.log('═'.repeat(50));
     

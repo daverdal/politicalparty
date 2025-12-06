@@ -1,5 +1,5 @@
 /**
- * Speakeasy API Server
+ * Political Party API Server
  * Main entry point - kept minimal by design
  */
 
@@ -38,7 +38,7 @@ async function start() {
     }
 
     app.listen(config.port, () => {
-        console.log(`\n🎤 Speakeasy API running on http://localhost:${config.port}`);
+        console.log(`\n🎤 Political Party API running on http://localhost:${config.port}`);
         console.log(`   Environment: ${config.env}`);
         console.log(`   Database: ${db.DATABASE}\n`);
     });
