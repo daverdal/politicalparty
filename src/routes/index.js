@@ -12,6 +12,7 @@ const eventsRouter = require('./events');
 const votesRouter = require('./votes');
 const prioritiesRouter = require('./priorities');
 const locationsRouter = require('./locations');
+const conventionsRouter = require('./conventions');
 
 // Register all routes
 router.use('/users', usersRouter);
@@ -20,6 +21,7 @@ router.use('/events', eventsRouter);
 router.use('/votes', votesRouter);
 router.use('/priorities', prioritiesRouter);
 router.use('/locations', locationsRouter);
+router.use('/conventions', conventionsRouter);
 
 // Health check endpoint
 router.get('/health', (req, res) => {

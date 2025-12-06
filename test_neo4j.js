@@ -32,7 +32,12 @@ const CONSTRAINTS = [
     'CREATE CONSTRAINT provincialRiding_id IF NOT EXISTS FOR (pr:ProvincialRiding) REQUIRE pr.id IS UNIQUE',
     'CREATE CONSTRAINT town_id IF NOT EXISTS FOR (t:Town) REQUIRE t.id IS UNIQUE',
     'CREATE CONSTRAINT firstNation_id IF NOT EXISTS FOR (fn:FirstNation) REQUIRE fn.id IS UNIQUE',
-    'CREATE CONSTRAINT adhocGroup_id IF NOT EXISTS FOR (ag:AdhocGroup) REQUIRE ag.id IS UNIQUE'
+    'CREATE CONSTRAINT adhocGroup_id IF NOT EXISTS FOR (ag:AdhocGroup) REQUIRE ag.id IS UNIQUE',
+    // Convention constraints
+    'CREATE CONSTRAINT convention_id IF NOT EXISTS FOR (c:Convention) REQUIRE c.id IS UNIQUE',
+    'CREATE CONSTRAINT nominationRace_id IF NOT EXISTS FOR (nr:NominationRace) REQUIRE nr.id IS UNIQUE',
+    'CREATE CONSTRAINT votingRound_id IF NOT EXISTS FOR (vr:VotingRound) REQUIRE vr.id IS UNIQUE',
+    'CREATE CONSTRAINT membership_id IF NOT EXISTS FOR (m:Membership) REQUIRE m.id IS UNIQUE'
 ];
 
 // ============================================
@@ -207,6 +212,120 @@ const EVENT_PARTICIPANTS = [
     { userId: 'u4', eventId: 'a2' },
     { userId: 'u4', eventId: 'a3' },
     { userId: 'u1', eventId: 'a3' }
+];
+
+// ============================================
+// CONVENTION SYSTEM DATA
+// ============================================
+
+// Convention - Annual party convention
+const CONVENTIONS = [
+    {
+        id: 'conv-2025',
+        name: '2025 National Convention',
+        year: 2025,
+        countryId: 'ca',
+        status: 'nominations', // upcoming, nominations, voting, completed
+        nominationStart: '2025-01-01T00:00:00',
+        nominationEnd: '2025-03-01T23:59:59',
+        votingStart: '2025-06-01T00:00:00',
+        votingEnd: '2025-06-15T23:59:59',
+        description: 'Annual convention to select candidates for all federal ridings'
+    },
+    {
+        id: 'conv-2024',
+        name: '2024 National Convention',
+        year: 2024,
+        countryId: 'ca',
+        status: 'completed',
+        nominationStart: '2024-01-01T00:00:00',
+        nominationEnd: '2024-03-01T23:59:59',
+        votingStart: '2024-06-01T00:00:00',
+        votingEnd: '2024-06-15T23:59:59',
+        description: 'Annual convention to select candidates for all federal ridings'
+    }
+];
+
+// Memberships - Users must be members to vote or run
+const MEMBERSHIPS = [
+    // All our users are members for 2025
+    { id: 'mem-u1-2025', userId: 'u1', year: 2025, status: 'active', votingRidingId: 'fr-mb-winnipeg-south-centre' },
+    { id: 'mem-u2-2025', userId: 'u2', year: 2025, status: 'active', votingRidingId: 'fr-on-toronto-centre' },
+    { id: 'mem-u3-2025', userId: 'u3', year: 2025, status: 'active', votingRidingId: 'fr-bc-vancouver-centre' },
+    { id: 'mem-u4-2025', userId: 'u4', year: 2025, status: 'active', votingRidingId: 'fr-ab-calgary-centre' },
+    { id: 'mem-u5-2025', userId: 'u5', year: 2025, status: 'active', votingRidingId: 'fr-ab-edmonton-centre' },
+    { id: 'mem-u6-2025', userId: 'u6', year: 2025, status: 'active', votingRidingId: 'fr-on-ottawa-centre' },
+    { id: 'mem-u7-2025', userId: 'u7', year: 2025, status: 'active', votingRidingId: 'fr-qc-papineau' },
+    { id: 'mem-u8-2025', userId: 'u8', year: 2025, status: 'active', votingRidingId: 'fr-ns-halifax' },
+    { id: 'mem-u9-2025', userId: 'u9', year: 2025, status: 'active', votingRidingId: 'fr-sk-regina-qu-appelle' },
+    { id: 'mem-u10-2025', userId: 'u10', year: 2025, status: 'active', votingRidingId: 'fr-nl-st-john-s-east' },
+    { id: 'mem-u11-2025', userId: 'u11', year: 2025, status: 'active', votingRidingId: 'fr-on-kitchener-centre' },
+    { id: 'mem-u12-2025', userId: 'u12', year: 2025, status: 'active', votingRidingId: 'fr-on-mississauga-east-cooksville' },
+    { id: 'mem-u13-2025', userId: 'u13', year: 2025, status: 'active', votingRidingId: 'fr-mb-brandon-souris' },
+    { id: 'mem-u14-2025', userId: 'u14', year: 2025, status: 'active', votingRidingId: 'fr-qc-louis-h-bert' },
+    { id: 'mem-u15-2025', userId: 'u15', year: 2025, status: 'active', votingRidingId: 'fr-bc-victoria' },
+    { id: 'mem-u16-2025', userId: 'u16', year: 2025, status: 'active', votingRidingId: 'fr-sk-saskatoon-university' },
+    { id: 'mem-u17-2025', userId: 'u17', year: 2025, status: 'active', votingRidingId: 'fr-bc-richmond' },
+    { id: 'mem-u18-2025', userId: 'u18', year: 2025, status: 'active', votingRidingId: 'fr-nt-northwest-territories' }
+];
+
+// Nomination Races - One per riding for the convention
+// Users can only run in ONE race per convention
+const NOMINATION_RACES = [
+    // Manitoba races
+    { id: 'race-2025-fr-mb-winnipeg-south-centre', conventionId: 'conv-2025', ridingId: 'fr-mb-winnipeg-south-centre', ridingType: 'FederalRiding', status: 'open', currentRound: 0 },
+    { id: 'race-2025-fr-mb-brandon-souris', conventionId: 'conv-2025', ridingId: 'fr-mb-brandon-souris', ridingType: 'FederalRiding', status: 'open', currentRound: 0 },
+    // Ontario races
+    { id: 'race-2025-fr-on-toronto-centre', conventionId: 'conv-2025', ridingId: 'fr-on-toronto-centre', ridingType: 'FederalRiding', status: 'open', currentRound: 0 },
+    { id: 'race-2025-fr-on-ottawa-centre', conventionId: 'conv-2025', ridingId: 'fr-on-ottawa-centre', ridingType: 'FederalRiding', status: 'open', currentRound: 0 },
+    // Alberta races  
+    { id: 'race-2025-fr-ab-calgary-centre', conventionId: 'conv-2025', ridingId: 'fr-ab-calgary-centre', ridingType: 'FederalRiding', status: 'open', currentRound: 0 },
+    { id: 'race-2025-fr-ab-edmonton-centre', conventionId: 'conv-2025', ridingId: 'fr-ab-edmonton-centre', ridingType: 'FederalRiding', status: 'open', currentRound: 0 },
+    // BC races
+    { id: 'race-2025-fr-bc-vancouver-centre', conventionId: 'conv-2025', ridingId: 'fr-bc-vancouver-centre', ridingType: 'FederalRiding', status: 'open', currentRound: 0 },
+    { id: 'race-2025-fr-bc-victoria', conventionId: 'conv-2025', ridingId: 'fr-bc-victoria', ridingType: 'FederalRiding', status: 'open', currentRound: 0 },
+    // Quebec races
+    { id: 'race-2025-fr-qc-papineau', conventionId: 'conv-2025', ridingId: 'fr-qc-papineau', ridingType: 'FederalRiding', status: 'open', currentRound: 0 },
+    // Saskatchewan races
+    { id: 'race-2025-fr-sk-regina-qu-appelle', conventionId: 'conv-2025', ridingId: 'fr-sk-regina-qu-appelle', ridingType: 'FederalRiding', status: 'open', currentRound: 0 },
+    // Nova Scotia races
+    { id: 'race-2025-fr-ns-halifax', conventionId: 'conv-2025', ridingId: 'fr-ns-halifax', ridingType: 'FederalRiding', status: 'open', currentRound: 0 }
+];
+
+// Candidates running in races (users can only run in ONE race per convention)
+// This links users to the race they're running in
+const RACE_CANDIDATES = [
+    // Winnipeg South Centre - Alice Chen running
+    { raceId: 'race-2025-fr-mb-winnipeg-south-centre', candidateId: 'u1', nominatedAt: '2025-01-15T10:00:00' },
+    // Brandon Souris - Linda Thompson running
+    { raceId: 'race-2025-fr-mb-brandon-souris', candidateId: 'u13', nominatedAt: '2025-01-20T14:00:00' },
+    // Toronto Centre - Marcus Johnson running
+    { raceId: 'race-2025-fr-on-toronto-centre', candidateId: 'u2', nominatedAt: '2025-01-18T09:00:00' },
+    // Ottawa Centre - David Kim running
+    { raceId: 'race-2025-fr-on-ottawa-centre', candidateId: 'u6', nominatedAt: '2025-01-22T11:00:00' },
+    // Calgary Centre - James Wilson running
+    { raceId: 'race-2025-fr-ab-calgary-centre', candidateId: 'u4', nominatedAt: '2025-01-25T16:00:00' },
+    // Edmonton Centre - Priya Patel running
+    { raceId: 'race-2025-fr-ab-edmonton-centre', candidateId: 'u5', nominatedAt: '2025-01-28T10:00:00' },
+    // Vancouver Centre - needs candidates (Sofia not running, she's not a candidate)
+    // Victoria - Susan Wright running
+    { raceId: 'race-2025-fr-bc-victoria', candidateId: 'u15', nominatedAt: '2025-02-01T09:00:00' },
+    // Papineau - Marie Tremblay running
+    { raceId: 'race-2025-fr-qc-papineau', candidateId: 'u7', nominatedAt: '2025-02-05T14:00:00' },
+    // Regina Qu'Appelle - Jennifer White Elk running
+    { raceId: 'race-2025-fr-sk-regina-qu-appelle', candidateId: 'u9', nominatedAt: '2025-02-10T11:00:00' },
+    // Halifax - Robert MacKenzie running
+    { raceId: 'race-2025-fr-ns-halifax', candidateId: 'u8', nominatedAt: '2025-02-12T15:00:00' },
+    // Richmond - Emily Chen running
+    { raceId: 'race-2025-fr-bc-richmond', conventionId: 'conv-2025', ridingId: 'fr-bc-richmond', candidateId: 'u17', nominatedAt: '2025-02-15T10:00:00' }
+];
+
+// Add a contested race with multiple candidates for drama!
+// Let's say Toronto Centre has 3 candidates
+const ADDITIONAL_CANDIDATES = [
+    // Additional candidates for Toronto Centre (contested race)
+    { raceId: 'race-2025-fr-on-toronto-centre', candidateId: 'u11', nominatedAt: '2025-01-25T10:00:00' }, // Sarah Greenberg
+    { raceId: 'race-2025-fr-on-toronto-centre', candidateId: 'u12', nominatedAt: '2025-01-30T14:00:00' }  // Ahmed Hassan
 ];
 
 // ============================================
@@ -502,6 +621,123 @@ async function seedUserLocations(driver) {
     }
 }
 
+async function seedConventions(driver) {
+    console.log('\n[12] Seeding Convention System...');
+    const session = driver.session({ database: DATABASE });
+    
+    try {
+        // Create Conventions
+        console.log('  Creating conventions...');
+        for (const conv of CONVENTIONS) {
+            await session.run(`
+                CREATE (c:Convention {
+                    id: $id,
+                    name: $name,
+                    year: $year,
+                    status: $status,
+                    nominationStart: datetime($nominationStart),
+                    nominationEnd: datetime($nominationEnd),
+                    votingStart: datetime($votingStart),
+                    votingEnd: datetime($votingEnd),
+                    description: $description,
+                    createdAt: datetime()
+                })
+            `, conv);
+            
+            // Link to country
+            await session.run(`
+                MATCH (conv:Convention {id: $convId}), (c:Country {id: $countryId})
+                CREATE (conv)-[:FOR_COUNTRY]->(c)
+            `, { convId: conv.id, countryId: conv.countryId });
+        }
+        console.log(`  ✓ Created ${CONVENTIONS.length} conventions`);
+        
+        // Create Memberships
+        console.log('  Creating memberships...');
+        for (const mem of MEMBERSHIPS) {
+            await session.run(`
+                CREATE (m:Membership {
+                    id: $id,
+                    year: $year,
+                    status: $status,
+                    createdAt: datetime()
+                })
+            `, mem);
+            
+            // Link membership to user
+            await session.run(`
+                MATCH (u:User {id: $userId}), (m:Membership {id: $memId})
+                CREATE (u)-[:HAS_MEMBERSHIP]->(m)
+            `, { userId: mem.userId, memId: mem.id });
+            
+            // Link membership to voting riding (where they can vote)
+            await session.run(`
+                MATCH (m:Membership {id: $memId}), (r:FederalRiding {id: $ridingId})
+                CREATE (m)-[:VOTES_IN]->(r)
+            `, { memId: mem.id, ridingId: mem.votingRidingId });
+        }
+        console.log(`  ✓ Created ${MEMBERSHIPS.length} memberships`);
+        
+        // Create Nomination Races
+        console.log('  Creating nomination races...');
+        for (const race of NOMINATION_RACES) {
+            await session.run(`
+                CREATE (nr:NominationRace {
+                    id: $id,
+                    status: $status,
+                    currentRound: $currentRound,
+                    createdAt: datetime()
+                })
+            `, race);
+            
+            // Link to convention
+            await session.run(`
+                MATCH (conv:Convention {id: $convId}), (nr:NominationRace {id: $raceId})
+                CREATE (conv)-[:HAS_RACE]->(nr)
+            `, { convId: race.conventionId, raceId: race.id });
+            
+            // Link to riding
+            await session.run(`
+                MATCH (nr:NominationRace {id: $raceId}), (r:${race.ridingType} {id: $ridingId})
+                CREATE (nr)-[:FOR_RIDING]->(r)
+            `, { raceId: race.id, ridingId: race.ridingId });
+        }
+        console.log(`  ✓ Created ${NOMINATION_RACES.length} nomination races`);
+        
+        // Add candidates to races
+        console.log('  Adding candidates to races...');
+        const allCandidates = [...RACE_CANDIDATES, ...ADDITIONAL_CANDIDATES];
+        for (const cand of allCandidates) {
+            try {
+                await session.run(`
+                    MATCH (u:User {id: $userId}), (nr:NominationRace {id: $raceId})
+                    CREATE (u)-[:RUNNING_IN {nominatedAt: datetime($nominatedAt)}]->(nr)
+                `, { userId: cand.candidateId, raceId: cand.raceId, nominatedAt: cand.nominatedAt });
+            } catch (err) {
+                console.log(`    ⚠ Could not add candidate ${cand.candidateId} to race: ${err.message}`);
+            }
+        }
+        console.log(`  ✓ Added ${allCandidates.length} candidates to races`);
+        
+        // Also need to create the Richmond race since we have a candidate for it
+        await session.run(`
+            MERGE (nr:NominationRace {id: 'race-2025-fr-bc-richmond'})
+            ON CREATE SET nr.status = 'open', nr.currentRound = 0, nr.createdAt = datetime()
+        `);
+        await session.run(`
+            MATCH (conv:Convention {id: 'conv-2025'}), (nr:NominationRace {id: 'race-2025-fr-bc-richmond'})
+            MERGE (conv)-[:HAS_RACE]->(nr)
+        `);
+        await session.run(`
+            MATCH (nr:NominationRace {id: 'race-2025-fr-bc-richmond'}), (r:FederalRiding {id: 'fr-bc-richmond'})
+            MERGE (nr)-[:FOR_RIDING]->(r)
+        `);
+        
+    } finally {
+        await session.close();
+    }
+}
+
 // Helper to generate ID from name
 function generateId(prefix, name) {
     return prefix + '-' + name.toLowerCase()
@@ -670,7 +906,7 @@ async function seedLocations(driver) {
 }
 
 async function showSummary(driver) {
-    console.log('\n[11] Database Summary...');
+    console.log('\n[13] Database Summary...');
     const session = driver.session({ database: DATABASE });
     
     try {
@@ -686,8 +922,11 @@ async function showSummary(driver) {
             MATCH (pr:ProvincialRiding) WITH users, ideas, events, votes, priorities, countries, provinces, fedRidings, count(pr) as provRidings
             MATCH (t:Town) WITH users, ideas, events, votes, priorities, countries, provinces, fedRidings, provRidings, count(t) as towns
             MATCH (fn:FirstNation) WITH users, ideas, events, votes, priorities, countries, provinces, fedRidings, provRidings, towns, count(fn) as firstNations
-            MATCH ()-[r]->() WITH users, ideas, events, votes, priorities, countries, provinces, fedRidings, provRidings, towns, firstNations, count(r) as relationships
-            RETURN users, ideas, events, votes, priorities, countries, provinces, fedRidings, provRidings, towns, firstNations, relationships
+            MATCH (conv:Convention) WITH users, ideas, events, votes, priorities, countries, provinces, fedRidings, provRidings, towns, firstNations, count(conv) as conventions
+            MATCH (nr:NominationRace) WITH users, ideas, events, votes, priorities, countries, provinces, fedRidings, provRidings, towns, firstNations, conventions, count(nr) as races
+            MATCH (m:Membership) WITH users, ideas, events, votes, priorities, countries, provinces, fedRidings, provRidings, towns, firstNations, conventions, races, count(m) as memberships
+            MATCH ()-[r]->() WITH users, ideas, events, votes, priorities, countries, provinces, fedRidings, provRidings, towns, firstNations, conventions, races, memberships, count(r) as relationships
+            RETURN users, ideas, events, votes, priorities, countries, provinces, fedRidings, provRidings, towns, firstNations, conventions, races, memberships, relationships
         `);
         
         const record = counts.records[0];
@@ -706,6 +945,11 @@ async function showSummary(driver) {
         console.log(`│  Provincial Ridings: ${String(record.get('provRidings')).padStart(10)}   │`);
         console.log(`│  Towns/Cities:       ${String(record.get('towns')).padStart(10)}   │`);
         console.log(`│  First Nations:      ${String(record.get('firstNations')).padStart(10)}   │`);
+        console.log('├─────────────────────────────────────┤');
+        console.log('│  CONVENTION SYSTEM                  │');
+        console.log(`│  Conventions:        ${String(record.get('conventions')).padStart(10)}   │`);
+        console.log(`│  Nomination Races:   ${String(record.get('races')).padStart(10)}   │`);
+        console.log(`│  Memberships:        ${String(record.get('memberships')).padStart(10)}   │`);
         console.log('├─────────────────────────────────────┤');
         console.log(`│  Total Relationships:${String(record.get('relationships')).padStart(10)}   │`);
         console.log('└─────────────────────────────────────┘');
@@ -744,6 +988,7 @@ async function main() {
         await seedRelationships(driver);
         await seedLocations(driver);
         await seedUserLocations(driver);
+        await seedConventions(driver);
         await showSummary(driver);
         
         console.log('\n═'.repeat(50));

@@ -1200,8 +1200,231 @@ const pages = {
     } catch (err) {
       content.innerHTML = `<div class="card"><div class="card-body">Error loading votes: ${err.message}</div></div>`;
     }
+  },
+
+  async convention() {
+    const content = document.getElementById('content');
+    content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    
+    try {
+      const conventions = await api('/conventions');
+      const activeConv = conventions.find(c => c.status !== 'completed') || conventions[0];
+      
+      // Get detailed info for active convention
+      let activeRaces = [];
+      if (activeConv) {
+        activeRaces = await api(`/conventions/${activeConv.id}/races`);
+      }
+      
+      // Count stats
+      const totalRaces = activeRaces.length;
+      const contestedRaces = activeRaces.filter(r => r.candidateCount > 1).length;
+      const uncontested = activeRaces.filter(r => r.candidateCount === 1).length;
+      const vacant = activeRaces.filter(r => r.candidateCount === 0).length;
+      
+      // Status badge helper
+      const getStatusBadge = (status) => {
+        const badges = {
+          'upcoming': '<span class="badge">🗓️ Upcoming</span>',
+          'nominations': '<span class="badge warning">📝 Nominations Open</span>',
+          'voting': '<span class="badge success">🗳️ Voting Active</span>',
+          'completed': '<span class="badge">✅ Completed</span>'
+        };
+        return badges[status] || `<span class="badge">${status}</span>`;
+      };
+      
+      content.innerHTML = `
+        <header class="page-header">
+          <h1 class="page-title">🏛️ Convention</h1>
+          <p class="page-subtitle">Party candidate selection process</p>
+        </header>
+        
+        ${activeConv ? `
+          <!-- Active Convention Card -->
+          <div class="card convention-hero">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">${activeConv.name}</h2>
+                <p class="card-subtitle">${activeConv.description || ''}</p>
+              </div>
+              ${getStatusBadge(activeConv.status)}
+            </div>
+            <div class="card-body">
+              <div class="convention-timeline">
+                <div class="timeline-phase ${activeConv.status === 'nominations' ? 'active' : activeConv.status === 'voting' || activeConv.status === 'completed' ? 'completed' : ''}">
+                  <div class="timeline-dot"></div>
+                  <div class="timeline-label">Nominations</div>
+                  <div class="timeline-date">${formatDate(activeConv.nominationStart)} - ${formatDate(activeConv.nominationEnd)}</div>
+                </div>
+                <div class="timeline-line"></div>
+                <div class="timeline-phase ${activeConv.status === 'voting' ? 'active' : activeConv.status === 'completed' ? 'completed' : ''}">
+                  <div class="timeline-dot"></div>
+                  <div class="timeline-label">Voting</div>
+                  <div class="timeline-date">${formatDate(activeConv.votingStart)} - ${formatDate(activeConv.votingEnd)}</div>
+                </div>
+                <div class="timeline-line"></div>
+                <div class="timeline-phase ${activeConv.status === 'completed' ? 'active' : ''}">
+                  <div class="timeline-dot"></div>
+                  <div class="timeline-label">Results</div>
+                  <div class="timeline-date">${formatDate(activeConv.votingEnd)}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Convention Stats -->
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-label">Total Races</div>
+              <div class="stat-value">${totalRaces}</div>
+            </div>
+            <div class="stat-card contested">
+              <div class="stat-label">Contested</div>
+              <div class="stat-value">${contestedRaces}</div>
+            </div>
+            <div class="stat-card uncontested">
+              <div class="stat-label">Uncontested</div>
+              <div class="stat-value">${uncontested}</div>
+            </div>
+            <div class="stat-card vacant">
+              <div class="stat-label">Need Candidates</div>
+              <div class="stat-value">${vacant}</div>
+            </div>
+          </div>
+          
+          <!-- Nomination Races -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Nomination Races</h3>
+              <span class="badge">${activeRaces.length} ridings</span>
+            </div>
+            <div class="card-body">
+              <div class="races-list">
+                ${activeRaces.length === 0 ? '<p class="empty-text">No races created yet</p>' : 
+                  activeRaces.map(race => `
+                    <div class="race-item ${race.candidateCount > 1 ? 'contested' : race.candidateCount === 1 ? 'uncontested' : 'vacant'}" data-race-id="${race.id}">
+                      <div class="race-info">
+                        <div class="race-riding">${race.riding?.name || 'Unknown Riding'}</div>
+                        <div class="race-province">${race.provinceName || ''}</div>
+                      </div>
+                      <div class="race-candidates">
+                        ${race.candidateCount === 0 ? 
+                          '<span class="race-status vacant">No candidates</span>' :
+                          race.candidateCount === 1 ?
+                          `<span class="race-status uncontested">1 candidate (uncontested)</span>` :
+                          `<span class="race-status contested">${race.candidateCount} candidates</span>`
+                        }
+                      </div>
+                      <div class="race-candidates-list">
+                        ${race.candidates?.map(c => `
+                          <span class="candidate-chip">${c.name}</span>
+                        `).join('') || ''}
+                      </div>
+                    </div>
+                  `).join('')
+                }
+              </div>
+            </div>
+          </div>
+        ` : `
+          <div class="card">
+            <div class="card-body">
+              <p>No conventions available yet.</p>
+            </div>
+          </div>
+        `}
+        
+        <!-- Past Conventions -->
+        ${conventions.filter(c => c.status === 'completed').length > 0 ? `
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Past Conventions</h3>
+            </div>
+            <div class="card-body">
+              ${conventions.filter(c => c.status === 'completed').map(conv => `
+                <div class="past-convention-item">
+                  <span class="past-convention-name">${conv.name}</span>
+                  <span class="past-convention-races">${conv.raceCount || 0} races</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+      `;
+      
+      // Add click handlers for race items
+      document.querySelectorAll('.race-item').forEach(item => {
+        item.addEventListener('click', async () => {
+          const raceId = item.dataset.raceId;
+          await showRaceDetail(raceId);
+        });
+      });
+      
+    } catch (err) {
+      content.innerHTML = `<div class="card"><div class="card-body">Error loading convention: ${err.message}</div></div>`;
+    }
   }
 };
+
+// Show race detail modal/view
+async function showRaceDetail(raceId) {
+  try {
+    const race = await api(`/conventions/races/${raceId}`);
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>${race.riding?.name || 'Unknown Riding'}</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-subtitle">${race.province?.name || ''} • ${race.convention?.name || ''}</p>
+          
+          <h3 class="candidates-header">${race.candidates?.length || 0} Candidates</h3>
+          
+          ${race.candidates?.length === 0 ? 
+            '<p class="empty-text">No candidates have declared for this riding yet.</p>' :
+            `<div class="race-candidates-detail">
+              ${race.candidates.map((candidate, index) => `
+                <div class="race-candidate-card ${index === 0 ? 'leading' : ''}">
+                  <div class="candidate-rank">#${index + 1}</div>
+                  <div class="candidate-avatar-lg">${getInitials(candidate.name)}</div>
+                  <div class="candidate-info-detail">
+                    <h4>${candidate.name}</h4>
+                    <p class="candidate-bio-short">${candidate.bio || 'No bio'}</p>
+                    <div class="candidate-stats-row">
+                      <span class="stat-pill points">⭐ ${candidate.points || 0} points</span>
+                      <span class="stat-pill endorsements">👍 ${candidate.endorsementCount || 0} endorsements</span>
+                    </div>
+                    ${candidate.platform ? `
+                      <div class="candidate-platform-preview">
+                        <strong>Platform:</strong> ${candidate.platform}
+                      </div>
+                    ` : ''}
+                  </div>
+                </div>
+              `).join('')}
+            </div>`
+          }
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close handlers
+    modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.remove();
+    });
+    
+  } catch (err) {
+    console.error('Error loading race:', err);
+  }
+}
 
 // Router
 function navigate(page) {

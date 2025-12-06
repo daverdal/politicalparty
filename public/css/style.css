@@ -957,6 +957,401 @@ a:hover {
   gap: 8px;
 }
 
+/* ================================
+   CONVENTION PAGE STYLES
+   ================================ */
+
+.convention-hero {
+  background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-tertiary) 100%);
+  border: 1px solid var(--accent-primary);
+  margin-bottom: 24px;
+}
+
+.convention-hero .card-title {
+  font-size: 1.5rem;
+}
+
+/* Convention Timeline */
+.convention-timeline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 24px 0;
+}
+
+.timeline-phase {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+}
+
+.timeline-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  border: 3px solid var(--border-color);
+  transition: all 0.3s ease;
+}
+
+.timeline-phase.active .timeline-dot {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 12px var(--accent-primary);
+}
+
+.timeline-phase.completed .timeline-dot {
+  background: var(--success);
+  border-color: var(--success);
+}
+
+.timeline-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.timeline-phase.active .timeline-label {
+  color: var(--accent-primary);
+}
+
+.timeline-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.timeline-line {
+  flex: 1;
+  max-width: 80px;
+  height: 3px;
+  background: var(--border-color);
+  margin: 0 8px;
+  margin-top: -40px;
+}
+
+/* Convention Stats */
+.stat-card.contested .stat-value {
+  color: var(--warning);
+}
+
+.stat-card.uncontested .stat-value {
+  color: var(--success);
+}
+
+.stat-card.vacant .stat-value {
+  color: var(--danger);
+}
+
+/* Races List */
+.races-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.race-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.race-item:hover {
+  background: var(--bg-hover);
+  transform: translateX(4px);
+}
+
+.race-item.contested {
+  border-left-color: var(--warning);
+}
+
+.race-item.uncontested {
+  border-left-color: var(--success);
+}
+
+.race-item.vacant {
+  border-left-color: var(--danger);
+}
+
+.race-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.race-riding {
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.race-province {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.race-candidates {
+  flex-shrink: 0;
+}
+
+.race-status {
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+.race-status.contested {
+  background: rgba(255, 179, 71, 0.15);
+  color: var(--warning);
+}
+
+.race-status.uncontested {
+  background: rgba(0, 212, 170, 0.15);
+  color: var(--success);
+}
+
+.race-status.vacant {
+  background: rgba(255, 107, 107, 0.15);
+  color: var(--danger);
+}
+
+.race-candidates-list {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.candidate-chip {
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  background: var(--bg-tertiary);
+  border-radius: 12px;
+  color: var(--text-secondary);
+}
+
+/* Past Conventions */
+.past-convention-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.past-convention-item:last-child {
+  border-bottom: none;
+}
+
+.past-convention-name {
+  color: var(--text-secondary);
+}
+
+.past-convention-races {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  max-width: 600px;
+  width: 100%;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h2 {
+  font-size: 1.25rem;
+  color: var(--text-primary);
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.modal-subtitle {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+}
+
+.candidates-header {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Race Detail Candidate Cards */
+.race-candidates-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.race-candidate-card {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  position: relative;
+}
+
+.race-candidate-card.leading {
+  border-color: var(--accent-primary);
+  background: linear-gradient(135deg, rgba(0, 212, 170, 0.05) 0%, var(--bg-secondary) 100%);
+}
+
+.race-candidate-card.leading::before {
+  content: '👑';
+  position: absolute;
+  top: -8px;
+  right: 12px;
+  font-size: 1.2rem;
+}
+
+.candidate-rank {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.candidate-avatar-lg {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.candidate-info-detail {
+  flex: 1;
+  min-width: 0;
+}
+
+.candidate-info-detail h4 {
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.candidate-bio-short {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.candidate-stats-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.stat-pill {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: var(--bg-tertiary);
+}
+
+.stat-pill.points {
+  color: var(--warning);
+}
+
+.stat-pill.endorsements {
+  color: var(--accent-secondary);
+}
+
+.candidate-platform-preview {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--accent-primary);
+}
+
+.candidate-platform-preview strong {
+  color: var(--accent-primary);
+}
+
+.empty-text {
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   .browse-layout {
