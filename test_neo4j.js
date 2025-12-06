@@ -44,27 +44,25 @@ const CONSTRAINTS = [
 // SEED DATA
 // ============================================
 const USERS = [
-    // Original users (now with Canadian locations) - some are candidates
-    { id: 'u1', name: 'Alice Chen', region: 'Winnipeg', bio: 'Community organizer passionate about local governance', skills: ['public speaking', 'event planning'], experience: ['city council liaison'], interests: ['environment', 'education'], candidate: true, platform: 'Fighting for affordable housing and green energy in Winnipeg South Centre' },
-    { id: 'u2', name: 'Marcus Johnson', region: 'Toronto', bio: 'Retired teacher advocating for youth programs', skills: ['teaching', 'writing'], experience: ['school board member'], interests: ['youth development', 'arts'], candidate: true, platform: 'Investing in education and youth opportunities across Toronto' },
-    { id: 'u3', name: 'Sofia Rodriguez', region: 'Vancouver', bio: 'Small business owner focused on economic development', skills: ['business planning', 'networking'], experience: ['chamber of commerce'], interests: ['economy', 'small business'], candidate: false },
-    { id: 'u4', name: 'James Wilson', region: 'Calgary', bio: 'Environmental scientist working on sustainability', skills: ['research', 'data analysis'], experience: ['EPA consultant'], interests: ['environment', 'sustainability'], candidate: true, platform: 'Science-based climate action and green jobs for Alberta' },
-    { id: 'u5', name: 'Priya Patel', region: 'Edmonton', bio: 'Healthcare worker advocating for community health', skills: ['healthcare', 'community outreach'], experience: ['hospital administrator'], interests: ['healthcare', 'mental health'], candidate: true, platform: 'Universal healthcare access and mental health support for all Albertans' },
-    { id: 'u6', name: 'David Kim', region: 'Ottawa', bio: 'Tech entrepreneur interested in civic innovation', skills: ['software development', 'project management'], experience: ['startup founder'], interests: ['technology', 'transparency'], candidate: true, platform: 'Open government, digital services, and tech sector growth' },
-    
-    // New Canadian users in various ridings - some are candidates
-    { id: 'u7', name: 'Marie Tremblay', region: 'Montreal', bio: 'Cultural advocate promoting bilingual communities', skills: ['languages', 'arts management'], experience: ['festival organizer'], interests: ['culture', 'heritage'], candidate: true, platform: 'Celebrating our bilingual heritage and supporting the arts' },
-    { id: 'u8', name: 'Robert MacKenzie', region: 'Halifax', bio: 'Fisheries expert advocating for coastal communities', skills: ['marine biology', 'policy'], experience: ['fisheries board'], interests: ['environment', 'economy'], candidate: true, platform: 'Sustainable fisheries and coastal community resilience' },
-    { id: 'u9', name: 'Jennifer White Elk', region: 'Regina', bio: 'Indigenous rights advocate and community leader', skills: ['advocacy', 'traditional knowledge'], experience: ['First Nations council'], interests: ['reconciliation', 'education'], candidate: true, platform: 'Reconciliation, indigenous sovereignty, and equitable education' },
-    { id: 'u10', name: 'Michael O\'Brien', region: 'St. John\'s', bio: 'Offshore energy transition specialist', skills: ['engineering', 'project management'], experience: ['energy sector'], interests: ['energy', 'jobs'], candidate: true, platform: 'Just transition from oil to renewable energy while protecting jobs' },
-    { id: 'u11', name: 'Sarah Greenberg', region: 'Kitchener', bio: 'Tech sector worker focused on digital inclusion', skills: ['software', 'training'], experience: ['nonprofit tech'], interests: ['technology', 'equity'], candidate: false },
-    { id: 'u12', name: 'Ahmed Hassan', region: 'Mississauga', bio: 'Healthcare administrator focused on immigrant services', skills: ['healthcare admin', 'multilingual'], experience: ['community health'], interests: ['healthcare', 'immigration'], candidate: true, platform: 'Welcoming newcomers and ensuring healthcare access for all' },
-    { id: 'u13', name: 'Linda Thompson', region: 'Brandon', bio: 'Agricultural specialist promoting sustainable farming', skills: ['agriculture', 'research'], experience: ['ag extension'], interests: ['agriculture', 'environment'], candidate: true, platform: 'Supporting family farms and sustainable agriculture practices' },
-    { id: 'u14', name: 'Pierre Gagnon', region: 'Quebec City', bio: 'Heritage preservation advocate', skills: ['history', 'architecture'], experience: ['preservation board'], interests: ['heritage', 'tourism'], candidate: false },
-    { id: 'u15', name: 'Susan Wright', region: 'Victoria', bio: 'Retired public servant focused on senior services', skills: ['public policy', 'advocacy'], experience: ['government'], interests: ['seniors', 'healthcare'], candidate: true, platform: 'Dignity for seniors: better pensions and healthcare' },
-    { id: 'u16', name: 'Daniel Blackwood', region: 'Saskatoon', bio: 'University researcher on rural development', skills: ['research', 'data analysis'], experience: ['academia'], interests: ['rural development', 'economy'], candidate: false },
-    { id: 'u17', name: 'Emily Chen', region: 'Richmond', bio: 'Small business owner advocating for immigrant entrepreneurs', skills: ['business', 'community building'], experience: ['chamber of commerce'], interests: ['economy', 'immigration'], candidate: true, platform: 'Supporting immigrant entrepreneurs and small business growth' },
-    { id: 'u18', name: 'Thomas Bear', region: 'Yellowknife', bio: 'Northern climate adaptation specialist', skills: ['environmental science', 'policy'], experience: ['territorial government'], interests: ['climate', 'indigenous rights'], candidate: true, platform: 'Climate adaptation and northern community infrastructure' }
+    // All users start as regular members - they become candidates when they accept a nomination
+    { id: 'u1', name: 'Alice Chen', region: 'Winnipeg', bio: 'Community organizer passionate about local governance', skills: ['public speaking', 'event planning'], experience: ['city council liaison'], interests: ['environment', 'education'] },
+    { id: 'u2', name: 'Marcus Johnson', region: 'Toronto', bio: 'Retired teacher advocating for youth programs', skills: ['teaching', 'writing'], experience: ['school board member'], interests: ['youth development', 'arts'] },
+    { id: 'u3', name: 'Sofia Rodriguez', region: 'Vancouver', bio: 'Small business owner focused on economic development', skills: ['business planning', 'networking'], experience: ['chamber of commerce'], interests: ['economy', 'small business'] },
+    { id: 'u4', name: 'James Wilson', region: 'Calgary', bio: 'Environmental scientist working on sustainability', skills: ['research', 'data analysis'], experience: ['EPA consultant'], interests: ['environment', 'sustainability'] },
+    { id: 'u5', name: 'Priya Patel', region: 'Edmonton', bio: 'Healthcare worker advocating for community health', skills: ['healthcare', 'community outreach'], experience: ['hospital administrator'], interests: ['healthcare', 'mental health'] },
+    { id: 'u6', name: 'David Kim', region: 'Ottawa', bio: 'Tech entrepreneur interested in civic innovation', skills: ['software development', 'project management'], experience: ['startup founder'], interests: ['technology', 'transparency'] },
+    { id: 'u7', name: 'Marie Tremblay', region: 'Montreal', bio: 'Cultural advocate promoting bilingual communities', skills: ['languages', 'arts management'], experience: ['festival organizer'], interests: ['culture', 'heritage'] },
+    { id: 'u8', name: 'Robert MacKenzie', region: 'Halifax', bio: 'Fisheries expert advocating for coastal communities', skills: ['marine biology', 'policy'], experience: ['fisheries board'], interests: ['environment', 'economy'] },
+    { id: 'u9', name: 'Jennifer White Elk', region: 'Regina', bio: 'Indigenous rights advocate and community leader', skills: ['advocacy', 'traditional knowledge'], experience: ['First Nations council'], interests: ['reconciliation', 'education'] },
+    { id: 'u10', name: 'Michael O\'Brien', region: 'St. John\'s', bio: 'Offshore energy transition specialist', skills: ['engineering', 'project management'], experience: ['energy sector'], interests: ['energy', 'jobs'] },
+    { id: 'u11', name: 'Sarah Greenberg', region: 'Kitchener', bio: 'Tech sector worker focused on digital inclusion', skills: ['software', 'training'], experience: ['nonprofit tech'], interests: ['technology', 'equity'] },
+    { id: 'u12', name: 'Ahmed Hassan', region: 'Mississauga', bio: 'Healthcare administrator focused on immigrant services', skills: ['healthcare admin', 'multilingual'], experience: ['community health'], interests: ['healthcare', 'immigration'] },
+    { id: 'u13', name: 'Linda Thompson', region: 'Brandon', bio: 'Agricultural specialist promoting sustainable farming', skills: ['agriculture', 'research'], experience: ['ag extension'], interests: ['agriculture', 'environment'] },
+    { id: 'u14', name: 'Pierre Gagnon', region: 'Quebec City', bio: 'Heritage preservation advocate', skills: ['history', 'architecture'], experience: ['preservation board'], interests: ['heritage', 'tourism'] },
+    { id: 'u15', name: 'Susan Wright', region: 'Victoria', bio: 'Retired public servant focused on senior services', skills: ['public policy', 'advocacy'], experience: ['government'], interests: ['seniors', 'healthcare'] },
+    { id: 'u16', name: 'Daniel Blackwood', region: 'Saskatoon', bio: 'University researcher on rural development', skills: ['research', 'data analysis'], experience: ['academia'], interests: ['rural development', 'economy'] },
+    { id: 'u17', name: 'Emily Chen', region: 'Richmond', bio: 'Small business owner advocating for immigrant entrepreneurs', skills: ['business', 'community building'], experience: ['chamber of commerce'], interests: ['economy', 'immigration'] },
+    { id: 'u18', name: 'Thomas Bear', region: 'Yellowknife', bio: 'Northern climate adaptation specialist', skills: ['environmental science', 'policy'], experience: ['territorial government'], interests: ['climate', 'indigenous rights'] }
 ];
 
 const IDEAS = [
@@ -229,46 +227,46 @@ const CONVENTION_WAVES = [
 ];
 
 // Convention - Annual party convention with regional waves
-// Each wave has its own nomination period followed by voting period
+// DATES SHIFTED FOR TESTING - Wave 1 starts Dec 1, 2024!
 const CONVENTIONS = [
     {
         id: 'conv-2025',
         name: '2025 National Convention',
         year: 2025,
         countryId: 'ca',
-        status: 'wave1-nominations', // wave1-nominations, wave1-voting, wave2-nominations, etc.
-        currentWave: 1,
-        // Wave 1 - Pacific (BC, Yukon) - First to vote!
-        wave1NominationStart: '2025-02-01T00:00:00',
-        wave1NominationEnd: '2025-02-15T23:59:59',
-        wave1VotingStart: '2025-02-22T00:00:00',
-        wave1VotingEnd: '2025-03-08T23:59:59',
+        status: 'upcoming', // Use Admin page to change this!
+        currentWave: 0,
+        // Wave 1 - Pacific (BC, Yukon) - HAPPENING NOW!
+        wave1NominationStart: '2024-12-01T00:00:00',
+        wave1NominationEnd: '2024-12-14T23:59:59',
+        wave1VotingStart: '2024-12-15T00:00:00',
+        wave1VotingEnd: '2024-12-28T23:59:59',
         // Wave 2 - Mountain (Alberta, NWT)
-        wave2NominationStart: '2025-03-01T00:00:00',
-        wave2NominationEnd: '2025-03-14T23:59:59',
-        wave2VotingStart: '2025-03-15T00:00:00',
-        wave2VotingEnd: '2025-03-29T23:59:59',
+        wave2NominationStart: '2025-01-01T00:00:00',
+        wave2NominationEnd: '2025-01-14T23:59:59',
+        wave2VotingStart: '2025-01-15T00:00:00',
+        wave2VotingEnd: '2025-01-28T23:59:59',
         // Wave 3 - Prairie (SK, MB, Nunavut)
-        wave3NominationStart: '2025-03-22T00:00:00',
-        wave3NominationEnd: '2025-04-04T23:59:59',
-        wave3VotingStart: '2025-04-05T00:00:00',
-        wave3VotingEnd: '2025-04-19T23:59:59',
+        wave3NominationStart: '2025-01-22T00:00:00',
+        wave3NominationEnd: '2025-02-04T23:59:59',
+        wave3VotingStart: '2025-02-05T00:00:00',
+        wave3VotingEnd: '2025-02-19T23:59:59',
         // Wave 4 - Central (Ontario) - "Super Saturday"
-        wave4NominationStart: '2025-04-12T00:00:00',
-        wave4NominationEnd: '2025-04-25T23:59:59',
-        wave4VotingStart: '2025-04-26T00:00:00',
-        wave4VotingEnd: '2025-05-10T23:59:59',
+        wave4NominationStart: '2025-02-12T00:00:00',
+        wave4NominationEnd: '2025-02-25T23:59:59',
+        wave4VotingStart: '2025-02-26T00:00:00',
+        wave4VotingEnd: '2025-03-10T23:59:59',
         // Wave 5 - Quebec
-        wave5NominationStart: '2025-05-03T00:00:00',
-        wave5NominationEnd: '2025-05-16T23:59:59',
-        wave5VotingStart: '2025-05-17T00:00:00',
-        wave5VotingEnd: '2025-05-31T23:59:59',
+        wave5NominationStart: '2025-03-03T00:00:00',
+        wave5NominationEnd: '2025-03-16T23:59:59',
+        wave5VotingStart: '2025-03-17T00:00:00',
+        wave5VotingEnd: '2025-03-31T23:59:59',
         // Wave 6 - Atlantic (NB, NS, PE, NL)
-        wave6NominationStart: '2025-05-24T00:00:00',
-        wave6NominationEnd: '2025-06-06T23:59:59',
-        wave6VotingStart: '2025-06-07T00:00:00',
-        wave6VotingEnd: '2025-06-21T23:59:59',
-        description: 'Annual convention - West to East regional waves with local nominations'
+        wave6NominationStart: '2025-03-24T00:00:00',
+        wave6NominationEnd: '2025-04-06T23:59:59',
+        wave6VotingStart: '2025-04-07T00:00:00',
+        wave6VotingEnd: '2025-04-21T23:59:59',
+        description: '🎮 TEST MODE - Wave 1 nominations open NOW!'
     },
     {
         id: 'conv-2024',
@@ -328,86 +326,27 @@ const MEMBERSHIPS = [
     { id: 'mem-u18-2025', userId: 'u18', year: 2025, status: 'active', votingRidingId: 'fr-nt-northwest-territories' }
 ];
 
-// Nomination Races - One per riding for the convention
-// Users can only run in ONE race per convention
+// Nomination Races - Wave 1 (BC) is OPEN for testing!
 const NOMINATION_RACES = [
-    // Manitoba races
-    { id: 'race-2025-fr-mb-winnipeg-south-centre', conventionId: 'conv-2025', ridingId: 'fr-mb-winnipeg-south-centre', ridingType: 'FederalRiding', status: 'open', currentRound: 0 },
-    { id: 'race-2025-fr-mb-brandon-souris', conventionId: 'conv-2025', ridingId: 'fr-mb-brandon-souris', ridingType: 'FederalRiding', status: 'open', currentRound: 0 },
-    // Ontario races
-    { id: 'race-2025-fr-on-toronto-centre', conventionId: 'conv-2025', ridingId: 'fr-on-toronto-centre', ridingType: 'FederalRiding', status: 'open', currentRound: 0 },
-    { id: 'race-2025-fr-on-ottawa-centre', conventionId: 'conv-2025', ridingId: 'fr-on-ottawa-centre', ridingType: 'FederalRiding', status: 'open', currentRound: 0 },
-    // Alberta races  
-    { id: 'race-2025-fr-ab-calgary-centre', conventionId: 'conv-2025', ridingId: 'fr-ab-calgary-centre', ridingType: 'FederalRiding', status: 'open', currentRound: 0 },
-    { id: 'race-2025-fr-ab-edmonton-centre', conventionId: 'conv-2025', ridingId: 'fr-ab-edmonton-centre', ridingType: 'FederalRiding', status: 'open', currentRound: 0 },
-    // BC races
-    { id: 'race-2025-fr-bc-vancouver-centre', conventionId: 'conv-2025', ridingId: 'fr-bc-vancouver-centre', ridingType: 'FederalRiding', status: 'open', currentRound: 0 },
-    { id: 'race-2025-fr-bc-victoria', conventionId: 'conv-2025', ridingId: 'fr-bc-victoria', ridingType: 'FederalRiding', status: 'open', currentRound: 0 },
-    // Quebec races
-    { id: 'race-2025-fr-qc-papineau', conventionId: 'conv-2025', ridingId: 'fr-qc-papineau', ridingType: 'FederalRiding', status: 'open', currentRound: 0 },
-    // Saskatchewan races
-    { id: 'race-2025-fr-sk-regina-qu-appelle', conventionId: 'conv-2025', ridingId: 'fr-sk-regina-qu-appelle', ridingType: 'FederalRiding', status: 'open', currentRound: 0 },
-    // Nova Scotia races
-    { id: 'race-2025-fr-ns-halifax', conventionId: 'conv-2025', ridingId: 'fr-ns-halifax', ridingType: 'FederalRiding', status: 'open', currentRound: 0 }
+    // Wave 1 - BC races (nominations open Dec 1-14)
+    { id: 'race-2025-fr-bc-vancouver-centre', conventionId: 'conv-2025', ridingId: 'fr-bc-vancouver-centre', ridingType: 'FederalRiding', status: 'open', currentRound: 0, wave: 1 },
+    { id: 'race-2025-fr-bc-victoria', conventionId: 'conv-2025', ridingId: 'fr-bc-victoria', ridingType: 'FederalRiding', status: 'open', currentRound: 0, wave: 1 },
+    { id: 'race-2025-fr-bc-richmond', conventionId: 'conv-2025', ridingId: 'fr-bc-richmond', ridingType: 'FederalRiding', status: 'open', currentRound: 0, wave: 1 },
+    { id: 'race-2025-fr-bc-burnaby-north-seymour', conventionId: 'conv-2025', ridingId: 'fr-bc-burnaby-north-seymour', ridingType: 'FederalRiding', status: 'open', currentRound: 0, wave: 1 },
+    { id: 'race-2025-fr-bc-north-vancouver', conventionId: 'conv-2025', ridingId: 'fr-bc-north-vancouver', ridingType: 'FederalRiding', status: 'open', currentRound: 0, wave: 1 }
 ];
 
-// Candidates running in races (users can only run in ONE race per convention)
-// This links users to the race they're running in
-const RACE_CANDIDATES = [
-    // Winnipeg South Centre - Alice Chen running
-    { raceId: 'race-2025-fr-mb-winnipeg-south-centre', candidateId: 'u1', nominatedAt: '2025-01-15T10:00:00' },
-    // Brandon Souris - Linda Thompson running
-    { raceId: 'race-2025-fr-mb-brandon-souris', candidateId: 'u13', nominatedAt: '2025-01-20T14:00:00' },
-    // Toronto Centre - Marcus Johnson running
-    { raceId: 'race-2025-fr-on-toronto-centre', candidateId: 'u2', nominatedAt: '2025-01-18T09:00:00' },
-    // Ottawa Centre - David Kim running
-    { raceId: 'race-2025-fr-on-ottawa-centre', candidateId: 'u6', nominatedAt: '2025-01-22T11:00:00' },
-    // Calgary Centre - James Wilson running
-    { raceId: 'race-2025-fr-ab-calgary-centre', candidateId: 'u4', nominatedAt: '2025-01-25T16:00:00' },
-    // Edmonton Centre - Priya Patel running
-    { raceId: 'race-2025-fr-ab-edmonton-centre', candidateId: 'u5', nominatedAt: '2025-01-28T10:00:00' },
-    // Vancouver Centre - needs candidates (Sofia not running, she's not a candidate)
-    // Victoria - Susan Wright running
-    { raceId: 'race-2025-fr-bc-victoria', candidateId: 'u15', nominatedAt: '2025-02-01T09:00:00' },
-    // Papineau - Marie Tremblay running
-    { raceId: 'race-2025-fr-qc-papineau', candidateId: 'u7', nominatedAt: '2025-02-05T14:00:00' },
-    // Regina Qu'Appelle - Jennifer White Elk running
-    { raceId: 'race-2025-fr-sk-regina-qu-appelle', candidateId: 'u9', nominatedAt: '2025-02-10T11:00:00' },
-    // Halifax - Robert MacKenzie running
-    { raceId: 'race-2025-fr-ns-halifax', candidateId: 'u8', nominatedAt: '2025-02-12T15:00:00' },
-    // Richmond - Emily Chen running
-    { raceId: 'race-2025-fr-bc-richmond', conventionId: 'conv-2025', ridingId: 'fr-bc-richmond', candidateId: 'u17', nominatedAt: '2025-02-15T10:00:00' }
-];
+// Candidates who have ACCEPTED nominations (already running)
+// CLEARED - we want to test the nomination flow manually
+const RACE_CANDIDATES = [];
 
-// Add a contested race with multiple candidates for drama!
-// Let's say Toronto Centre has 3 candidates
-const ADDITIONAL_CANDIDATES = [
-    // Additional candidates for Toronto Centre (contested race)
-    { raceId: 'race-2025-fr-on-toronto-centre', candidateId: 'u11', nominatedAt: '2025-01-25T10:00:00' }, // Sarah Greenberg
-    { raceId: 'race-2025-fr-on-toronto-centre', candidateId: 'u12', nominatedAt: '2025-01-30T14:00:00' }  // Ahmed Hassan
-];
+// Vancouver Centre is CONTESTED - multiple candidates!
+// CLEARED - we want to test the nomination flow manually  
+const ADDITIONAL_CANDIDATES = [];
 
-// Grassroots nominations - people nominating others for races
-// These are PENDING nominations that the nominee can accept/decline
-const GRASSROOTS_NOMINATIONS = [
-    // Multiple people nominating Sofia Rodriguez (u3) for Vancouver Centre - she hasn't accepted yet
-    { nominatorId: 'u15', nomineeId: 'u3', raceId: 'race-2025-fr-bc-vancouver-centre', ridingId: 'fr-bc-vancouver-centre', message: 'Sofia would be amazing for Vancouver!' },
-    { nominatorId: 'u17', nomineeId: 'u3', raceId: 'race-2025-fr-bc-vancouver-centre', ridingId: 'fr-bc-vancouver-centre', message: 'We need her business expertise!' },
-    { nominatorId: 'u4', nomineeId: 'u3', raceId: 'race-2025-fr-bc-vancouver-centre', ridingId: 'fr-bc-vancouver-centre', message: 'A proven community leader' },
-    
-    // People nominating Pierre Gagnon (u14) for Quebec ridings - he's not a declared candidate
-    { nominatorId: 'u7', nomineeId: 'u14', raceId: 'race-2025-fr-qc-louis-h-bert', ridingId: 'fr-qc-louis-h-bert', message: 'Pierre knows our heritage!' },
-    { nominatorId: 'u2', nomineeId: 'u14', raceId: 'race-2025-fr-qc-louis-h-bert', ridingId: 'fr-qc-louis-h-bert', message: 'Great advocate for preservation' },
-    
-    // Daniel Blackwood (u16) being nominated for Saskatoon - he's a researcher, not a declared candidate
-    { nominatorId: 'u9', nomineeId: 'u16', raceId: 'race-2025-fr-sk-saskatoon-university', ridingId: 'fr-sk-saskatoon-university', message: 'His research on rural development is exactly what we need' },
-    { nominatorId: 'u13', nomineeId: 'u16', raceId: 'race-2025-fr-sk-saskatoon-university', ridingId: 'fr-sk-saskatoon-university', message: 'Daniel understands prairie issues' },
-    { nominatorId: 'u1', nomineeId: 'u16', raceId: 'race-2025-fr-sk-saskatoon-university', ridingId: 'fr-sk-saskatoon-university', message: 'We need academics in politics!' },
-    
-    // Sarah Greenberg (u11) being nominated for multiple ridings - popular but hasn't declared
-    { nominatorId: 'u6', nomineeId: 'u11', raceId: 'race-2025-fr-on-kitchener-centre', ridingId: 'fr-on-kitchener-centre', message: 'Tech sector needs representation!' },
-    { nominatorId: 'u12', nomineeId: 'u11', raceId: 'race-2025-fr-on-kitchener-centre', ridingId: 'fr-on-kitchener-centre', message: 'Sarah is a digital inclusion champion' }
-];
+// Grassroots nominations - PENDING (nominee hasn't accepted yet)
+// CLEARED - we want to test the nomination flow manually
+const GRASSROOTS_NOMINATIONS = [];
 
 // ============================================
 // LOCATION SEED DATA
@@ -832,20 +771,6 @@ async function seedConventions(driver) {
             }
         }
         console.log(`  ✓ Added ${allCandidates.length} candidates to races`);
-        
-        // Also need to create the Richmond race since we have a candidate for it
-        await session.run(`
-            MERGE (nr:NominationRace {id: 'race-2025-fr-bc-richmond'})
-            ON CREATE SET nr.status = 'open', nr.currentRound = 0, nr.createdAt = datetime()
-        `);
-        await session.run(`
-            MATCH (conv:Convention {id: 'conv-2025'}), (nr:NominationRace {id: 'race-2025-fr-bc-richmond'})
-            MERGE (conv)-[:HAS_RACE]->(nr)
-        `);
-        await session.run(`
-            MATCH (nr:NominationRace {id: 'race-2025-fr-bc-richmond'}), (r:FederalRiding {id: 'fr-bc-richmond'})
-            MERGE (nr)-[:FOR_RIDING]->(r)
-        `);
         
         // Add grassroots nominations (people nominating others)
         console.log('  Adding grassroots nominations...');

@@ -104,6 +104,24 @@ router.get('/countries/:id/provinces', async (req, res) => {
     }
 });
 
+// GET /api/locations/provinces - Get all provinces
+router.get('/provinces', async (req, res) => {
+    const session = getSession();
+    try {
+        const result = await session.run(`
+            MATCH (p:Province)
+            RETURN p
+            ORDER BY p.name
+        `);
+        const provinces = result.records.map(record => record.get('p').properties);
+        res.json(provinces);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    } finally {
+        await session.close();
+    }
+});
+
 // GET /api/locations/provinces/:id - Get a province with all its locations
 router.get('/provinces/:id', async (req, res) => {
     const session = getSession();
@@ -154,6 +172,46 @@ router.get('/provinces/:id/towns', async (req, res) => {
         `, { provinceId: req.params.id });
         const towns = result.records.map(record => record.get('t').properties);
         res.json(towns);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    } finally {
+        await session.close();
+    }
+});
+
+// GET /api/locations/provinces/:id/ridings - Get ALL ridings for a province (combined)
+router.get('/provinces/:id/ridings', async (req, res) => {
+    const session = getSession();
+    try {
+        const result = await session.run(`
+            MATCH (p:Province {id: $provinceId})
+            OPTIONAL MATCH (p)-[:HAS_FEDERAL_RIDING]->(fr:FederalRiding)
+            OPTIONAL MATCH (p)-[:HAS_PROVINCIAL_RIDING]->(pr:ProvincialRiding)
+            OPTIONAL MATCH (p)-[:HAS_FIRST_NATION]->(fn:FirstNation)
+            WITH p,
+                 collect(DISTINCT {id: fr.id, name: fr.name, type: 'FederalRiding'}) as federal,
+                 collect(DISTINCT {id: pr.id, name: pr.name, type: 'ProvincialRiding'}) as provincial,
+                 collect(DISTINCT {id: fn.id, name: fn.name, type: 'FirstNation'}) as firstNations
+            RETURN federal, provincial, firstNations
+        `, { provinceId: req.params.id });
+        
+        if (result.records.length === 0) {
+            return res.json([]);
+        }
+        
+        const record = result.records[0];
+        const federal = record.get('federal').filter(r => r.id);
+        const provincial = record.get('provincial').filter(r => r.id);
+        const firstNations = record.get('firstNations').filter(r => r.id);
+        
+        // Combine and sort all ridings
+        const allRidings = [
+            ...federal.map(r => ({ ...r, category: '🗳️ Federal' })),
+            ...provincial.map(r => ({ ...r, category: '📋 Provincial' })),
+            ...firstNations.map(r => ({ ...r, category: '🪶 First Nation' }))
+        ].sort((a, b) => a.name.localeCompare(b.name));
+        
+        res.json(allRidings);
     } catch (error) {
         res.status(500).json({ error: error.message });
     } finally {

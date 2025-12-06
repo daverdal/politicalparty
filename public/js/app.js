@@ -5,8 +5,62 @@ async function api(endpoint) {
   return response.json();
 }
 
+// ============================================
+// CURRENT USER STATE (for testing/gameplay)
+// ============================================
+let currentUser = null;
+let allUsers = [];
+
+// Load and populate user selector
+async function initUserSelector() {
+  try {
+    allUsers = await api('/users');
+    const selector = document.getElementById('current-user-select');
+    if (!selector) return;
+    
+    selector.innerHTML = `
+      <option value="">-- Select a user --</option>
+      ${allUsers.map(u => `
+        <option value="${u.id}" ${u.candidate ? '👤' : ''}>${u.name}${u.candidate ? ' ⭐' : ''}</option>
+      `).join('')}
+    `;
+    
+    // Restore from localStorage
+    const savedUserId = localStorage.getItem('currentUserId');
+    if (savedUserId) {
+      selector.value = savedUserId;
+      currentUser = allUsers.find(u => u.id === savedUserId);
+    }
+    
+    // Handle selection change
+    selector.addEventListener('change', (e) => {
+      const userId = e.target.value;
+      if (userId) {
+        currentUser = allUsers.find(u => u.id === userId);
+        localStorage.setItem('currentUserId', userId);
+      } else {
+        currentUser = null;
+        localStorage.removeItem('currentUserId');
+      }
+      // Refresh current page to reflect user change
+      const currentPage = window.location.hash.slice(1) || 'dashboard';
+      if (pages[currentPage]) pages[currentPage]();
+    });
+  } catch (err) {
+    console.error('Failed to load users:', err);
+  }
+}
+
+// Get current user (for API calls)
+function getCurrentUser() {
+  return currentUser;
+}
+
+// ============================================
+
 // Get initials from name
 function getInitials(name) {
+  if (!name) return '?';
   return name.split(' ').map(n => n[0]).join('').toUpperCase();
 }
 
@@ -849,6 +903,295 @@ let browseState = {
 
 // Page loaders
 const pages = {
+  // ============================================
+  // MY PROFILE PAGE
+  // ============================================
+  async profile() {
+    const content = document.getElementById('content');
+    
+    if (!currentUser) {
+      content.innerHTML = `
+        <header class="page-header">
+          <h1 class="page-title">👤 My Profile</h1>
+        </header>
+        <div class="card">
+          <div class="card-body">
+            <p class="empty-text">Please select a user from the dropdown above to view your profile.</p>
+          </div>
+        </div>
+      `;
+      return;
+    }
+    
+    content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    
+    try {
+      // Fetch user details, conventions, and provinces for location picker
+      const [userDetails, conventions, provinces] = await Promise.all([
+        api(`/users/${currentUser.id}`),
+        api('/conventions'),
+        api('/locations/provinces')
+      ]);
+      
+      const activeConv = conventions.find(c => c.status !== 'completed');
+      let nominations = [];
+      let currentRace = null;
+      
+      if (activeConv) {
+        try {
+          // Get nominations for this user
+          const nomData = await api(`/conventions/${activeConv.id}/nominations/${currentUser.id}`);
+          // API returns array directly
+          nominations = Array.isArray(nomData) ? nomData : (nomData.nominations || []);
+          
+          // Find if user is already running in a race
+          currentRace = nominations.find(n => n.hasAccepted);
+        } catch (e) {
+          console.log('No nominations found:', e);
+        }
+      }
+      
+      const pendingNominations = nominations.filter(n => !n.hasAccepted);
+      
+      content.innerHTML = `
+        <header class="page-header">
+          <h1 class="page-title">👤 My Profile</h1>
+          <p class="page-subtitle">Welcome, ${currentUser.name}</p>
+        </header>
+        
+        <!-- User Info Card -->
+        <div class="card">
+          <div class="card-header">
+            <div class="profile-header">
+              <div class="profile-avatar">${getInitials(currentUser.name)}</div>
+              <div>
+                <h2 class="profile-name">${currentUser.name}</h2>
+                <p class="profile-region">${userDetails.location?.name || currentUser.region || 'No location set'}</p>
+              </div>
+            </div>
+            ${currentUser.candidate ? '<span class="badge success">⭐ Candidate</span>' : ''}
+          </div>
+          <div class="card-body">
+            <p class="profile-bio">${userDetails.bio || 'No bio provided'}</p>
+            <div class="profile-stats">
+              <div class="profile-stat">
+                <span class="profile-stat-value">${userDetails.points || 0}</span>
+                <span class="profile-stat-label">Points</span>
+              </div>
+              <div class="profile-stat">
+                <span class="profile-stat-value">${userDetails.endorsementCount || 0}</span>
+                <span class="profile-stat-label">Endorsements</span>
+              </div>
+            </div>
+            
+            <!-- Location Selector -->
+            <div class="location-selector-section">
+              <h4>📍 My Location (Riding)</h4>
+              <p class="location-help">Set your riding to appear in local candidates list and receive nominations for your area.</p>
+              <div class="location-selector-form">
+                <select id="province-select" class="form-select">
+                  <option value="">-- Select Province --</option>
+                  ${provinces.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+                </select>
+                <select id="riding-select" class="form-select" disabled>
+                  <option value="">-- Select Riding --</option>
+                </select>
+                <button class="btn btn-primary" id="save-location-btn" disabled>Save Location</button>
+              </div>
+              <div id="location-feedback" class="location-feedback"></div>
+              ${userDetails.location ? `
+                <p class="current-location">Current: <strong>${userDetails.location.name}</strong></p>
+              ` : ''}
+            </div>
+            
+            ${currentUser.platform ? `
+              <div class="profile-platform">
+                <strong>Platform:</strong> ${currentUser.platform}
+              </div>
+            ` : ''}
+          </div>
+        </div>
+        
+        <!-- Current Race Status -->
+        ${currentRace ? `
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">🏁 Currently Running In</h3>
+              <span class="badge success">Active</span>
+            </div>
+            <div class="card-body">
+              <div class="current-race-info">
+                <div class="race-riding-lg">${currentRace.riding?.name || 'Unknown Riding'}</div>
+                <p class="race-province-lg">${currentRace.province?.name || ''}</p>
+                <div class="race-actions">
+                  <button class="btn btn-danger" onclick="withdrawFromRace('${activeConv?.id}', '${currentRace.race?.id}')">
+                    Withdraw from Race
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+        
+        <!-- Pending Nominations -->
+        <div class="card ${pendingNominations.length > 0 ? 'highlight' : ''}">
+          <div class="card-header">
+            <h3 class="card-title">📬 Pending Nominations</h3>
+            ${pendingNominations.length > 0 ? `<span class="badge warning">${pendingNominations.length} pending</span>` : ''}
+          </div>
+          <div class="card-body">
+            ${pendingNominations.length === 0 ? `
+              <p class="empty-text">No pending nominations. ${currentRace ? 'You\'re already running in a race!' : 'Others can nominate you for races during the nomination phase.'}</p>
+            ` : `
+              <p class="nominations-help">You've been nominated for the following races. You can only accept <strong>one</strong> nomination per convention.</p>
+              <div class="nominations-list">
+                ${pendingNominations.map(nom => `
+                  <div class="nomination-card" data-race-id="${nom.race?.id}">
+                    <div class="nomination-riding">${nom.riding?.name || 'Unknown Riding'}</div>
+                    <div class="nomination-province">${nom.province?.name || ''}</div>
+                    <div class="nomination-count">${nom.nominationCount || 1} nomination(s)</div>
+                    <div class="nomination-nominators">
+                      Nominated by: ${nom.nominations?.map(n => n.nominatorName).join(', ') || 'Unknown'}
+                    </div>
+                    <div class="nomination-actions">
+                      <button class="btn btn-primary" onclick="acceptNomination('${activeConv?.id}', '${nom.race?.id}')">
+                        ✅ Accept & Run
+                      </button>
+                      <button class="btn btn-secondary" onclick="declineNomination('${activeConv?.id}', '${nom.race?.id}')">
+                        ❌ Decline
+                      </button>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            `}
+          </div>
+        </div>
+        
+        <!-- Convention Status -->
+        ${activeConv ? `
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">🏛️ ${activeConv.name}</h3>
+              <span class="badge">${activeConv.status || 'upcoming'}</span>
+            </div>
+            <div class="card-body">
+              <p>Current Phase: <strong>${activeConv.status?.replace('-', ' → ').replace('wave', 'Wave ') || 'Upcoming'}</strong></p>
+              ${activeConv.status?.includes('nominations') ? `
+                <p class="help-text">📝 Nominations are open! Ask members to nominate you, or nominate others in the <a href="#convention">Convention</a> page.</p>
+              ` : activeConv.status?.includes('voting') ? `
+                <p class="help-text">🗳️ Voting is underway! If you're running, encourage members to vote for you.</p>
+              ` : `
+                <p class="help-text">Convention hasn't started yet. Check the <a href="#admin">Admin</a> page to begin.</p>
+              `}
+            </div>
+          </div>
+        ` : ''}
+      `;
+      
+      // ============================================
+      // LOCATION SELECTOR EVENT HANDLERS
+      // ============================================
+      const provinceSelect = document.getElementById('province-select');
+      const ridingSelect = document.getElementById('riding-select');
+      const saveBtn = document.getElementById('save-location-btn');
+      const feedback = document.getElementById('location-feedback');
+      
+      // Pre-select current location if user has one
+      if (userDetails.location) {
+        // Find which province this riding belongs to
+        const currentLocId = userDetails.location.id;
+        // We'll need to load the province to pre-select
+      }
+      
+      // Province change → Load ridings
+      provinceSelect?.addEventListener('change', async (e) => {
+        const provinceId = e.target.value;
+        ridingSelect.innerHTML = '<option value="">Loading...</option>';
+        ridingSelect.disabled = true;
+        saveBtn.disabled = true;
+        
+        if (!provinceId) {
+          ridingSelect.innerHTML = '<option value="">-- Select Riding --</option>';
+          return;
+        }
+        
+        try {
+          // Load all ridings for this province (federal, provincial, first nations)
+          const ridings = await api(`/locations/provinces/${provinceId}/ridings`);
+          
+          // Group by category
+          const grouped = {};
+          ridings.forEach(r => {
+            const cat = r.category || 'Other';
+            if (!grouped[cat]) grouped[cat] = [];
+            grouped[cat].push(r);
+          });
+          
+          // Build optgroups
+          let options = '<option value="">-- Select Riding --</option>';
+          for (const [category, items] of Object.entries(grouped)) {
+            options += `<optgroup label="${category}">`;
+            items.forEach(r => {
+              options += `<option value="${r.id}" data-type="${r.type}">${r.name}</option>`;
+            });
+            options += '</optgroup>';
+          }
+          
+          ridingSelect.innerHTML = options;
+          ridingSelect.disabled = false;
+        } catch (err) {
+          ridingSelect.innerHTML = '<option value="">Error loading ridings</option>';
+          console.error('Error loading ridings:', err);
+        }
+      });
+      
+      // Riding change → Enable save button
+      ridingSelect?.addEventListener('change', (e) => {
+        saveBtn.disabled = !e.target.value;
+      });
+      
+      // Save location
+      saveBtn?.addEventListener('click', async () => {
+        const ridingOption = ridingSelect.options[ridingSelect.selectedIndex];
+        const locationId = ridingOption.value;
+        const locationType = ridingOption.dataset.type || 'FederalRiding';
+        
+        if (!locationId) return;
+        
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+        
+        try {
+          const response = await fetch(`/api/users/${currentUser.id}/location`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ locationId, locationType })
+          });
+          const result = await response.json();
+          
+          if (response.ok) {
+            feedback.innerHTML = `<span class="success">✅ Location set to ${result.location?.name || locationId}</span>`;
+            // Refresh profile after a moment
+            setTimeout(() => pages.profile(), 1500);
+          } else {
+            feedback.innerHTML = `<span class="error">❌ ${result.error}</span>`;
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save Location';
+          }
+        } catch (err) {
+          feedback.innerHTML = `<span class="error">❌ Error: ${err.message}</span>`;
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save Location';
+        }
+      });
+      
+    } catch (err) {
+      console.error('Error loading profile:', err);
+      content.innerHTML = `<div class="card"><div class="card-body">Error loading profile: ${err.message}</div></div>`;
+    }
+  },
+  
   async browse() {
     const content = document.getElementById('content');
     content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
@@ -1023,19 +1366,20 @@ const pages = {
       content.innerHTML = `
         <header class="page-header">
           <h1 class="page-title">Members</h1>
-          <p class="page-subtitle">${users.length} community members</p>
+          <p class="page-subtitle">${users.length} community members - Click to view & nominate</p>
         </header>
         
         <div class="cards-grid">
           ${users.map(user => `
-            <div class="card">
+            <div class="card member-card" data-user-id="${user.id}" style="cursor: pointer;">
               <div class="user-card">
                 <div class="avatar">${getInitials(user.name)}</div>
                 <div class="user-info">
                   <h3 class="card-title">${user.name}</h3>
                   <p class="card-subtitle">${user.bio || ''}</p>
                   <div class="user-meta">
-                    <span>📍 ${user.region}</span>
+                    <span>📍 ${user.location?.name || user.region || 'No location'}</span>
+                    ${user.candidate ? '<span class="badge-small">⭐ Candidate</span>' : ''}
                   </div>
                 </div>
               </div>
@@ -1044,15 +1388,19 @@ const pages = {
                   ${renderTags(user.skills)}
                 </div>
               ` : ''}
-              ${user.interests && user.interests.length ? `
-                <div class="card-footer" style="border-top: none; padding-top: 8px;">
-                  ${renderTags(user.interests, true)}
-                </div>
-              ` : ''}
             </div>
           `).join('')}
         </div>
       `;
+      
+      // Add click handlers for member cards
+      document.querySelectorAll('.member-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const userId = card.dataset.userId;
+          showMemberDetail(userId);
+        });
+      });
+      
     } catch (err) {
       content.innerHTML = `<div class="card"><div class="card-body">Error loading users: ${err.message}</div></div>`;
     }
@@ -1234,12 +1582,15 @@ const pages = {
       
       // Status badge helper
       const getStatusBadge = (status, currentWave) => {
-        if (status === 'nominations') return '<span class="badge warning">📝 Nominations Open</span>';
+        if (status === 'upcoming') return '<span class="badge">🗓️ Coming Feb 2025</span>';
         if (status === 'completed') return '<span class="badge">✅ Completed</span>';
-        if (status === 'upcoming') return '<span class="badge">🗓️ Upcoming</span>';
-        // Check if it's a wave status
-        const waveNum = currentWave || 0;
-        if (waveNum > 0 && waveNum <= 6) {
+        // Check for wave-specific status
+        if (status && status.includes('-nominations')) {
+          const waveNum = status.replace('wave', '').replace('-nominations', '');
+          return `<span class="badge warning">📝 Wave ${waveNum} Nominations</span>`;
+        }
+        if (status && status.includes('-voting')) {
+          const waveNum = status.replace('wave', '').replace('-voting', '');
           return `<span class="badge success">🗳️ Wave ${waveNum} Voting</span>`;
         }
         return `<span class="badge">${status}</span>`;
@@ -1337,30 +1688,39 @@ const pages = {
           <!-- Nomination Races -->
           <div class="card">
             <div class="card-header">
-              <h3 class="card-title">Nomination Races</h3>
+              <h3 class="card-title">🏁 Active Races - Wave ${activeConv.currentWave || 1}</h3>
               <span class="badge">${activeRaces.length} ridings</span>
             </div>
             <div class="card-body">
-              <div class="races-list">
-                ${activeRaces.length === 0 ? '<p class="empty-text">No races created yet</p>' : 
+              <p class="races-help">Click a riding to see candidates and nominate someone</p>
+              <div class="races-grid">
+                ${activeRaces.length === 0 ? '<p class="empty-text">No races created yet. Use Admin panel to create races.</p>' : 
                   activeRaces.map(race => `
-                    <div class="race-item ${race.candidateCount > 1 ? 'contested' : race.candidateCount === 1 ? 'uncontested' : 'vacant'}" data-race-id="${race.id}">
-                      <div class="race-info">
-                        <div class="race-riding">${race.riding?.name || 'Unknown Riding'}</div>
-                        <div class="race-province">${race.provinceName || ''}</div>
+                    <div class="race-card ${race.candidateCount > 1 ? 'contested' : race.candidateCount === 1 ? 'uncontested' : 'vacant'}" 
+                         data-race-id="${race.id}" 
+                         onclick="showRaceDetail('${race.id}')">
+                      <div class="race-card-header">
+                        <div class="race-riding-name">${race.riding?.name || 'Unknown Riding'}</div>
+                        <div class="race-province-name">${race.provinceName || ''}</div>
                       </div>
-                      <div class="race-candidates">
+                      <div class="race-card-body">
                         ${race.candidateCount === 0 ? 
-                          '<span class="race-status vacant">No candidates</span>' :
+                          '<div class="race-empty">🚫 No candidates yet</div>' :
                           race.candidateCount === 1 ?
-                          `<span class="race-status uncontested">1 candidate (uncontested)</span>` :
-                          `<span class="race-status contested">${race.candidateCount} candidates</span>`
+                          `<div class="race-uncontested">👤 1 candidate (uncontested)</div>` :
+                          `<div class="race-contested">👥 ${race.candidateCount} candidates</div>`
                         }
+                        ${race.candidates?.length > 0 ? `
+                          <div class="race-candidates-preview">
+                            ${race.candidates.slice(0, 3).map(c => `
+                              <span class="candidate-tag">${c.name}</span>
+                            `).join('')}
+                            ${race.candidates.length > 3 ? `<span class="candidate-more">+${race.candidates.length - 3} more</span>` : ''}
+                          </div>
+                        ` : ''}
                       </div>
-                      <div class="race-candidates-list">
-                        ${race.candidates?.map(c => `
-                          <span class="candidate-chip">${c.name}</span>
-                        `).join('') || ''}
+                      <div class="race-card-footer">
+                        <span class="view-race-btn">View Race →</span>
                       </div>
                     </div>
                   `).join('')
@@ -1408,6 +1768,327 @@ const pages = {
   }
 };
 
+// Admin page
+pages.admin = async function() {
+    const content = document.getElementById('content');
+    content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    
+    try {
+      const [conventions, autoMode] = await Promise.all([
+        api('/conventions'),
+        api('/admin/auto-mode')
+      ]);
+      const activeConv = conventions.find(c => c.status !== 'completed') || conventions[0];
+      
+      const phases = [
+        { status: 'upcoming', label: '🗓️ Upcoming', wave: 0 },
+        { status: 'wave1-nominations', label: '📝 Wave 1 Nominations (Pacific)', wave: 1 },
+        { status: 'wave1-voting', label: '🗳️ Wave 1 Voting (Pacific)', wave: 1 },
+        { status: 'wave2-nominations', label: '📝 Wave 2 Nominations (Mountain)', wave: 2 },
+        { status: 'wave2-voting', label: '🗳️ Wave 2 Voting (Mountain)', wave: 2 },
+        { status: 'wave3-nominations', label: '📝 Wave 3 Nominations (Prairie)', wave: 3 },
+        { status: 'wave3-voting', label: '🗳️ Wave 3 Voting (Prairie)', wave: 3 },
+        { status: 'wave4-nominations', label: '📝 Wave 4 Nominations (Central)', wave: 4 },
+        { status: 'wave4-voting', label: '🗳️ Wave 4 Voting (Central)', wave: 4 },
+        { status: 'wave5-nominations', label: '📝 Wave 5 Nominations (Quebec)', wave: 5 },
+        { status: 'wave5-voting', label: '🗳️ Wave 5 Voting (Quebec)', wave: 5 },
+        { status: 'wave6-nominations', label: '📝 Wave 6 Nominations (Atlantic)', wave: 6 },
+        { status: 'wave6-voting', label: '🗳️ Wave 6 Voting (Atlantic)', wave: 6 },
+        { status: 'completed', label: '✅ Completed', wave: 6 },
+      ];
+      
+      content.innerHTML = `
+        <header class="page-header">
+          <h1 class="page-title">⚡ Admin Controls</h1>
+          <p class="page-subtitle">Super admin tools for testing the convention</p>
+        </header>
+        
+        <div class="cards-grid">
+          <!-- Auto Mode Toggle -->
+          <div class="card auto-mode-card ${autoMode.enabled ? 'enabled' : ''}">
+            <div class="card-header">
+              <h3 class="card-title">🤖 Auto Mode</h3>
+              <label class="toggle-switch">
+                <input type="checkbox" id="auto-mode-toggle" ${autoMode.enabled ? 'checked' : ''} onchange="toggleAutoMode(this.checked)">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="card-body">
+              <p class="auto-mode-status">
+                ${autoMode.enabled 
+                  ? '🤖 <strong>AUTO</strong> - System checks dates every hour and advances automatically' 
+                  : '🎮 <strong>MANUAL</strong> - Use buttons below to control phases'}
+              </p>
+              ${autoMode.lastCheck ? `<p class="auto-mode-info">Last check: ${new Date(autoMode.lastCheck).toLocaleString()}</p>` : ''}
+              ${autoMode.lastAction ? `<p class="auto-mode-info">Last action: ${autoMode.lastAction}</p>` : ''}
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">🎮 Convention Phase Control</h3>
+            </div>
+            <div class="card-body">
+              <p style="margin-bottom: 16px;">Current: <strong>${activeConv?.status || 'none'}</strong></p>
+              
+              <div class="admin-phase-buttons">
+                ${phases.map(p => `
+                  <button class="admin-btn ${activeConv?.status === p.status ? 'active' : ''}" 
+                          onclick="setConventionPhase('${activeConv?.id}', '${p.status}', ${p.wave})">
+                    ${p.label}
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">⏩ Quick Actions</h3>
+            </div>
+            <div class="card-body">
+              <button class="admin-btn primary" onclick="advanceConvention('${activeConv?.id}')">
+                ⏩ Advance to Next Phase
+              </button>
+              
+              <button class="admin-btn" onclick="createWaveRaces('${activeConv?.id}')" style="margin-top: 12px;">
+                🏁 Create Races for Current Wave
+              </button>
+              
+              <div id="admin-result" style="margin-top: 16px; padding: 12px; background: var(--bg-secondary); border-radius: 8px; display: none;">
+              </div>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">📋 Wave Reference</h3>
+            </div>
+            <div class="card-body">
+              <table class="admin-table">
+                <tr><th>Wave</th><th>Region</th><th>Provinces</th></tr>
+                <tr><td>1</td><td>Pacific</td><td>BC, Yukon</td></tr>
+                <tr><td>2</td><td>Mountain</td><td>Alberta, NWT</td></tr>
+                <tr><td>3</td><td>Prairie</td><td>SK, MB, Nunavut</td></tr>
+                <tr><td>4</td><td>Central</td><td>Ontario</td></tr>
+                <tr><td>5</td><td>Quebec</td><td>Quebec</td></tr>
+                <tr><td>6</td><td>Atlantic</td><td>NB, NS, PE, NL</td></tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+    } catch (err) {
+      content.innerHTML = `<div class="card"><div class="card-body">Error: ${err.message}</div></div>`;
+    }
+};
+
+// Toggle auto mode
+async function toggleAutoMode(enabled) {
+    try {
+        const response = await fetch('/api/admin/auto-mode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled })
+        });
+        const data = await response.json();
+        showAdminResult(data.message || data.error);
+        pages.admin(); // Refresh
+    } catch (err) {
+        showAdminResult('Error: ' + err.message);
+    }
+}
+
+// Admin helper functions
+async function setConventionPhase(convId, status, wave) {
+    try {
+        const response = await fetch(`/api/admin/convention/${convId}/set-phase`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status, currentWave: wave })
+        });
+        const data = await response.json();
+        showAdminResult(data.message || data.error);
+        pages.admin(); // Refresh
+    } catch (err) {
+        showAdminResult('Error: ' + err.message);
+    }
+}
+
+async function advanceConvention(convId) {
+    try {
+        const response = await fetch(`/api/admin/convention/${convId}/advance`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await response.json();
+        showAdminResult(data.message || data.error);
+        pages.admin(); // Refresh
+    } catch (err) {
+        showAdminResult('Error: ' + err.message);
+    }
+}
+
+async function createWaveRaces(convId) {
+    try {
+        const response = await fetch(`/api/admin/convention/${convId}/create-wave-races`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await response.json();
+        showAdminResult(data.message || data.error);
+    } catch (err) {
+        showAdminResult('Error: ' + err.message);
+    }
+}
+
+function showAdminResult(message) {
+    const el = document.getElementById('admin-result');
+    if (el) {
+        // Handle multi-line messages
+        el.innerHTML = message.split('\n').map(line => `<div>${line}</div>`).join('');
+        el.style.display = 'block';
+        // Don't auto-hide - let user see the info
+    }
+}
+
+// Show member detail modal with nominate option
+async function showMemberDetail(userId) {
+  try {
+    const [user, conventions] = await Promise.all([
+      api(`/users/${userId}`),
+      api('/conventions')
+    ]);
+    
+    const activeConv = conventions.find(c => c.status !== 'completed');
+    const isNominationsOpen = activeConv?.status?.includes('nominations');
+    
+    // Check if this user has a location set
+    const hasLocation = user.location && user.location.id;
+    const locationType = user.location?.type || 'FederalRiding';
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="profile-header">
+            <div class="profile-avatar">${getInitials(user.name)}</div>
+            <div>
+              <h2>${user.name}</h2>
+              <p class="modal-subtitle">📍 ${user.location?.name || user.region || 'No location set'}</p>
+            </div>
+          </div>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="member-bio">${user.bio || 'No bio provided'}</p>
+          
+          <div class="member-stats">
+            <div class="member-stat">
+              <span class="stat-value">${user.points || 0}</span>
+              <span class="stat-label">Points</span>
+            </div>
+            <div class="member-stat">
+              <span class="stat-value">${user.endorsementCount || 0}</span>
+              <span class="stat-label">Endorsements</span>
+            </div>
+          </div>
+          
+          ${user.skills?.length ? `
+            <div class="member-section">
+              <h4>Skills</h4>
+              <div class="tags">${user.skills.map(s => `<span class="tag">${s}</span>`).join('')}</div>
+            </div>
+          ` : ''}
+          
+          ${user.interests?.length ? `
+            <div class="member-section">
+              <h4>Interests</h4>
+              <div class="tags">${user.interests.map(i => `<span class="tag interest">${i}</span>`).join('')}</div>
+            </div>
+          ` : ''}
+          
+          <hr class="modal-divider">
+          
+          <!-- Nomination Section -->
+          <div class="nominate-section">
+            <h4>📝 Nominate for Convention</h4>
+            ${!currentUser ? `
+              <p class="nominate-hint">Select yourself from the "Playing as" dropdown to nominate this member.</p>
+            ` : currentUser.id === userId ? `
+              <p class="nominate-hint">You cannot nominate yourself. Ask another member to nominate you!</p>
+            ` : !isNominationsOpen ? `
+              <p class="nominate-hint">Nominations are not currently open. Check the Admin page to start a nominations phase.</p>
+            ` : !hasLocation ? `
+              <p class="nominate-hint">This member hasn't set their riding yet. They need to set their location in their Profile before they can be nominated.</p>
+            ` : `
+              <p class="nominate-info">Nominate <strong>${user.name}</strong> to run in <strong>${user.location.name}</strong></p>
+              <button class="btn btn-primary" id="nominate-member-btn">
+                🗳️ Nominate ${user.name}
+              </button>
+              <div id="nominate-feedback" class="nomination-feedback"></div>
+            `}
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Nominate button handler
+    const nominateBtn = modal.querySelector('#nominate-member-btn');
+    if (nominateBtn) {
+      nominateBtn.addEventListener('click', async () => {
+        const feedback = modal.querySelector('#nominate-feedback');
+        nominateBtn.disabled = true;
+        nominateBtn.textContent = 'Nominating...';
+        
+        try {
+          // First, find or create the race for this riding
+          const raceId = `race-${activeConv.id.replace('conv-', '')}-${user.location.id}`;
+          
+          const response = await fetch(`/api/conventions/${activeConv.id}/nominate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              nominatorId: currentUser.id,
+              nomineeId: userId,
+              ridingId: user.location.id,
+              ridingType: locationType
+            })
+          });
+          const result = await response.json();
+          
+          if (response.ok && result.success) {
+            feedback.innerHTML = `<span class="success">✅ ${user.name} has been nominated for ${user.location.name}! They now have ${result.nominationCount} nomination(s). They'll need to accept in their Profile.</span>`;
+            nominateBtn.textContent = '✅ Nominated!';
+          } else {
+            feedback.innerHTML = `<span class="error">❌ ${result.error || 'Failed to nominate'}</span>`;
+            nominateBtn.disabled = false;
+            nominateBtn.textContent = `🗳️ Nominate ${user.name}`;
+          }
+        } catch (err) {
+          feedback.innerHTML = `<span class="error">❌ Error: ${err.message}</span>`;
+          nominateBtn.disabled = false;
+          nominateBtn.textContent = `🗳️ Nominate ${user.name}`;
+        }
+      });
+    }
+    
+    // Close handlers
+    modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.remove();
+    });
+    
+  } catch (err) {
+    console.error('Error loading member:', err);
+    alert('Error loading member details');
+  }
+}
+
 // Show race detail modal/view
 async function showRaceDetail(raceId) {
   try {
@@ -1417,18 +2098,25 @@ async function showRaceDetail(raceId) {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.innerHTML = `
-      <div class="modal-content">
+      <div class="modal-content modal-wide">
         <div class="modal-header">
-          <h2>${race.riding?.name || 'Unknown Riding'}</h2>
+          <div>
+            <h2>${race.riding?.name || 'Unknown Riding'}</h2>
+            <p class="modal-subtitle">${race.province?.name || ''} • ${race.convention?.name || ''}</p>
+          </div>
           <button class="modal-close">&times;</button>
         </div>
         <div class="modal-body">
-          <p class="modal-subtitle">${race.province?.name || ''} • ${race.convention?.name || ''}</p>
+          <!-- Candidates Section -->
+          <h3 class="candidates-header">
+            ${race.candidates?.length || 0} Declared Candidates
+            ${race.candidates?.length === 0 ? '<span class="header-hint">- awaiting nominations</span>' : ''}
+          </h3>
           
-          <h3 class="candidates-header">${race.candidates?.length || 0} Candidates</h3>
-          
-          ${race.candidates?.length === 0 ? 
-            '<p class="empty-text">No candidates have declared for this riding yet.</p>' :
+          ${race.candidates?.length === 0 ? `
+            <p class="empty-text">No candidates have accepted nominations for this riding yet.</p>
+            <p class="nomination-hint">💡 To nominate someone: Go to <strong>Members</strong>, find a member who lives in this riding, and click "Nominate" on their profile.</p>
+          ` :
             `<div class="race-candidates-detail">
               ${race.candidates.map((candidate, index) => `
                 <div class="race-candidate-card ${index === 0 ? 'leading' : ''}">
@@ -1436,7 +2124,7 @@ async function showRaceDetail(raceId) {
                   <div class="candidate-avatar-lg">${getInitials(candidate.name)}</div>
                   <div class="candidate-info-detail">
                     <h4>${candidate.name}</h4>
-                    <p class="candidate-bio-short">${candidate.bio || 'No bio'}</p>
+                    <p class="candidate-bio-short">${candidate.bio || 'No bio provided'}</p>
                     <div class="candidate-stats-row">
                       <span class="stat-pill points">⭐ ${candidate.points || 0} points</span>
                       <span class="stat-pill endorsements">👍 ${candidate.endorsementCount || 0} endorsements</span>
@@ -1486,7 +2174,91 @@ function navigate(page) {
 }
 
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
+// ============================================
+// NOMINATION ACTIONS
+// ============================================
+
+async function acceptNomination(convId, raceId) {
+  if (!currentUser) {
+    alert('Please select a user first');
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/api/conventions/${convId}/accept-nomination`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: currentUser.id, raceId })
+    });
+    const result = await response.json();
+    
+    if (result.success) {
+      alert('✅ Nomination accepted! You are now a candidate.');
+      pages.profile(); // Refresh profile
+    } else {
+      alert('❌ ' + (result.error || 'Failed to accept nomination'));
+    }
+  } catch (err) {
+    alert('❌ Error: ' + err.message);
+  }
+}
+
+async function declineNomination(convId, raceId) {
+  if (!currentUser) return;
+  
+  if (!confirm('Are you sure you want to decline this nomination?')) return;
+  
+  try {
+    const response = await fetch(`/api/conventions/${convId}/decline-nomination`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: currentUser.id, raceId })
+    });
+    const result = await response.json();
+    
+    if (result.success) {
+      alert('Nomination declined.');
+      pages.profile(); // Refresh profile
+    } else {
+      alert('❌ ' + (result.error || 'Failed to decline'));
+    }
+  } catch (err) {
+    alert('❌ Error: ' + err.message);
+  }
+}
+
+async function withdrawFromRace(convId, raceId) {
+  if (!currentUser) return;
+  
+  if (!confirm('Are you sure you want to withdraw from this race? This cannot be undone.')) return;
+  
+  try {
+    const response = await fetch(`/api/conventions/${convId}/withdraw`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: currentUser.id, raceId })
+    });
+    const result = await response.json();
+    
+    if (result.success) {
+      alert('You have withdrawn from the race.');
+      pages.profile(); // Refresh profile
+    } else {
+      alert('❌ ' + (result.error || 'Failed to withdraw'));
+    }
+  } catch (err) {
+    alert('❌ Error: ' + err.message);
+  }
+}
+
+// ============================================
+// INITIALIZATION
+// ============================================
+
+document.addEventListener('DOMContentLoaded', async () => {
+  // Initialize user selector
+  await initUserSelector();
+  
   // Set up navigation
   document.querySelectorAll('.nav-link').forEach(link => {
     link.addEventListener('click', (e) => {

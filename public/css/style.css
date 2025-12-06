@@ -86,11 +86,44 @@ a:hover {
   position: fixed;
   height: 100vh;
   z-index: 100;
+  overflow-y: auto;
 }
 
 .sidebar-header {
   padding: 24px;
   border-bottom: 1px solid var(--border-color);
+}
+
+/* User Selector */
+.user-selector {
+  padding: 12px 16px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.user-selector-label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.user-select {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.user-select:focus {
+  outline: none;
+  border-color: var(--accent-primary);
 }
 
 .logo {
@@ -124,6 +157,8 @@ a:hover {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  overflow-y: auto;
+  min-height: 0; /* Important for flex children to scroll */
 }
 
 .nav-link {
@@ -1111,6 +1146,402 @@ a:hover {
   background: transparent;
 }
 
+/* ============================================
+   PROFILE PAGE STYLES
+   ============================================ */
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.profile-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--accent-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: white;
+}
+
+.profile-name {
+  font-size: 1.5rem;
+  margin-bottom: 4px;
+}
+
+.profile-region {
+  color: var(--text-muted);
+}
+
+.profile-bio {
+  margin-bottom: 16px;
+  color: var(--text-secondary);
+}
+
+.profile-stats {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 16px;
+}
+
+.profile-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-stat-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
+.profile-stat-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.profile-platform {
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--accent-primary);
+}
+
+/* Location Selector */
+.location-selector-section {
+  margin-top: 20px;
+  padding: 16px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border-color);
+}
+
+.location-selector-section h4 {
+  margin-bottom: 8px;
+  color: var(--accent-primary);
+}
+
+.location-help {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.location-selector-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.location-selector-form .form-select {
+  flex: 1;
+  min-width: 180px;
+}
+
+.location-feedback {
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+.location-feedback .success {
+  color: var(--success);
+}
+
+.location-feedback .error {
+  color: var(--danger);
+}
+
+.current-location {
+  margin-top: 12px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+/* Current Race */
+.current-race-info {
+  text-align: center;
+  padding: 16px;
+}
+
+.race-riding-lg {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
+.race-province-lg {
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.race-actions {
+  margin-top: 16px;
+}
+
+/* Nominations */
+.card.highlight {
+  border: 2px solid var(--warning);
+  animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% { border-color: var(--warning); }
+  50% { border-color: rgba(255, 179, 71, 0.3); }
+}
+
+.nominations-help {
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+
+.nominations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nomination-card {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  border-left: 4px solid var(--accent-primary);
+}
+
+.nomination-riding {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.nomination-province {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.nomination-count {
+  font-size: 0.9rem;
+  color: var(--accent-secondary);
+  margin-bottom: 4px;
+}
+
+.nomination-nominators {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.nomination-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn {
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background: var(--accent-gradient);
+  color: white;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 212, 170, 0.3);
+}
+
+.btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-hover);
+}
+
+.btn-danger {
+  background: rgba(255, 107, 107, 0.15);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+.btn-danger:hover {
+  background: var(--danger);
+  color: white;
+}
+
+.help-text {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.help-text a {
+  color: var(--accent-primary);
+}
+
+/* Admin Page Styles */
+.admin-phase-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-btn {
+  padding: 10px 16px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.admin-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+}
+
+.admin-btn.active {
+  background: var(--accent-primary);
+  color: var(--bg-primary);
+  border-color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.admin-btn.primary {
+  background: var(--accent-gradient);
+  color: var(--bg-primary);
+  border: none;
+  font-weight: 600;
+}
+
+.admin-btn.primary:hover {
+  opacity: 0.9;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.admin-table th {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.admin-table tr:last-child td {
+  border-bottom: none;
+}
+
+#admin-result {
+  background: var(--bg-tertiary);
+  border-left: 4px solid var(--accent-primary);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+#admin-result div {
+  padding: 2px 0;
+}
+
+/* Auto Mode Card */
+.auto-mode-card {
+  border: 2px solid var(--border-color);
+  transition: all 0.3s ease;
+}
+
+.auto-mode-card.enabled {
+  border-color: var(--accent-primary);
+  background: linear-gradient(135deg, rgba(0, 212, 170, 0.05) 0%, var(--bg-card) 100%);
+}
+
+.auto-mode-status {
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+.auto-mode-info {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  margin-top: 4px;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 28px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--bg-tertiary);
+  transition: 0.3s;
+  border-radius: 28px;
+  border: 2px solid var(--border-color);
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 2px;
+  bottom: 2px;
+  background-color: var(--text-muted);
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(24px);
+  background-color: var(--bg-primary);
+}
+
 /* Wave colors */
 .wave-phase[data-wave="1"] .wave-dot { background: #00d4aa; }
 .wave-phase[data-wave="2"] .wave-dot { background: #00c4ff; }
@@ -1287,6 +1718,122 @@ a:hover {
   color: var(--text-secondary);
 }
 
+/* Race Cards Grid */
+.races-help {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+}
+
+.races-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.race-card {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.race-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-primary);
+  box-shadow: 0 8px 24px rgba(0, 212, 170, 0.15);
+}
+
+.race-card.contested {
+  border-left: 4px solid var(--warning);
+}
+
+.race-card.uncontested {
+  border-left: 4px solid var(--success);
+}
+
+.race-card.vacant {
+  border-left: 4px solid var(--danger);
+}
+
+.race-card-header {
+  padding: 16px 16px 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.race-riding-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.race-province-name {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.race-card-body {
+  padding: 12px 16px;
+  min-height: 80px;
+}
+
+.race-empty {
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+.race-uncontested {
+  color: var(--success);
+  font-size: 0.9rem;
+}
+
+.race-contested {
+  color: var(--warning);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.race-candidates-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.candidate-tag {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  background: var(--bg-tertiary);
+  border-radius: 16px;
+  color: var(--accent-primary);
+  border: 1px solid rgba(0, 212, 170, 0.3);
+}
+
+.candidate-more {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  color: var(--text-muted);
+}
+
+.race-card-footer {
+  padding: 10px 16px;
+  background: var(--bg-tertiary);
+  border-top: 1px solid var(--border-color);
+}
+
+.view-race-btn {
+  color: var(--accent-primary);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.race-card:hover .view-race-btn {
+  text-decoration: underline;
+}
+
 /* Past Conventions */
 .past-convention-item {
   display: flex;
@@ -1329,6 +1876,10 @@ a:hover {
   border: 1px solid var(--border-color);
   max-width: 600px;
   width: 100%;
+}
+
+.modal-content.modal-wide {
+  max-width: 800px;
   max-height: 80vh;
   overflow: hidden;
   display: flex;
@@ -1371,12 +1922,164 @@ a:hover {
 .modal-body {
   padding: 24px;
   overflow-y: auto;
+  max-height: 70vh;
 }
 
 .modal-subtitle {
   color: var(--text-muted);
   font-size: 0.9rem;
-  margin-bottom: 20px;
+}
+
+.modal-divider {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 20px 0;
+}
+
+/* Nomination Section */
+.nomination-section {
+  background: var(--bg-tertiary);
+  padding: 16px;
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+}
+
+.nomination-section h3 {
+  font-size: 1rem;
+  margin-bottom: 8px;
+  color: var(--accent-primary);
+}
+
+.nomination-help {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.nomination-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.form-select {
+  flex: 1;
+  min-width: 150px;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.form-arrow {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.nomination-feedback {
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+.nomination-feedback .success {
+  color: var(--success);
+}
+
+.nomination-feedback .error {
+  color: var(--danger);
+}
+
+/* Member Modal */
+.member-bio {
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.member-stats {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 16px;
+}
+
+.member-stat {
+  text-align: center;
+}
+
+.member-stat .stat-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
+.member-stat .stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.member-section {
+  margin-bottom: 12px;
+}
+
+.member-section h4 {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.nominate-section {
+  background: var(--bg-tertiary);
+  padding: 16px;
+  border-radius: var(--radius-md);
+}
+
+.nominate-section h4 {
+  margin-bottom: 10px;
+  color: var(--accent-primary);
+}
+
+.nominate-hint {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.nominate-info {
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+}
+
+.nomination-hint {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.badge-small {
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  background: rgba(0, 212, 170, 0.15);
+  color: var(--success);
+  border-radius: 10px;
+  margin-left: 8px;
+}
+
+.header-hint {
+  font-weight: normal;
+  color: var(--text-muted);
+  font-size: 0.85rem;
 }
 
 .candidates-header {

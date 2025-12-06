@@ -307,11 +307,16 @@ router.get('/races/:raceId', async (req, res) => {
 
 // POST /api/conventions/:convId/nominate - Nominate SOMEONE ELSE for a race (grassroots nominations)
 router.post('/:convId/nominate', async (req, res) => {
-    const { nominatorId, nomineeId, ridingId, ridingType, message } = req.body;
+    const { nominatorId, nomineeId, ridingId, ridingType, raceId: providedRaceId, message } = req.body;
     const convId = req.params.convId;
     
-    if (!nominatorId || !nomineeId || !ridingId || !ridingType) {
-        return res.status(400).json({ error: 'nominatorId, nomineeId, ridingId, and ridingType are required' });
+    // Support both raceId directly OR ridingId+ridingType
+    if (!nominatorId || !nomineeId) {
+        return res.status(400).json({ error: 'nominatorId and nomineeId are required' });
+    }
+    
+    if (!providedRaceId && (!ridingId || !ridingType)) {
+        return res.status(400).json({ error: 'Either raceId OR (ridingId and ridingType) are required' });
     }
     
     if (nominatorId === nomineeId) {
@@ -322,30 +327,43 @@ router.post('/:convId/nominate', async (req, res) => {
     const session = driver.session({ database: getDatabase() });
     
     try {
-        // Check if convention is in nominations phase
+        // Check if convention is in a nominations phase (supports wave-specific statuses)
         const convCheck = await session.run(`
             MATCH (c:Convention {id: $convId})
-            WHERE c.status = 'nominations'
+            WHERE c.status CONTAINS 'nominations'
             RETURN c
         `, { convId });
         
         if (convCheck.records.length === 0) {
-            return res.status(400).json({ error: 'Convention is not accepting nominations' });
+            return res.status(400).json({ error: 'Convention is not currently accepting nominations. Check the Admin panel.' });
         }
         
-        // Find or create the race for this riding
-        const raceId = `race-${convId.replace('conv-', '')}-${ridingId}`;
+        // Use provided raceId or construct from ridingId
+        const raceId = providedRaceId || `race-${convId.replace('conv-', '')}-${ridingId}`;
         
-        await session.run(`
-            MERGE (race:NominationRace {id: $raceId})
-            ON CREATE SET race.status = 'open', race.currentRound = 0, race.createdAt = datetime()
-            WITH race
-            MATCH (conv:Convention {id: $convId})
-            MERGE (conv)-[:HAS_RACE]->(race)
-            WITH race
-            MATCH (riding:${ridingType} {id: $ridingId})
-            MERGE (race)-[:FOR_RIDING]->(riding)
-        `, { raceId, convId, ridingId });
+        // If raceId provided, verify it exists
+        if (providedRaceId) {
+            const raceCheck = await session.run(`
+                MATCH (race:NominationRace {id: $raceId})
+                RETURN race
+            `, { raceId });
+            
+            if (raceCheck.records.length === 0) {
+                return res.status(400).json({ error: 'Race not found. Make sure races have been created for this wave.' });
+            }
+        } else {
+            // Create race from riding
+            await session.run(`
+                MERGE (race:NominationRace {id: $raceId})
+                ON CREATE SET race.status = 'open', race.currentRound = 0, race.createdAt = datetime()
+                WITH race
+                MATCH (conv:Convention {id: $convId})
+                MERGE (conv)-[:HAS_RACE]->(race)
+                WITH race
+                MATCH (riding:${ridingType} {id: $ridingId})
+                MERGE (race)-[:FOR_RIDING]->(riding)
+            `, { raceId, convId, ridingId });
+        }
         
         // Check if this nomination already exists
         const existingNom = await session.run(`
@@ -358,17 +376,27 @@ router.post('/:convId/nominate', async (req, res) => {
             return res.status(400).json({ error: 'You have already nominated this person for this riding' });
         }
         
+        // Get ridingId from race if not provided
+        let actualRidingId = ridingId;
+        if (!actualRidingId && providedRaceId) {
+            const ridingResult = await session.run(`
+                MATCH (race:NominationRace {id: $raceId})-[:FOR_RIDING]->(riding)
+                RETURN riding.id as ridingId
+            `, { raceId });
+            actualRidingId = ridingResult.records[0]?.get('ridingId') || raceId;
+        }
+        
         // Create the nomination
         await session.run(`
             MATCH (nominator:User {id: $nominatorId}), (nominee:User {id: $nomineeId})
             CREATE (nominator)-[:NOMINATED_FOR_RACE {
                 raceId: $raceId,
-                ridingId: $ridingId,
+                ridingId: $actualRidingId,
                 conventionId: $convId,
                 message: $message,
                 createdAt: datetime()
             }]->(nominee)
-        `, { nominatorId, nomineeId, raceId, ridingId, convId, message: message || '' });
+        `, { nominatorId, nomineeId, raceId, actualRidingId, convId, message: message || '' });
         
         // Get nomination count for this person in this race
         const countResult = await session.run(`
