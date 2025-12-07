@@ -75,4 +75,82 @@ router.post('/convention/:id/create-wave-races', async (req, res) => {
     }
 });
 
+// GET /api/admin/convention/:id/stats - Get convention statistics
+router.get('/convention/:id/stats', async (req, res) => {
+    try {
+        const stats = await adminService.getConventionStats(req.params.id);
+        if (!stats) {
+            return res.status(404).json({ error: 'Convention not found' });
+        }
+        res.json(stats);
+    } catch (error) {
+        console.error('Error getting stats:', error);
+        res.status(500).json({ error: 'Failed to get convention stats' });
+    }
+});
+
+// POST /api/admin/convention/:id/reset - Reset convention to initial state
+router.post('/convention/:id/reset', async (req, res) => {
+    try {
+        const result = await adminService.resetConvention(req.params.id);
+        res.json(result);
+    } catch (error) {
+        console.error('Error resetting convention:', error);
+        res.status(500).json({ error: 'Failed to reset convention' });
+    }
+});
+
+// GET /api/admin/conventions - Get all conventions
+router.get('/conventions', async (req, res) => {
+    try {
+        const conventions = await adminService.getAllConventions();
+        res.json(conventions);
+    } catch (error) {
+        console.error('Error getting conventions:', error);
+        res.status(500).json({ error: 'Failed to get conventions' });
+    }
+});
+
+// POST /api/admin/conventions - Create a new convention
+router.post('/conventions', async (req, res) => {
+    const { name, year } = req.body;
+    
+    if (!name || !year) {
+        return res.status(400).json({ error: 'Name and year are required' });
+    }
+    
+    try {
+        const result = await adminService.createConvention({ name, year: parseInt(year) });
+        res.json(result);
+    } catch (error) {
+        console.error('Error creating convention:', error);
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// GET /api/admin/convention/:id/results - Get convention results
+router.get('/convention/:id/results', async (req, res) => {
+    try {
+        const results = await adminService.getConventionResults(req.params.id);
+        if (!results) {
+            return res.status(404).json({ error: 'Convention not found' });
+        }
+        res.json(results);
+    } catch (error) {
+        console.error('Error getting results:', error);
+        res.status(500).json({ error: 'Failed to get convention results' });
+    }
+});
+
+// DELETE /api/admin/convention/:id - Delete a convention
+router.delete('/convention/:id', async (req, res) => {
+    try {
+        const result = await adminService.deleteConvention(req.params.id);
+        res.json(result);
+    } catch (error) {
+        console.error('Error deleting convention:', error);
+        res.status(500).json({ error: 'Failed to delete convention' });
+    }
+});
+
 module.exports = router;

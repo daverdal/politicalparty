@@ -410,6 +410,314 @@ async function createRacesForCurrentWave(convId) {
     }
 }
 
+// ============================================
+// CONVENTION STATS
+// ============================================
+
+async function getConventionStats(convId) {
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+    
+    try {
+        const result = await session.run(`
+            MATCH (c:Convention {id: $convId})
+            OPTIONAL MATCH (c)-[:HAS_RACE]->(race:NominationRace)
+            OPTIONAL MATCH (candidate:User)-[:RUNNING_IN]->(race)
+            OPTIONAL MATCH (race)<-[:FOR_RACE]-(nom:Nomination)
+            OPTIONAL MATCH (race)<-[:VOTE_FOR_RACE]-(vote:Vote)
+            WITH c, 
+                 count(DISTINCT race) as totalRaces,
+                 count(DISTINCT candidate) as totalCandidates,
+                 count(DISTINCT nom) as totalNominations,
+                 count(DISTINCT vote) as totalVotes
+            OPTIONAL MATCH (c)-[:HAS_RACE]->(openRace:NominationRace {status: 'open'})
+            OPTIONAL MATCH (c)-[:HAS_RACE]->(votingRace:NominationRace {status: 'voting'})
+            OPTIONAL MATCH (c)-[:HAS_RACE]->(closedRace:NominationRace {status: 'closed'})
+            RETURN c.status as status,
+                   c.currentWave as currentWave,
+                   totalRaces,
+                   totalCandidates,
+                   totalNominations,
+                   totalVotes,
+                   count(DISTINCT openRace) as openRaces,
+                   count(DISTINCT votingRace) as votingRaces,
+                   count(DISTINCT closedRace) as closedRaces
+        `, { convId });
+        
+        if (result.records.length === 0) return null;
+        
+        const r = result.records[0];
+        return {
+            status: r.get('status'),
+            currentWave: toNumber(r.get('currentWave')),
+            totalRaces: toNumber(r.get('totalRaces')),
+            totalCandidates: toNumber(r.get('totalCandidates')),
+            totalNominations: toNumber(r.get('totalNominations')),
+            totalVotes: toNumber(r.get('totalVotes')),
+            openRaces: toNumber(r.get('openRaces')),
+            votingRaces: toNumber(r.get('votingRaces')),
+            closedRaces: toNumber(r.get('closedRaces'))
+        };
+    } finally {
+        await session.close();
+    }
+}
+
+// ============================================
+// RESET CONVENTION
+// ============================================
+
+async function resetConvention(convId) {
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+    
+    try {
+        // Get stats before reset for the message
+        const stats = await getConventionStats(convId);
+        
+        // Delete all votes for this convention's races
+        await session.run(`
+            MATCH (c:Convention {id: $convId})-[:HAS_RACE]->(race:NominationRace)
+            OPTIONAL MATCH (race)<-[:VOTE_FOR_RACE]-(vote:Vote)
+            DETACH DELETE vote
+        `, { convId });
+        
+        // Delete all nominations for this convention's races
+        await session.run(`
+            MATCH (c:Convention {id: $convId})-[:HAS_RACE]->(race:NominationRace)
+            OPTIONAL MATCH (race)<-[:FOR_RACE]-(nom:Nomination)
+            DETACH DELETE nom
+        `, { convId });
+        
+        // Remove RUNNING_IN relationships
+        await session.run(`
+            MATCH (c:Convention {id: $convId})-[:HAS_RACE]->(race:NominationRace)
+            OPTIONAL MATCH (u:User)-[r:RUNNING_IN]->(race)
+            DELETE r
+        `, { convId });
+        
+        // Delete all races for this convention
+        await session.run(`
+            MATCH (c:Convention {id: $convId})-[:HAS_RACE]->(race:NominationRace)
+            DETACH DELETE race
+        `, { convId });
+        
+        // Reset convention status
+        await session.run(`
+            MATCH (c:Convention {id: $convId})
+            SET c.status = 'upcoming', c.currentWave = 0
+        `, { convId });
+        
+        return {
+            success: true,
+            message: `🔄 Convention Reset Complete!\n` +
+                     `Deleted: ${stats?.totalRaces || 0} races, ${stats?.totalCandidates || 0} candidates, ` +
+                     `${stats?.totalNominations || 0} nominations, ${stats?.totalVotes || 0} votes\n` +
+                     `Status reset to: upcoming`
+        };
+    } finally {
+        await session.close();
+    }
+}
+
+// ============================================
+// CREATE NEW CONVENTION
+// ============================================
+
+async function createConvention({ name, year, countryId = 'ca' }) {
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+    
+    try {
+        // Generate ID from year
+        const convId = `conv-${year}`;
+        
+        // Check if convention already exists
+        const existing = await session.run(`
+            MATCH (c:Convention {id: $convId})
+            RETURN c
+        `, { convId });
+        
+        if (existing.records.length > 0) {
+            throw new Error(`Convention for ${year} already exists`);
+        }
+        
+        // Create the convention
+        const result = await session.run(`
+            MATCH (country:Country {id: $countryId})
+            CREATE (c:Convention {
+                id: $convId,
+                name: $name,
+                year: $year,
+                status: 'upcoming',
+                currentWave: 0,
+                createdAt: datetime()
+            })
+            CREATE (c)-[:FOR_COUNTRY]->(country)
+            RETURN c
+        `, { convId, name, year, countryId });
+        
+        if (result.records.length === 0) {
+            throw new Error('Failed to create convention. Make sure the country exists.');
+        }
+        
+        const conv = result.records[0].get('c').properties;
+        
+        return {
+            success: true,
+            convention: {
+                id: conv.id,
+                name: conv.name,
+                year: toNumber(conv.year),
+                status: conv.status
+            },
+            message: `✅ Created "${name}" convention for ${year}`
+        };
+    } finally {
+        await session.close();
+    }
+}
+
+// ============================================
+// GET ALL CONVENTIONS
+// ============================================
+
+async function getAllConventions() {
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+    
+    try {
+        const result = await session.run(`
+            MATCH (c:Convention)
+            OPTIONAL MATCH (c)-[:HAS_RACE]->(race:NominationRace)
+            OPTIONAL MATCH (candidate:User)-[:RUNNING_IN]->(race)
+            OPTIONAL MATCH (race)-[:HAS_WINNER]->(winner:User)
+            WITH c, 
+                 count(DISTINCT race) as totalRaces,
+                 count(DISTINCT candidate) as totalCandidates,
+                 count(DISTINCT winner) as winnersDecided
+            RETURN c, totalRaces, totalCandidates, winnersDecided
+            ORDER BY c.year DESC
+        `);
+        
+        return result.records.map(r => {
+            const conv = r.get('c').properties;
+            return {
+                id: conv.id,
+                name: conv.name,
+                year: toNumber(conv.year),
+                status: conv.status,
+                currentWave: toNumber(conv.currentWave),
+                totalRaces: toNumber(r.get('totalRaces')),
+                totalCandidates: toNumber(r.get('totalCandidates')),
+                winnersDecided: toNumber(r.get('winnersDecided'))
+            };
+        });
+    } finally {
+        await session.close();
+    }
+}
+
+// ============================================
+// GET CONVENTION RESULTS
+// ============================================
+
+async function getConventionResults(convId) {
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+    
+    try {
+        // Get convention info
+        const convResult = await session.run(`
+            MATCH (c:Convention {id: $convId})
+            RETURN c
+        `, { convId });
+        
+        if (convResult.records.length === 0) return null;
+        
+        const conv = convResult.records[0].get('c').properties;
+        
+        // Get all races with their winners
+        const racesResult = await session.run(`
+            MATCH (c:Convention {id: $convId})-[:HAS_RACE]->(race:NominationRace)-[:FOR_RIDING]->(riding)
+            OPTIONAL MATCH (race)-[:HAS_WINNER]->(winner:User)
+            OPTIONAL MATCH (riding)<-[:HAS_FEDERAL_RIDING|HAS_PROVINCIAL_RIDING|HAS_FIRST_NATION]-(province:Province)
+            RETURN race, riding, winner, province.name as provinceName, province.code as provinceCode
+            ORDER BY race.wave, province.name, riding.name
+        `, { convId });
+        
+        const racesByWave = {};
+        
+        racesResult.records.forEach(r => {
+            const race = r.get('race').properties;
+            const riding = r.get('riding').properties;
+            const winner = r.get('winner')?.properties;
+            const wave = toNumber(race.wave) || 1;
+            
+            if (!racesByWave[wave]) {
+                racesByWave[wave] = {
+                    waveName: WAVE_NAMES[wave],
+                    races: []
+                };
+            }
+            
+            racesByWave[wave].races.push({
+                raceId: race.id,
+                ridingName: riding.name,
+                provinceName: r.get('provinceName'),
+                provinceCode: r.get('provinceCode'),
+                status: race.status,
+                winner: winner ? { id: winner.id, name: winner.name } : null
+            });
+        });
+        
+        return {
+            id: conv.id,
+            name: conv.name,
+            year: toNumber(conv.year),
+            status: conv.status,
+            waves: racesByWave
+        };
+    } finally {
+        await session.close();
+    }
+}
+
+// ============================================
+// DELETE CONVENTION
+// ============================================
+
+async function deleteConvention(convId) {
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+    
+    try {
+        // First reset to clean up related data
+        await resetConvention(convId);
+        
+        // Now delete the convention itself
+        const result = await session.run(`
+            MATCH (c:Convention {id: $convId})
+            WITH c, c.name as name
+            DETACH DELETE c
+            RETURN name
+        `, { convId });
+        
+        if (result.records.length === 0) {
+            throw new Error('Convention not found');
+        }
+        
+        const name = result.records[0].get('name');
+        
+        return {
+            success: true,
+            message: `🗑️ Deleted convention: ${name}`
+        };
+    } finally {
+        await session.close();
+    }
+}
+
 module.exports = {
     // Auto-mode
     getAutoModeStatus,
@@ -420,6 +728,14 @@ module.exports = {
     setConventionPhase,
     advanceConventionPhase,
     createRacesForCurrentWave,
+    getConventionStats,
+    resetConvention,
+    
+    // Convention CRUD
+    createConvention,
+    getAllConventions,
+    getConventionResults,
+    deleteConvention,
     
     // Constants
     WAVE_PROVINCES,

@@ -1707,6 +1707,55 @@ a:hover {
   opacity: 0.9;
 }
 
+.admin-btn.danger {
+  background: rgba(255, 107, 107, 0.15);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+.admin-btn.danger:hover {
+  background: var(--danger);
+  color: white;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.stats-breakdown {
+  text-align: center;
+}
+
+@media (max-width: 600px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 .admin-table {
   width: 100%;
   border-collapse: collapse;
@@ -2124,6 +2173,121 @@ a:hover {
 .past-convention-races {
   color: var(--text-muted);
   font-size: 0.85rem;
+}
+
+/* Convention List */
+.convention-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.convention-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border-left: 3px solid var(--border-color);
+}
+
+.convention-item.active {
+  border-left-color: var(--accent-primary);
+  background: rgba(var(--accent-primary-rgb, 0, 212, 170), 0.1);
+}
+
+.convention-item.completed {
+  opacity: 0.7;
+}
+
+.convention-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.convention-name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.convention-status {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+
+.convention-stats {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.convention-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-btn.small {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+
+/* Results List */
+.results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  border-left: 3px solid var(--border-color);
+}
+
+.result-item.has-winner {
+  border-left-color: var(--success);
+}
+
+.result-item.no-winner {
+  border-left-color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.result-riding {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.riding-name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.riding-province {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.result-winner {
+  text-align: right;
+}
+
+.winner-name {
+  color: var(--success);
+  font-weight: 500;
+}
+
+.no-winner-text {
+  color: var(--text-muted);
+  font-size: 0.9rem;
 }
 
 /* Modal Styles */

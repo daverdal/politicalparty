@@ -475,36 +475,146 @@ App.pages.admin = async function() {
     content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     
     try {
-        const [conventions, autoMode] = await Promise.all([
-            App.api('/conventions'),
+        const [allConventions, autoMode] = await Promise.all([
+            App.api('/admin/conventions'),
             App.api('/admin/auto-mode')
         ]);
-        const activeConv = conventions.find(c => c.status !== 'completed') || conventions[0];
+        
+        // Find active convention (non-completed) or most recent
+        const activeConv = allConventions.find(c => c.status !== 'completed') || allConventions[0];
+        const pastConventions = allConventions.filter(c => c.status === 'completed');
+        
+        // Fetch stats for the active convention
+        let stats = null;
+        if (activeConv?.id) {
+            try {
+                stats = await App.api(`/admin/convention/${activeConv.id}/stats`);
+            } catch (e) {
+                console.log('Could not fetch stats:', e.message);
+            }
+        }
         
         const phases = [
             { status: 'upcoming', label: '🗓️ Upcoming', wave: 0 },
-            { status: 'wave1-nominations', label: '📝 Wave 1 Nominations', wave: 1 },
-            { status: 'wave1-voting', label: '🗳️ Wave 1 Voting', wave: 1 },
-            { status: 'wave2-nominations', label: '📝 Wave 2 Nominations', wave: 2 },
-            { status: 'wave2-voting', label: '🗳️ Wave 2 Voting', wave: 2 },
-            { status: 'wave3-nominations', label: '📝 Wave 3 Nominations', wave: 3 },
-            { status: 'wave3-voting', label: '🗳️ Wave 3 Voting', wave: 3 },
-            { status: 'wave4-nominations', label: '📝 Wave 4 Nominations', wave: 4 },
-            { status: 'wave4-voting', label: '🗳️ Wave 4 Voting', wave: 4 },
-            { status: 'wave5-nominations', label: '📝 Wave 5 Nominations', wave: 5 },
-            { status: 'wave5-voting', label: '🗳️ Wave 5 Voting', wave: 5 },
-            { status: 'wave6-nominations', label: '📝 Wave 6 Nominations', wave: 6 },
-            { status: 'wave6-voting', label: '🗳️ Wave 6 Voting', wave: 6 },
+            { status: 'wave1-nominations', label: '📝 Wave 1 Nom', wave: 1 },
+            { status: 'wave1-voting', label: '🗳️ Wave 1 Vote', wave: 1 },
+            { status: 'wave2-nominations', label: '📝 Wave 2 Nom', wave: 2 },
+            { status: 'wave2-voting', label: '🗳️ Wave 2 Vote', wave: 2 },
+            { status: 'wave3-nominations', label: '📝 Wave 3 Nom', wave: 3 },
+            { status: 'wave3-voting', label: '🗳️ Wave 3 Vote', wave: 3 },
+            { status: 'wave4-nominations', label: '📝 Wave 4 Nom', wave: 4 },
+            { status: 'wave4-voting', label: '🗳️ Wave 4 Vote', wave: 4 },
+            { status: 'wave5-nominations', label: '📝 Wave 5 Nom', wave: 5 },
+            { status: 'wave5-voting', label: '🗳️ Wave 5 Vote', wave: 5 },
+            { status: 'wave6-nominations', label: '📝 Wave 6 Nom', wave: 6 },
+            { status: 'wave6-voting', label: '🗳️ Wave 6 Vote', wave: 6 },
             { status: 'completed', label: '✅ Completed', wave: 6 },
         ];
         
+        const currentYear = new Date().getFullYear();
+        
         content.innerHTML = `
             <header class="page-header">
-                <h1 class="page-title">⚡ Admin Controls</h1>
-                <p class="page-subtitle">Super admin tools for testing the convention</p>
+                <h1 class="page-title">Admin Controls</h1>
+                <p class="page-subtitle">Convention management and testing tools</p>
             </header>
             
             <div class="cards-grid">
+                <!-- All Conventions Card -->
+                <div class="card">
+                    <div class="card-header"><h3 class="card-title">📋 All Conventions</h3></div>
+                    <div class="card-body">
+                        ${allConventions.length === 0 ? '<p class="empty-text">No conventions yet. Create one below.</p>' : `
+                            <div class="convention-list">
+                                ${allConventions.map(c => `
+                                    <div class="convention-item ${c.id === activeConv?.id ? 'active' : ''} ${c.status === 'completed' ? 'completed' : ''}">
+                                        <div class="convention-info">
+                                            <span class="convention-name">${c.name}</span>
+                                            <span class="convention-status">${c.status}</span>
+                                        </div>
+                                        <div class="convention-stats">
+                                            ${c.totalRaces} races, ${c.totalCandidates} candidates
+                                            ${c.winnersDecided > 0 ? `, ${c.winnersDecided} winners` : ''}
+                                        </div>
+                                        <div class="convention-actions">
+                                            ${c.status === 'completed' ? 
+                                                `<button class="admin-btn small" onclick="App.viewConventionResults('${c.id}')">View Results</button>` :
+                                                `<button class="admin-btn small primary" onclick="App.setActiveConvention('${c.id}')">Manage</button>`
+                                            }
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `}
+                    </div>
+                </div>
+                
+                <!-- Create New Convention Card -->
+                <div class="card">
+                    <div class="card-header"><h3 class="card-title">➕ Create New Convention</h3></div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label>Convention Name</label>
+                            <input type="text" id="new-conv-name" class="form-input" placeholder="e.g., ${currentYear + 1} National Convention" value="${currentYear + 1} National Convention">
+                        </div>
+                        <div class="form-group">
+                            <label>Year</label>
+                            <input type="number" id="new-conv-year" class="form-input" min="2020" max="2100" value="${currentYear + 1}">
+                        </div>
+                        <button class="admin-btn primary" onclick="App.createNewConvention()" style="margin-top: 12px;">➕ Create Convention</button>
+                        <div id="create-conv-result" style="margin-top: 12px; display: none;"></div>
+                    </div>
+                </div>
+                
+                ${activeConv ? `
+                <!-- Active Convention Controls -->
+                <div class="card" style="grid-column: span 2;">
+                    <div class="card-header">
+                        <h3 class="card-title">🎯 Active: ${activeConv.name}</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="stats-grid" style="margin-bottom: 20px;">
+                            <div class="stat-item">
+                                <span class="stat-value">${stats?.totalRaces || 0}</span>
+                                <span class="stat-label">Races</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">${stats?.totalCandidates || 0}</span>
+                                <span class="stat-label">Candidates</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">${stats?.totalNominations || 0}</span>
+                                <span class="stat-label">Nominations</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">${stats?.totalVotes || 0}</span>
+                                <span class="stat-label">Votes</span>
+                            </div>
+                        </div>
+                        
+                        <p style="margin-bottom: 12px;">Current Phase: <strong>${activeConv.status}</strong> ${stats?.currentWave ? `(Wave ${stats.currentWave})` : ''}</p>
+                        
+                        <div class="admin-phase-buttons" style="margin-bottom: 16px;">
+                            ${phases.map(p => `<button class="admin-btn ${activeConv.status === p.status ? 'active' : ''}" onclick="App.setConventionPhase('${activeConv.id}', '${p.status}', ${p.wave})">${p.label}</button>`).join('')}
+                        </div>
+                        
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                            <button class="admin-btn primary" onclick="App.advanceConvention('${activeConv.id}')">⏩ Advance Phase</button>
+                            <button class="admin-btn" onclick="App.createWaveRaces('${activeConv.id}')">🏁 Create Races</button>
+                            ${activeConv.status?.includes('-voting') ? `
+                                <button class="admin-btn" onclick="App.startAllVoting('${activeConv.id}')">▶️ Start All Voting</button>
+                                <button class="admin-btn warning" onclick="App.closeAllRounds('${activeConv.id}')">⏭️ Close All Rounds</button>
+                            ` : ''}
+                            <button class="admin-btn danger" onclick="App.confirmResetConvention('${activeConv.id}')">🔄 Reset</button>
+                            <button class="admin-btn danger" onclick="App.confirmDeleteConvention('${activeConv.id}', '${activeConv.name}')">🗑️ Delete</button>
+                        </div>
+                        
+                        <div id="admin-result" style="margin-top: 16px; padding: 12px; background: var(--bg-secondary); border-radius: 8px; display: none;"></div>
+                    </div>
+                </div>
+                ` : ''}
+                
+                <!-- Auto Mode Card -->
                 <div class="card auto-mode-card ${autoMode.enabled ? 'enabled' : ''}">
                     <div class="card-header">
                         <h3 class="card-title">🤖 Auto Mode</h3>
@@ -514,33 +624,8 @@ App.pages.admin = async function() {
                         </label>
                     </div>
                     <div class="card-body">
-                        <p class="auto-mode-status">${autoMode.enabled ? '🤖 <strong>AUTO</strong> - System checks dates every hour' : '🎮 <strong>MANUAL</strong> - Use buttons to control phases'}</p>
+                        <p class="auto-mode-status">${autoMode.enabled ? '🤖 <strong>AUTO</strong> - Checks dates hourly' : '🎮 <strong>MANUAL</strong> - Use buttons'}</p>
                         ${autoMode.lastCheck ? `<p class="auto-mode-info">Last check: ${new Date(autoMode.lastCheck).toLocaleString()}</p>` : ''}
-                    </div>
-                </div>
-                
-                <div class="card">
-                    <div class="card-header"><h3 class="card-title">🎮 Convention Phase Control</h3></div>
-                    <div class="card-body">
-                        <p style="margin-bottom: 16px;">Current: <strong>${activeConv?.status || 'none'}</strong></p>
-                        <div class="admin-phase-buttons">
-                            ${phases.map(p => `<button class="admin-btn ${activeConv?.status === p.status ? 'active' : ''}" onclick="App.setConventionPhase('${activeConv?.id}', '${p.status}', ${p.wave})">${p.label}</button>`).join('')}
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="card">
-                    <div class="card-header"><h3 class="card-title">⏩ Quick Actions</h3></div>
-                    <div class="card-body">
-                        <button class="admin-btn primary" onclick="App.advanceConvention('${activeConv?.id}')">⏩ Advance to Next Phase</button>
-                        <button class="admin-btn" onclick="App.createWaveRaces('${activeConv?.id}')" style="margin-top: 12px;">🏁 Create Races for Current Wave</button>
-                        ${activeConv?.status?.includes('-voting') ? `
-                            <hr style="margin: 16px 0; border-color: var(--border-color);">
-                            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 12px;">🗳️ Voting Phase Controls:</p>
-                            <button class="admin-btn" onclick="App.startAllVoting('${activeConv?.id}')" style="margin-bottom: 8px;">▶️ Start Voting on All Races</button>
-                            <button class="admin-btn warning" onclick="App.closeAllRounds('${activeConv?.id}')">⏭️ Close All Rounds (Eliminate Lowest)</button>
-                        ` : ''}
-                        <div id="admin-result" style="margin-top: 16px; padding: 12px; background: var(--bg-secondary); border-radius: 8px; display: none;"></div>
                     </div>
                 </div>
             </div>
@@ -650,11 +735,170 @@ App.closeAllRounds = async function(convId) {
     }
 };
 
+App.confirmResetConvention = function(convId) {
+    if (!confirm('⚠️ WARNING: This will DELETE all races, nominations, candidates, and votes!\n\nThe convention will be reset to "upcoming" status.\n\nAre you sure you want to continue?')) {
+        return;
+    }
+    
+    // Double confirm for safety
+    if (!confirm('🔄 FINAL CONFIRMATION\n\nThis action cannot be undone. Reset the entire convention?')) {
+        return;
+    }
+    
+    App.resetConvention(convId);
+};
+
+App.resetConvention = async function(convId) {
+    try {
+        App.showAdminResult('🔄 Resetting convention...');
+        const { data } = await App.apiPost(`/admin/convention/${convId}/reset`, {});
+        App.showAdminResult(data.message || data.error);
+        setTimeout(() => App.pages.admin(), 2000);
+    } catch (err) {
+        App.showAdminResult('Error: ' + err.message);
+    }
+};
+
 App.showAdminResult = function(message) {
     const el = document.getElementById('admin-result');
     if (el) {
         el.innerHTML = message.split('\n').map(line => `<div>${line}</div>`).join('');
         el.style.display = 'block';
+    }
+};
+
+// ============================================
+// CONVENTION MANAGEMENT
+// ============================================
+
+App.createNewConvention = async function() {
+    const name = document.getElementById('new-conv-name')?.value?.trim();
+    const year = parseInt(document.getElementById('new-conv-year')?.value);
+    const resultEl = document.getElementById('create-conv-result');
+    
+    if (!name || !year) {
+        if (resultEl) {
+            resultEl.style.display = 'block';
+            resultEl.innerHTML = '<span style="color: var(--danger);">Please enter a name and year</span>';
+        }
+        return;
+    }
+    
+    try {
+        if (resultEl) {
+            resultEl.style.display = 'block';
+            resultEl.innerHTML = 'Creating convention...';
+        }
+        
+        const { data } = await App.apiPost('/admin/conventions', { name, year });
+        
+        if (data.success) {
+            if (resultEl) {
+                resultEl.innerHTML = `<span style="color: var(--success);">${data.message}</span>`;
+            }
+            setTimeout(() => App.pages.admin(), 1500);
+        } else {
+            if (resultEl) {
+                resultEl.innerHTML = `<span style="color: var(--danger);">${data.error}</span>`;
+            }
+        }
+    } catch (err) {
+        if (resultEl) {
+            resultEl.style.display = 'block';
+            resultEl.innerHTML = `<span style="color: var(--danger);">Error: ${err.message}</span>`;
+        }
+    }
+};
+
+App.setActiveConvention = function(convId) {
+    // Just reload the admin page - it will automatically show this convention
+    // if it's the active one (non-completed)
+    App.pages.admin();
+};
+
+App.viewConventionResults = async function(convId) {
+    const content = document.getElementById('content');
+    content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    
+    try {
+        const results = await App.api(`/admin/convention/${convId}/results`);
+        
+        content.innerHTML = `
+            <header class="page-header">
+                <h1 class="page-title">📊 ${results.name} Results</h1>
+                <p class="page-subtitle">Final results from ${results.year}</p>
+            </header>
+            
+            <div style="margin-bottom: 20px;">
+                <button class="admin-btn" onclick="App.pages.admin()">← Back to Admin</button>
+            </div>
+            
+            <div class="cards-grid">
+                ${Object.entries(results.waves).map(([waveNum, wave]) => `
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Wave ${waveNum}: ${wave.waveName}</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="results-list">
+                                ${wave.races.map(race => `
+                                    <div class="result-item ${race.winner ? 'has-winner' : 'no-winner'}">
+                                        <div class="result-riding">
+                                            <span class="riding-name">${race.ridingName}</span>
+                                            <span class="riding-province">${race.provinceName || ''}</span>
+                                        </div>
+                                        <div class="result-winner">
+                                            ${race.winner ? 
+                                                `<span class="winner-name">🏆 ${race.winner.name}</span>` :
+                                                `<span class="no-winner-text">No winner</span>`
+                                            }
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } catch (err) {
+        content.innerHTML = `
+            <div class="card">
+                <div class="card-body">
+                    <p>Error loading results: ${err.message}</p>
+                    <button class="admin-btn" onclick="App.pages.admin()">← Back to Admin</button>
+                </div>
+            </div>
+        `;
+    }
+};
+
+App.confirmDeleteConvention = function(convId, name) {
+    if (!confirm(`⚠️ WARNING: Delete "${name}"?\n\nThis will permanently delete the convention and ALL its data (races, nominations, votes, results).\n\nThis cannot be undone!`)) {
+        return;
+    }
+    
+    if (!confirm(`🗑️ FINAL CONFIRMATION\n\nType "DELETE" to confirm... (Just kidding, click OK to delete "${name}")`)) {
+        return;
+    }
+    
+    App.deleteConvention(convId);
+};
+
+App.deleteConvention = async function(convId) {
+    try {
+        App.showAdminResult('🗑️ Deleting convention...');
+        const response = await fetch(`/api/admin/convention/${convId}`, { method: 'DELETE' });
+        const data = await response.json();
+        
+        if (data.success) {
+            App.showAdminResult(data.message);
+            setTimeout(() => App.pages.admin(), 1500);
+        } else {
+            App.showAdminResult('Error: ' + (data.error || 'Failed to delete'));
+        }
+    } catch (err) {
+        App.showAdminResult('Error: ' + err.message);
     }
 };
 
