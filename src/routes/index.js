@@ -6,6 +6,7 @@
 const express = require('express');
 const router = express.Router();
 
+const authRouter = require('./auth');
 const usersRouter = require('./users');
 const ideasRouter = require('./ideas');
 const eventsRouter = require('./events');
@@ -17,6 +18,7 @@ const adminRouter = require('./admin');
 const votingRouter = require('./voting');
 
 // Register all routes
+router.use('/auth', authRouter);
 router.use('/users', usersRouter);
 router.use('/ideas', ideasRouter);
 router.use('/events', eventsRouter);

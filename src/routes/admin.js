@@ -7,6 +7,10 @@
 const express = require('express');
 const router = express.Router();
 const adminService = require('../services/adminService');
+const { authenticate, requireAdmin } = require('../middleware/auth');
+
+// All admin routes require an authenticated admin user
+router.use(authenticate, requireAdmin);
 
 // GET /api/admin/auto-mode - Get auto-mode status
 router.get('/auto-mode', (req, res) => {

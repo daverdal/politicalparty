@@ -8,6 +8,7 @@ const express = require('express');
 const router = express.Router();
 const userService = require('../services/userService');
 const { getSession } = require('../config/db');
+const { authenticate, requireVerifiedUser, requireAdmin } = require('../middleware/auth');
 
 // GET /api/users - Get all users
 router.get('/', async (req, res) => {
@@ -32,8 +33,19 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// POST /api/users - Create a new user
-router.post('/', async (req, res) => {
+function ensureSelfOrAdmin(req, res) {
+    if (req.user && req.user.role === 'admin') {
+        return true;
+    }
+    if (!req.user || req.user.id !== req.params.id) {
+        res.status(403).json({ error: 'You can only modify your own profile' });
+        return false;
+    }
+    return true;
+}
+
+// POST /api/users - Create a new user (admin only; normal users sign up via /api/auth/signup)
+router.post('/', authenticate, requireAdmin, async (req, res) => {
     const session = getSession();
     const { id, name, region, bio, skills, experience, interests } = req.body;
     
@@ -62,11 +74,14 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/users/:id - Update a user
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticate, requireVerifiedUser, async (req, res) => {
     const session = getSession();
     const { name, region, bio, skills, experience, interests } = req.body;
     
     try {
+        if (!ensureSelfOrAdmin(req, res)) {
+            return;
+        }
         const result = await session.run(`
             MATCH (u:User {id: $id})
             SET u.name = $name,
@@ -90,8 +105,8 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// DELETE /api/users/:id - Delete a user
-router.delete('/:id', async (req, res) => {
+// DELETE /api/users/:id - Delete a user (admin only)
+router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
     const session = getSession();
     try {
         const result = await session.run(
@@ -121,12 +136,15 @@ router.get('/:id/endorsements', async (req, res) => {
 });
 
 // POST /api/users/:id/endorse - Endorse another user
-router.post('/:id/endorse', async (req, res) => {
+router.post('/:id/endorse', authenticate, requireVerifiedUser, async (req, res) => {
     const { targetUserId, message } = req.body;
     
     try {
+        if (!ensureSelfOrAdmin(req, res)) {
+            return;
+        }
         const result = await userService.endorseUser({
-            fromUserId: req.params.id,
+            fromUserId: req.user.id,
             toUserId: targetUserId,
             message
         });
@@ -137,10 +155,13 @@ router.post('/:id/endorse', async (req, res) => {
 });
 
 // PUT /api/users/:id/location - Set user's single location
-router.put('/:id/location', async (req, res) => {
+router.put('/:id/location', authenticate, requireVerifiedUser, async (req, res) => {
     const { locationId, locationType } = req.body;
     
     try {
+        if (!ensureSelfOrAdmin(req, res)) {
+            return;
+        }
         const result = await userService.setUserLocation({
             userId: req.params.id,
             locationId,
@@ -153,7 +174,7 @@ router.put('/:id/location', async (req, res) => {
 });
 
 // PUT /api/users/:id/locations - Set multiple locations
-router.put('/:id/locations', async (req, res) => {
+router.put('/:id/locations', authenticate, requireVerifiedUser, async (req, res) => {
     const { locations } = req.body;
     
     if (!locations || !Array.isArray(locations)) {
@@ -161,6 +182,9 @@ router.put('/:id/locations', async (req, res) => {
     }
     
     try {
+        if (!ensureSelfOrAdmin(req, res)) {
+            return;
+        }
         const result = await userService.setUserLocations({
             userId: req.params.id,
             locations
@@ -172,8 +196,11 @@ router.put('/:id/locations', async (req, res) => {
 });
 
 // DELETE /api/users/:id/location - Remove user's location
-router.delete('/:id/location', async (req, res) => {
+router.delete('/:id/location', authenticate, requireVerifiedUser, async (req, res) => {
     try {
+        if (!ensureSelfOrAdmin(req, res)) {
+            return;
+        }
         const result = await userService.removeUserLocation(req.params.id);
         res.json(result);
     } catch (error) {

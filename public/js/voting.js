@@ -121,6 +121,13 @@ App.voting.renderRaceCard = function(race, convId) {
  * Show voting modal for a race
  */
 App.voting.showVotingModal = async function(raceId, convId) {
+    if (!App.currentUser) {
+        alert('Please select yourself or a member first.');
+        return;
+    }
+    if (!App.requireVerifiedAuth()) {
+        return;
+    }
     // Create modal
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';

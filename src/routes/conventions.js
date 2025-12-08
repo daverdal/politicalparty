@@ -9,6 +9,7 @@ const router = express.Router();
 const conventionService = require('../services/conventionService');
 const { getDriver, getDatabase } = require('../config/db');
 const { toNumber, toISODate } = require('../utils/neo4jHelpers');
+const { authenticate, requireVerifiedUser, requireAdmin } = require('../middleware/auth');
 
 // GET /api/conventions - List all conventions
 router.get('/', async (req, res) => {
@@ -110,12 +111,12 @@ router.get('/races/:raceId', async (req, res) => {
 });
 
 // POST /api/conventions/:convId/nominate - Nominate someone (permanent, not convention-tied)
-router.post('/:convId/nominate', async (req, res) => {
-    const { nominatorId, nomineeId, message } = req.body;
-    
-    // Input validation
-    if (!nominatorId || !nomineeId) {
-        return res.status(400).json({ error: 'nominatorId and nomineeId are required' });
+router.post('/:convId/nominate', authenticate, requireVerifiedUser, async (req, res) => {
+    const { nomineeId, message } = req.body;
+    const nominatorId = req.user.id;
+
+    if (!nomineeId) {
+        return res.status(400).json({ error: 'nomineeId is required' });
     }
     
     try {
@@ -132,13 +133,9 @@ router.post('/:convId/nominate', async (req, res) => {
 });
 
 // POST /api/conventions/:convId/declare-candidacy - User declares they want to run
-router.post('/:convId/declare-candidacy', async (req, res) => {
-    const { userId } = req.body;
+router.post('/:convId/declare-candidacy', authenticate, requireVerifiedUser, async (req, res) => {
     const convId = req.params.convId;
-    
-    if (!userId) {
-        return res.status(400).json({ error: 'userId is required' });
-    }
+    const userId = req.user.id;
     
     try {
         const result = await conventionService.declareCandidacy({ userId, convId });
@@ -189,11 +186,12 @@ router.get('/:convId/nominations/:userId', async (req, res) => {
 });
 
 // POST /api/conventions/:convId/accept-nomination - Accept a nomination
-router.post('/:convId/accept-nomination', async (req, res) => {
-    const { userId, raceId } = req.body;
+router.post('/:convId/accept-nomination', authenticate, requireVerifiedUser, async (req, res) => {
+    const { raceId } = req.body;
+    const userId = req.user.id;
     
-    if (!userId || !raceId) {
-        return res.status(400).json({ error: 'userId and raceId are required' });
+    if (!raceId) {
+        return res.status(400).json({ error: 'raceId is required' });
     }
     
     try {
@@ -210,11 +208,12 @@ router.post('/:convId/accept-nomination', async (req, res) => {
 });
 
 // POST /api/conventions/:convId/decline-nomination - Decline a nomination
-router.post('/:convId/decline-nomination', async (req, res) => {
-    const { userId, raceId } = req.body;
+router.post('/:convId/decline-nomination', authenticate, requireVerifiedUser, async (req, res) => {
+    const { raceId } = req.body;
+    const userId = req.user.id;
     
-    if (!userId || !raceId) {
-        return res.status(400).json({ error: 'userId and raceId are required' });
+    if (!raceId) {
+        return res.status(400).json({ error: 'raceId is required' });
     }
     
     try {
@@ -227,12 +226,13 @@ router.post('/:convId/decline-nomination', async (req, res) => {
 });
 
 // POST /api/conventions/:convId/withdraw - Withdraw from a race
-router.post('/:convId/withdraw', async (req, res) => {
-    const { userId, raceId } = req.body;
+router.post('/:convId/withdraw', authenticate, requireVerifiedUser, async (req, res) => {
+    const { raceId } = req.body;
     const convId = req.params.convId;
+    const userId = req.user.id;
     
-    if (!userId || !raceId) {
-        return res.status(400).json({ error: 'userId and raceId are required' });
+    if (!raceId) {
+        return res.status(400).json({ error: 'raceId is required' });
     }
     
     try {
@@ -245,12 +245,13 @@ router.post('/:convId/withdraw', async (req, res) => {
 });
 
 // POST /api/conventions/races/:raceId/vote - Cast a vote
-router.post('/races/:raceId/vote', async (req, res) => {
-    const { voterId, candidateId, round } = req.body;
+router.post('/races/:raceId/vote', authenticate, requireVerifiedUser, async (req, res) => {
+    const { candidateId, round } = req.body;
     const raceId = req.params.raceId;
+    const voterId = req.user.id;
     
-    if (!voterId || !candidateId) {
-        return res.status(400).json({ error: 'voterId and candidateId are required' });
+    if (!candidateId) {
+        return res.status(400).json({ error: 'candidateId is required' });
     }
     
     const driver = getDriver();

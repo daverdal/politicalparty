@@ -6,6 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const votingService = require('../services/votingService');
+const { authenticate, requireVerifiedUser, requireAdmin } = require('../middleware/auth');
 
 // GET /api/voting/races/:convId - Get all races in voting phase
 router.get('/races/:convId', async (req, res) => {
@@ -40,8 +41,8 @@ router.get('/race/:raceId/tallies', async (req, res) => {
     }
 });
 
-// POST /api/voting/race/:raceId/start - Start voting (create round 1)
-router.post('/race/:raceId/start', async (req, res) => {
+// POST /api/voting/race/:raceId/start - Start voting (create round 1) - admin only
+router.post('/race/:raceId/start', authenticate, requireAdmin, async (req, res) => {
     try {
         const result = await votingService.startVotingForRace(req.params.raceId);
         res.json(result);
@@ -51,11 +52,12 @@ router.post('/race/:raceId/start', async (req, res) => {
 });
 
 // POST /api/voting/race/:raceId/vote - Cast a vote
-router.post('/race/:raceId/vote', async (req, res) => {
-    const { oderId, candidateId } = req.body;
+router.post('/race/:raceId/vote', authenticate, requireVerifiedUser, async (req, res) => {
+    const { candidateId } = req.body;
+    const oderId = req.user.id;
     
-    if (!oderId || !candidateId) {
-        return res.status(400).json({ error: 'oderId and candidateId are required' });
+    if (!candidateId) {
+        return res.status(400).json({ error: 'candidateId is required' });
     }
     
     try {
@@ -70,8 +72,8 @@ router.post('/race/:raceId/vote', async (req, res) => {
     }
 });
 
-// POST /api/voting/race/:raceId/close-round - Close round and advance
-router.post('/race/:raceId/close-round', async (req, res) => {
+// POST /api/voting/race/:raceId/close-round - Close round and advance (admin only)
+router.post('/race/:raceId/close-round', authenticate, requireAdmin, async (req, res) => {
     try {
         const result = await votingService.closeRoundAndAdvance(req.params.raceId);
         res.json(result);
@@ -81,10 +83,14 @@ router.post('/race/:raceId/close-round', async (req, res) => {
 });
 
 // GET /api/voting/race/:raceId/has-voted/:userId - Check if user voted
-router.get('/race/:raceId/has-voted/:userId', async (req, res) => {
+router.get('/race/:raceId/has-voted/:userId', authenticate, requireVerifiedUser, async (req, res) => {
     try {
+        if (req.params.userId !== req.user.id) {
+            return res.status(403).json({ error: 'Cannot check vote status for another user' });
+        }
+
         const result = await votingService.hasUserVoted({
-            oderId: req.params.userId,
+            oderId: req.user.id,
             raceId: req.params.raceId
         });
         res.json(result);

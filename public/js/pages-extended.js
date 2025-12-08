@@ -6,6 +6,220 @@
 window.App = window.App || {};
 
 // ============================================
+// AUTH UI (Sign-in / Sign-up)
+// ============================================
+
+App.updateAuthUi = function() {
+    const container = document.getElementById('auth-status');
+    if (!container) return;
+
+    if (App.authUser) {
+        const verifiedText = App.authUser.verified ? '✅ Verified' : '✉️ Not verified';
+        container.innerHTML = `
+            <div class="auth-summary">
+                <div class="auth-summary-main">
+                    <span class="auth-summary-label">Signed in as</span>
+                    <span class="auth-summary-email">${App.authUser.email}</span>
+                </div>
+                <div class="auth-summary-meta">
+                    <span class="auth-summary-status">${verifiedText}</span>
+                    <button class="btn btn-secondary btn-sm" id="auth-logout-btn">Sign out</button>
+                </div>
+            </div>
+        `;
+
+        const logoutBtn = document.getElementById('auth-logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                try {
+                    await App.apiPost('/auth/logout', {});
+                } catch (e) {
+                    // ignore errors, we'll still clear local state
+                }
+                App.setAuthUser(null);
+                // Reload to ensure state is consistent (user list, pages, etc.)
+                window.location.reload();
+            });
+        }
+    } else {
+        container.innerHTML = `
+            <button class="btn btn-secondary btn-sm" id="auth-open-modal-btn">
+                Sign in / Sign up
+            </button>
+        `;
+        const openBtn = document.getElementById('auth-open-modal-btn');
+        if (openBtn) {
+            openBtn.addEventListener('click', () => App.showAuthModal('login'));
+        }
+    }
+};
+
+App.showAuthModal = function(initialTab = 'login') {
+    const existing = document.querySelector('.modal-overlay.auth-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay auth-modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Account</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="auth-tabs">
+                    <button class="auth-tab ${initialTab === 'login' ? 'active' : ''}" data-tab="login">Sign in</button>
+                    <button class="auth-tab ${initialTab === 'signup' ? 'active' : ''}" data-tab="signup">Create account</button>
+                </div>
+                <div class="auth-tab-content ${initialTab === 'login' ? 'active' : ''}" id="auth-tab-login">
+                    <form id="auth-login-form" class="auth-form">
+                        <label>
+                            <span>Email</span>
+                            <input type="email" name="email" required autocomplete="email">
+                        </label>
+                        <label>
+                            <span>Password</span>
+                            <input type="password" name="password" required autocomplete="current-password">
+                        </label>
+                        <p class="auth-help">
+                            Use the email and password you signed up with. We do not use Google or other third-party sign-in.
+                        </p>
+                        <button type="submit" class="btn btn-primary auth-submit-btn">Sign in</button>
+                        <div class="auth-feedback" id="auth-login-feedback"></div>
+                    </form>
+                </div>
+                <div class="auth-tab-content ${initialTab === 'signup' ? 'active' : ''}" id="auth-tab-signup">
+                    <form id="auth-signup-form" class="auth-form">
+                        <label>
+                            <span>Email</span>
+                            <input type="email" name="email" required autocomplete="email">
+                        </label>
+                        <label>
+                            <span>Password</span>
+                            <input type="password" name="password" required minlength="8" autocomplete="new-password">
+                        </label>
+                        <label>
+                            <span>Display name</span>
+                            <input type="text" name="name" placeholder="Optional – how you appear to other members">
+                        </label>
+                        <p class="auth-help">
+                            To keep bots out, sign-up may require solving a CAPTCHA and confirming your email address.
+                        </p>
+                        <button type="submit" class="btn btn-primary auth-submit-btn">Create account</button>
+                        <div class="auth-feedback" id="auth-signup-feedback"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const close = () => modal.remove();
+    modal.querySelector('.modal-close').addEventListener('click', close);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+    });
+
+    // Tab switching
+    modal.querySelectorAll('.auth-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabName = tab.dataset.tab;
+            modal.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            modal.querySelectorAll('.auth-tab-content').forEach(c => c.classList.remove('active'));
+            tab.classList.add('active');
+            const content = modal.querySelector(`#auth-tab-${tabName}`);
+            if (content) content.classList.add('active');
+        });
+    });
+
+    // Login submit
+    const loginForm = modal.querySelector('#auth-login-form');
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const feedback = modal.querySelector('#auth-login-feedback');
+        const submitBtn = loginForm.querySelector('.auth-submit-btn');
+        feedback.textContent = '';
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Signing in...';
+
+        const formData = new FormData(loginForm);
+        const email = formData.get('email');
+        const password = formData.get('password');
+
+        try {
+            const { response, data } = await App.apiPost('/auth/login', { email, password });
+            if (!response.ok || !data.success) {
+                feedback.textContent = data.error || 'Unable to sign in.';
+                feedback.classList.add('error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Sign in';
+                return;
+            }
+
+            App.setAuthUser(data.user);
+            // Reload to ensure full app picks up authenticated state and user list
+            window.location.reload();
+        } catch (err) {
+            feedback.textContent = err.message;
+            feedback.classList.add('error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Sign in';
+        }
+    });
+
+    // Signup submit
+    const signupForm = modal.querySelector('#auth-signup-form');
+    signupForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const feedback = modal.querySelector('#auth-signup-feedback');
+        const submitBtn = signupForm.querySelector('.auth-submit-btn');
+        feedback.textContent = '';
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating account...';
+
+        const formData = new FormData(signupForm);
+        const email = formData.get('email');
+        const password = formData.get('password');
+        const name = formData.get('name') || undefined;
+
+        // If an hCaptcha widget is present, use its response token
+        let captchaToken = '';
+        if (window.hcaptcha && typeof window.hcaptcha.getResponse === 'function') {
+            captchaToken = window.hcaptcha.getResponse() || '';
+        }
+
+        try {
+            const { response, data } = await App.apiPost('/auth/signup', {
+                email,
+                password,
+                name,
+                captchaToken
+            });
+
+            if (!response.ok || !data.success) {
+                feedback.textContent = data.error || 'Unable to create account.';
+                feedback.classList.add('error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create account';
+                return;
+            }
+
+            feedback.textContent = data.message || 'Account created. Please check your email to verify your address.';
+            feedback.classList.remove('error');
+            feedback.classList.add('success');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Check your email';
+        } catch (err) {
+            feedback.textContent = err.message;
+            feedback.classList.add('error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create account';
+        }
+    });
+};
+
+// ============================================
 // PROFILE PAGE
 // ============================================
 
@@ -1084,9 +1298,12 @@ App.deleteConvention = async function(convId) {
  * Anyone can run - no nominations required!
  */
 App.declareCandidacy = async function(convId) {
-    if (!App.currentUser) { 
-        alert('Please select a user first'); 
-        return; 
+    if (!App.currentUser) {
+        alert('Please select a user first');
+        return;
+    }
+    if (!App.requireVerifiedAuth()) {
+        return;
     }
     
     if (!confirm('Are you sure you want to run for office? You will be added as a candidate in your riding.')) {
@@ -1116,6 +1333,9 @@ App.acceptNomination = async function(convId, raceId) {
 
 App.declineNomination = async function(convId, raceId) {
     if (!App.currentUser || !confirm('Are you sure you want to decline this nomination?')) return;
+    if (!App.requireVerifiedAuth()) {
+        return;
+    }
     
     try {
         const { data } = await App.apiPost(`/conventions/${convId}/decline-nomination`, { userId: App.currentUser.id, raceId });
@@ -1132,6 +1352,9 @@ App.declineNomination = async function(convId, raceId) {
 
 App.withdrawFromRace = async function(convId, raceId) {
     if (!App.currentUser || !confirm('Are you sure you want to withdraw from this race?')) return;
+    if (!App.requireVerifiedAuth()) {
+        return;
+    }
     
     try {
         const { data } = await App.apiPost(`/conventions/${convId}/withdraw`, { userId: App.currentUser.id, raceId });
@@ -1151,6 +1374,9 @@ App.withdrawFromRace = async function(convId, raceId) {
 // ============================================
 
 App.showMemberDetail = async function(userId) {
+    if (!App.requireVerifiedAuth()) {
+        return;
+    }
     try {
         const [user, conventions, endorsements] = await Promise.all([
             App.api(`/users/${userId}`),

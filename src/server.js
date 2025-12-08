@@ -5,6 +5,7 @@
 
 require('dotenv').config();
 const express = require('express');
+const cookieParser = require('cookie-parser');
 const path = require('path');
 const config = require('./config');
 const db = require('./config/db');
@@ -14,6 +15,7 @@ const app = express();
 
 // Middleware
 app.use(express.json());
+app.use(cookieParser());
 
 // Serve static files from public folder
 app.use(express.static(path.join(__dirname, '../public')));

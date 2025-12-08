@@ -40,10 +40,15 @@ App.navigate = function(page) {
 document.addEventListener('DOMContentLoaded', async () => {
     // Initialize theme
     App.initTheme();
-    
+
     // Initialize user selector
     await App.initUserSelector();
-    
+
+    // Load authenticated user (if any) and update auth UI
+    if (typeof App.loadAuthUser === 'function') {
+        await App.loadAuthUser();
+    }
+
     // Set up navigation
     document.querySelectorAll('.nav-link').forEach(link => {
         link.addEventListener('click', (e) => {

@@ -33,7 +33,45 @@ App.toggleTheme = function(useVT100) {
 };
 
 // ============================================
-// CURRENT USER STATE
+// AUTH STATE
+// ============================================
+
+App.authUser = null;
+
+App.setAuthUser = function(user) {
+    App.authUser = user || null;
+    if (typeof App.updateAuthUi === 'function') {
+        App.updateAuthUi();
+    }
+};
+
+App.loadAuthUser = async function() {
+    try {
+        const user = await App.api('/auth/me');
+        App.setAuthUser(user);
+    } catch (err) {
+        // Not logged in or token invalid - ignore
+        App.setAuthUser(null);
+    }
+};
+
+App.requireVerifiedAuth = function() {
+    if (!App.authUser) {
+        alert('Please sign in to perform this action.');
+        if (typeof App.showAuthModal === 'function') {
+            App.showAuthModal('login');
+        }
+        return false;
+    }
+    if (!App.authUser.verified) {
+        alert('Please verify your email before performing this action. Check your inbox for a verification email.');
+        return false;
+    }
+    return true;
+};
+
+// ============================================
+// CURRENT USER STATE (legacy \"playing as\" selector)
 // ============================================
 
 App.currentUser = null;

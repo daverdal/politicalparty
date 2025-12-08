@@ -7,6 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const eventService = require('../services/eventService');
+const { authenticate, requireVerifiedUser, requireAdmin } = require('../middleware/auth');
 
 // GET /api/events - Get all events
 router.get('/', async (req, res) => {
@@ -31,8 +32,8 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// POST /api/events - Create a new event
-router.post('/', async (req, res) => {
+// POST /api/events - Create a new event (admin only)
+router.post('/', authenticate, requireAdmin, async (req, res) => {
     try {
         const event = await eventService.createEvent(req.body);
         res.status(201).json(event);
@@ -41,8 +42,8 @@ router.post('/', async (req, res) => {
     }
 });
 
-// PUT /api/events/:id - Update an event
-router.put('/:id', async (req, res) => {
+// PUT /api/events/:id - Update an event (admin only)
+router.put('/:id', authenticate, requireAdmin, async (req, res) => {
     try {
         const event = await eventService.updateEvent(req.params.id, req.body);
         if (!event) {
@@ -54,8 +55,8 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// DELETE /api/events/:id - Delete an event
-router.delete('/:id', async (req, res) => {
+// DELETE /api/events/:id - Delete an event (admin only)
+router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
     try {
         const deleted = await eventService.deleteEvent(req.params.id);
         if (!deleted) {
@@ -68,10 +69,10 @@ router.delete('/:id', async (req, res) => {
 });
 
 // POST /api/events/:id/participate - Join an event
-router.post('/:id/participate', async (req, res) => {
+router.post('/:id/participate', authenticate, requireVerifiedUser, async (req, res) => {
     try {
         const success = await eventService.participateInEvent({
-            userId: req.body.userId,
+            userId: req.user.id,
             eventId: req.params.id
         });
         if (!success) {
@@ -84,10 +85,10 @@ router.post('/:id/participate', async (req, res) => {
 });
 
 // DELETE /api/events/:id/participate - Leave an event
-router.delete('/:id/participate', async (req, res) => {
+router.delete('/:id/participate', authenticate, requireVerifiedUser, async (req, res) => {
     try {
         await eventService.leaveEvent({
-            userId: req.body.userId,
+            userId: req.user.id,
             eventId: req.params.id
         });
         res.json({ message: 'Participation removed' });

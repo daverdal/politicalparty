@@ -30,6 +30,20 @@ async function verifyConnection() {
     try {
         const d = getDriver();
         await d.verifyConnectivity();
+
+        // Ensure required constraints exist
+        const session = d.session({ database: DATABASE });
+        try {
+            // Unique email constraint for User nodes (if not already present)
+            await session.run(`
+                CREATE CONSTRAINT user_email_unique IF NOT EXISTS
+                FOR (u:User)
+                REQUIRE u.email IS UNIQUE
+            `);
+        } finally {
+            await session.close();
+        }
+
         console.log(`✓ Connected to Neo4j (${DATABASE})`);
         return true;
     } catch (error) {
