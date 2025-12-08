@@ -52,10 +52,12 @@ async function getUserById(userId) {
             OPTIONAL MATCH (u)-[:LOCATED_IN]->(loc)
             OPTIONAL MATCH (u)-[:POSTED]->(idea:Idea)<-[:SUPPORTED]-(supporter:User)
             OPTIONAL MATCH (endorser:User)-[:ENDORSED]->(u)
+            OPTIONAL MATCH (nominator:User)-[:NOMINATED]->(u)
             WITH u, collect(DISTINCT {node: loc, labels: labels(loc)}) as locations,
                  count(DISTINCT supporter) as points,
-                 count(DISTINCT endorser) as endorsementCount
-            RETURN u, locations, points, endorsementCount
+                 count(DISTINCT endorser) as endorsementCount,
+                 count(DISTINCT nominator) as nominationCount
+            RETURN u, locations, points, endorsementCount, nominationCount
         `, { userId });
         
         if (result.records.length === 0) return null;
@@ -87,7 +89,8 @@ async function getUserById(userId) {
             location: primaryLocation,  // backward compat
             locations,                  // all locations
             points: toNumber(record.get('points')),
-            endorsementCount: toNumber(record.get('endorsementCount'))
+            endorsementCount: toNumber(record.get('endorsementCount')),
+            nominationCount: toNumber(record.get('nominationCount'))
         };
     } finally {
         await session.close();

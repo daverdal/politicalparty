@@ -149,6 +149,7 @@ App.pages.profile = async function() {
                 </div>
             </div>
             
+            <!-- Candidacy Section -->
             ${currentRace ? `
                 <div class="card">
                     <div class="card-header"><h3 class="card-title">🏁 Currently Running In</h3><span class="badge success">Active</span></div>
@@ -162,29 +163,43 @@ App.pages.profile = async function() {
                         </div>
                     </div>
                 </div>
+            ` : activeConv && userDetails.locations?.length > 0 ? `
+                <div class="card">
+                    <div class="card-header"><h3 class="card-title">🗳️ Run for Office</h3></div>
+                    <div class="card-body">
+                        <p>Want to run in ${activeConv.name}? Anyone can declare candidacy - you don't need nominations to run!</p>
+                        <p class="nominations-info" style="margin: 12px 0;">
+                            You have <strong>${nominations[0]?.nominationCount || 0}</strong> lifetime nomination(s) supporting you.
+                        </p>
+                        <button class="btn btn-primary" onclick="App.declareCandidacy('${activeConv.id}')">🏃 Declare Candidacy</button>
+                    </div>
+                </div>
+            ` : activeConv ? `
+                <div class="card">
+                    <div class="card-header"><h3 class="card-title">🗳️ Run for Office</h3></div>
+                    <div class="card-body">
+                        <p class="empty-text">Set your location above to run for office in your riding.</p>
+                    </div>
+                </div>
             ` : ''}
             
-            <div class="card ${pendingNominations.length > 0 ? 'highlight' : ''}">
+            <!-- Nominations Section (Informational) -->
+            <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">📬 Pending Nominations</h3>
-                    ${pendingNominations.length > 0 ? `<span class="badge warning">${pendingNominations.length} pending</span>` : ''}
+                    <h3 class="card-title">📬 My Nominations</h3>
+                    ${nominations[0]?.nominationCount > 0 ? `<span class="badge success">${nominations[0].nominationCount} supporters</span>` : ''}
                 </div>
                 <div class="card-body">
-                    ${pendingNominations.length === 0 ? `
-                        <p class="empty-text">No pending nominations. ${currentRace ? "You're already running in a race!" : 'Others can nominate you for races during the nomination phase.'}</p>
+                    ${nominations[0]?.nominationCount === 0 || !nominations[0]?.nominations?.length ? `
+                        <p class="empty-text">No one has nominated you yet. Nominations are a way for members to show their support - you don't need them to run!</p>
                     ` : `
-                        <p class="nominations-help">You've been nominated for the following races. You can only accept <strong>one</strong> nomination per convention.</p>
+                        <p class="nominations-help">These members have nominated you. Nominations are permanent and show voter support.</p>
                         <div class="nominations-list">
-                            ${pendingNominations.map(nom => `
-                                <div class="nomination-card" data-race-id="${nom.race?.id}">
-                                    <div class="nomination-riding">${nom.riding?.name || 'Unknown Riding'}</div>
-                                    <div class="nomination-province">${nom.province?.name || ''}</div>
-                                    <div class="nomination-count">${nom.nominationCount || 1} nomination(s)</div>
-                                    <div class="nomination-nominators">Nominated by: ${nom.nominations?.map(n => n.nominatorName).join(', ') || 'Unknown'}</div>
-                                    <div class="nomination-actions">
-                                        <button class="btn btn-primary" onclick="App.acceptNomination('${activeConv?.id}', '${nom.race?.id}')">✅ Accept & Run</button>
-                                        <button class="btn btn-secondary" onclick="App.declineNomination('${activeConv?.id}', '${nom.race?.id}')">❌ Decline</button>
-                                    </div>
+                            ${nominations[0].nominations.map(nom => `
+                                <div class="nomination-item">
+                                    <span class="nominator-name">👍 ${nom.nominatorName}</span>
+                                    ${nom.message ? `<span class="nominator-message">"${nom.message}"</span>` : ''}
+                                    <span class="nomination-date">${nom.createdAt ? new Date(nom.createdAt).toLocaleDateString() : ''}</span>
                                 </div>
                             `).join('')}
                         </div>
@@ -389,68 +404,84 @@ App.pages.convention = async function() {
         content.innerHTML = `
             <header class="page-header">
                 <h1 class="page-title">🏛️ Convention</h1>
-                <p class="page-subtitle">West to East regional voting waves</p>
+                <p class="page-subtitle">${activeConv ? activeConv.name : 'West to East regional voting waves'}</p>
             </header>
             
             ${activeConv ? `
-                <div class="card convention-hero">
-                    <div class="card-header">
-                        <div><h2 class="card-title">${activeConv.name}</h2><p class="card-subtitle">${activeConv.description || ''}</p></div>
-                        ${getStatusBadge(activeConv.status)}
-                    </div>
-                    <div class="card-body">${buildWaveTimeline(activeConv)}</div>
+                <!-- Tab Navigation -->
+                <div class="convention-tabs">
+                    <button class="convention-tab active" data-tab="progress" onclick="App.switchConventionTab('progress')">
+                        📊 Convention Progress
+                    </button>
+                    <button class="convention-tab" data-tab="races" onclick="App.switchConventionTab('races')">
+                        🏁 Active Races <span class="tab-badge">${activeRaces.length}</span>
+                    </button>
                 </div>
                 
-                <div class="stats-row">
-                    <div class="stat-card"><div class="stat-label">Total Races</div><div class="stat-value">${totalRaces}</div></div>
-                    <div class="stat-card contested"><div class="stat-label">Contested</div><div class="stat-value">${contestedRaces}</div></div>
-                    <div class="stat-card uncontested"><div class="stat-label">Uncontested</div><div class="stat-value">${uncontested}</div></div>
-                    <div class="stat-card vacant"><div class="stat-label">Need Candidates</div><div class="stat-value">${vacant}</div></div>
+                <!-- Convention Progress Tab -->
+                <div id="convention-tab-progress" class="convention-tab-content active">
+                    <div class="card convention-hero">
+                        <div class="card-header">
+                            <div><h2 class="card-title">${activeConv.name}</h2><p class="card-subtitle">${activeConv.description || 'West to East regional voting waves'}</p></div>
+                            ${getStatusBadge(activeConv.status)}
+                        </div>
+                        <div class="card-body">${buildWaveTimeline(activeConv)}</div>
+                    </div>
+                    
+                    <div class="stats-row">
+                        <div class="stat-card"><div class="stat-label">Total Races</div><div class="stat-value">${totalRaces}</div></div>
+                        <div class="stat-card contested"><div class="stat-label">Contested</div><div class="stat-value">${contestedRaces}</div></div>
+                        <div class="stat-card uncontested"><div class="stat-label">Uncontested</div><div class="stat-value">${uncontested}</div></div>
+                        <div class="stat-card vacant"><div class="stat-label">Need Candidates</div><div class="stat-value">${vacant}</div></div>
+                    </div>
                 </div>
                 
-                ${activeConv.status?.includes('-voting') ? `
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">🗳️ Voting - Wave ${activeConv.currentWave || 1}</h3>
-                            <span class="badge success">${activeRaces.length} ridings</span>
-                        </div>
-                        <div class="card-body">
-                            <p class="races-help">Cast your vote for candidates in each riding</p>
-                            <div id="voting-races-container">
-                                <div class="loading"><div class="spinner"></div></div>
+                <!-- Active Races Tab -->
+                <div id="convention-tab-races" class="convention-tab-content" style="display: none;">
+                    ${activeConv.status?.includes('-voting') ? `
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">🗳️ Voting - Wave ${activeConv.currentWave || 1}</h3>
+                                <span class="badge success">${activeRaces.length} ridings</span>
+                            </div>
+                            <div class="card-body">
+                                <p class="races-help">Cast your vote for candidates in each riding</p>
+                                <div id="voting-races-container">
+                                    <div class="loading"><div class="spinner"></div></div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ` : `
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">🏁 Active Races - Wave ${activeConv.currentWave || 1}</h3>
-                            <span class="badge">${activeRaces.length} ridings</span>
-                        </div>
-                        <div class="card-body">
-                            <p class="races-help">Click a riding to see candidates and nominate someone</p>
-                            <div class="races-grid">
-                                ${activeRaces.length === 0 ? '<p class="empty-text">No races created yet. Use Admin panel to create races.</p>' : 
-                                    activeRaces.map(race => `
-                                        <div class="race-card ${race.candidateCount > 1 ? 'contested' : race.candidateCount === 1 ? 'uncontested' : 'vacant'}" 
-                                             data-race-id="${race.id}" onclick="App.showRaceDetail('${race.id}')">
-                                            <div class="race-card-header">
-                                                <div class="race-riding-name">${race.riding?.name || 'Unknown'}</div>
-                                                <div class="race-province-name">${race.provinceName || ''}</div>
+                    ` : `
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">🏁 Active Races - Wave ${activeConv.currentWave || 1}</h3>
+                                <span class="badge">${activeRaces.length} ridings</span>
+                            </div>
+                            <div class="card-body">
+                                <p class="races-help">Click a riding to see candidates and nominate someone</p>
+                                <div class="races-grid">
+                                    ${activeRaces.length === 0 ? '<p class="empty-text">No races created yet. Races are created automatically when a wave begins.</p>' : 
+                                        activeRaces.map(race => `
+                                            <div class="race-card ${race.candidateCount > 1 ? 'contested' : race.candidateCount === 1 ? 'uncontested' : 'vacant'}" 
+                                                 data-race-id="${race.id}" onclick="App.showRaceDetail('${race.id}')">
+                                                <div class="race-card-header">
+                                                    <div class="race-riding-name">${race.riding?.name || 'Unknown'}</div>
+                                                    <div class="race-province-name">${race.provinceName || ''}</div>
+                                                </div>
+                                                <div class="race-card-body">
+                                                    ${race.candidateCount === 0 ? '<div class="race-empty">No candidates yet</div>' :
+                                                      race.candidateCount === 1 ? '<div class="race-uncontested">1 candidate</div>' :
+                                                      `<div class="race-contested">${race.candidateCount} candidates</div>`}
+                                                </div>
+                                                <div class="race-card-footer"><span class="view-race-btn">View Race →</span></div>
                                             </div>
-                                            <div class="race-card-body">
-                                                ${race.candidateCount === 0 ? '<div class="race-empty">No candidates yet</div>' :
-                                                  race.candidateCount === 1 ? '<div class="race-uncontested">1 candidate</div>' :
-                                                  `<div class="race-contested">${race.candidateCount} candidates</div>`}
-                                            </div>
-                                            <div class="race-card-footer"><span class="view-race-btn">View Race →</span></div>
-                                        </div>
-                                    `).join('')
-                                }
+                                        `).join('')
+                                    }
+                                </div>
                             </div>
                         </div>
-                    </div>
-                `}
+                    `}
+                </div>
             ` : '<div class="card"><div class="card-body"><p>No conventions available yet.</p></div></div>'}
         `;
         
@@ -464,6 +495,20 @@ App.pages.convention = async function() {
     } catch (err) {
         content.innerHTML = `<div class="card"><div class="card-body">Error: ${err.message}</div></div>`;
     }
+};
+
+// Tab switching for Convention page
+App.switchConventionTab = function(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.convention-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.tab === tabName);
+    });
+    
+    // Update tab content
+    document.querySelectorAll('.convention-tab-content').forEach(content => {
+        content.style.display = content.id === `convention-tab-${tabName}` ? 'block' : 'none';
+        content.classList.toggle('active', content.id === `convention-tab-${tabName}`);
+    });
 };
 
 // ============================================
@@ -561,6 +606,13 @@ App.pages.admin = async function() {
                             <label>Year</label>
                             <input type="number" id="new-conv-year" class="form-input" min="2020" max="2100" value="${currentYear + 1}">
                         </div>
+                        <div class="form-group">
+                            <label>Start Date <span style="color: var(--text-muted); font-weight: normal;">(Wave 1 nominations begin)</span></label>
+                            <input type="date" id="new-conv-start" class="form-input" value="${currentYear + 1}-01-15">
+                        </div>
+                        <p class="form-help" style="margin: 8px 0; color: var(--text-muted); font-size: 0.85rem;">
+                            📅 Schedule is auto-generated: 2 weeks nominations + 1 week voting per wave (6 waves total, ~18 weeks)
+                        </p>
                         <button class="admin-btn primary" onclick="App.createNewConvention()" style="margin-top: 12px;">➕ Create Convention</button>
                         <div id="create-conv-result" style="margin-top: 12px; display: none;"></div>
                     </div>
@@ -594,22 +646,107 @@ App.pages.admin = async function() {
                         
                         <p style="margin-bottom: 12px;">Current Phase: <strong>${activeConv.status}</strong> ${stats?.currentWave ? `(Wave ${stats.currentWave})` : ''}</p>
                         
-                        <div class="admin-phase-buttons" style="margin-bottom: 16px;">
-                            ${phases.map(p => `<button class="admin-btn ${activeConv.status === p.status ? 'active' : ''}" onclick="App.setConventionPhase('${activeConv.id}', '${p.status}', ${p.wave})">${p.label}</button>`).join('')}
-                        </div>
-                        
-                        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                            <button class="admin-btn primary" onclick="App.advanceConvention('${activeConv.id}')">⏩ Advance Phase</button>
-                            <button class="admin-btn" onclick="App.createWaveRaces('${activeConv.id}')">🏁 Create Races</button>
-                            ${activeConv.status?.includes('-voting') ? `
-                                <button class="admin-btn" onclick="App.startAllVoting('${activeConv.id}')">▶️ Start All Voting</button>
-                                <button class="admin-btn warning" onclick="App.closeAllRounds('${activeConv.id}')">⏭️ Close All Rounds</button>
-                            ` : ''}
-                            <button class="admin-btn danger" onclick="App.confirmResetConvention('${activeConv.id}')">🔄 Reset</button>
-                            <button class="admin-btn danger" onclick="App.confirmDeleteConvention('${activeConv.id}', '${activeConv.name}')">🗑️ Delete</button>
-                        </div>
+                        ${autoMode.enabled ? `
+                            <div class="auto-mode-notice" style="background: rgba(0, 212, 170, 0.1); border: 1px solid var(--accent-primary); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                                <strong>🤖 Auto Mode Active</strong> - All controls are locked. The system will advance phases automatically based on the schedule below.
+                                <br><small style="color: var(--text-muted);">Disable Auto Mode to manually control, reset, or delete the convention.</small>
+                            </div>
+                        ` : `
+                            <div class="admin-phase-buttons" style="margin-bottom: 16px;">
+                                ${phases.map(p => `<button class="admin-btn ${activeConv.status === p.status ? 'active' : ''}" onclick="App.setConventionPhase('${activeConv.id}', '${p.status}', ${p.wave})">${p.label}</button>`).join('')}
+                            </div>
+                            
+                            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                                <button class="admin-btn primary" onclick="App.advanceConvention('${activeConv.id}')">⏩ Advance Phase</button>
+                                ${activeConv.status?.includes('-voting') ? `
+                                    <button class="admin-btn" onclick="App.startAllVoting('${activeConv.id}')">▶️ Start All Voting</button>
+                                    <button class="admin-btn warning" onclick="App.closeAllRounds('${activeConv.id}')">⏭️ Close All Rounds</button>
+                                ` : ''}
+                            </div>
+                            
+                            <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+                                <button class="admin-btn danger" onclick="App.confirmResetConvention('${activeConv.id}')">🔄 Reset</button>
+                                <button class="admin-btn danger" onclick="App.confirmDeleteConvention('${activeConv.id}', '${activeConv.name}')">🗑️ Delete</button>
+                            </div>
+                        `}
                         
                         <div id="admin-result" style="margin-top: 16px; padding: 12px; background: var(--bg-secondary); border-radius: 8px; display: none;"></div>
+                    </div>
+                </div>
+                
+                <!-- Schedule Card -->
+                <div class="card" style="grid-column: span 2;">
+                    <div class="card-header">
+                        <h3 class="card-title">📅 Convention Schedule</h3>
+                        <button class="admin-btn small" onclick="App.toggleScheduleEdit()">✏️ Edit</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="schedule-view">
+                            <div class="schedule-grid">
+                                ${[1,2,3,4,5,6].map(wave => {
+                                    const nomStart = activeConv[`wave${wave}NominationStart`];
+                                    const nomEnd = activeConv[`wave${wave}NominationEnd`];
+                                    const voteStart = activeConv[`wave${wave}VotingStart`];
+                                    const voteEnd = activeConv[`wave${wave}VotingEnd`];
+                                    const waveNames = {1:'BC/North',2:'Prairies',3:'North ON',4:'South ON',5:'Quebec',6:'Atlantic'};
+                                    const isCurrentWave = stats?.currentWave === wave;
+                                    const isPast = activeConv.status === 'completed' || (stats?.currentWave && wave < stats.currentWave);
+                                    return `
+                                        <div class="schedule-wave ${isCurrentWave ? 'current' : ''} ${isPast ? 'past' : ''}">
+                                            <div class="wave-header">Wave ${wave}: ${waveNames[wave]}</div>
+                                            <div class="wave-dates">
+                                                <div class="wave-phase">
+                                                    <span class="phase-label">📝 Nominations:</span>
+                                                    <span class="phase-dates">${nomStart ? new Date(nomStart).toLocaleDateString() : '—'} - ${nomEnd ? new Date(nomEnd).toLocaleDateString() : '—'}</span>
+                                                </div>
+                                                <div class="wave-phase">
+                                                    <span class="phase-label">🗳️ Voting:</span>
+                                                    <span class="phase-dates">${voteStart ? new Date(voteStart).toLocaleDateString() : '—'} - ${voteEnd ? new Date(voteEnd).toLocaleDateString() : '—'}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                        <div id="schedule-edit" style="display: none;">
+                            <div class="schedule-edit-grid">
+                                ${[1,2,3,4,5,6].map(wave => {
+                                    const nomStart = activeConv[`wave${wave}NominationStart`];
+                                    const nomEnd = activeConv[`wave${wave}NominationEnd`];
+                                    const voteStart = activeConv[`wave${wave}VotingStart`];
+                                    const voteEnd = activeConv[`wave${wave}VotingEnd`];
+                                    const waveNames = {1:'BC/North',2:'Prairies',3:'North ON',4:'South ON',5:'Quebec',6:'Atlantic'};
+                                    const toDateInput = (d) => d ? new Date(d).toISOString().split('T')[0] : '';
+                                    return `
+                                        <div class="schedule-wave-edit">
+                                            <div class="wave-header">Wave ${wave}: ${waveNames[wave]}</div>
+                                            <div class="wave-edit-row">
+                                                <label>Nom Start</label>
+                                                <input type="date" class="form-input small" id="w${wave}ns" value="${toDateInput(nomStart)}">
+                                            </div>
+                                            <div class="wave-edit-row">
+                                                <label>Nom End</label>
+                                                <input type="date" class="form-input small" id="w${wave}ne" value="${toDateInput(nomEnd)}">
+                                            </div>
+                                            <div class="wave-edit-row">
+                                                <label>Vote Start</label>
+                                                <input type="date" class="form-input small" id="w${wave}vs" value="${toDateInput(voteStart)}">
+                                            </div>
+                                            <div class="wave-edit-row">
+                                                <label>Vote End</label>
+                                                <input type="date" class="form-input small" id="w${wave}ve" value="${toDateInput(voteEnd)}">
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                            <div style="margin-top: 16px; display: flex; gap: 12px;">
+                                <button class="admin-btn primary" onclick="App.saveSchedule('${activeConv.id}')">💾 Save Schedule</button>
+                                <button class="admin-btn" onclick="App.toggleScheduleEdit()">Cancel</button>
+                            </div>
+                            <div id="schedule-result" style="margin-top: 12px;"></div>
+                        </div>
                     </div>
                 </div>
                 ` : ''}
@@ -639,6 +776,48 @@ App.pages.admin = async function() {
 // ADMIN ACTIONS
 // ============================================
 
+App.toggleScheduleEdit = function() {
+    const view = document.getElementById('schedule-view');
+    const edit = document.getElementById('schedule-edit');
+    if (view && edit) {
+        const isEditing = edit.style.display !== 'none';
+        view.style.display = isEditing ? 'block' : 'none';
+        edit.style.display = isEditing ? 'none' : 'block';
+    }
+};
+
+App.saveSchedule = async function(convId) {
+    const schedule = {};
+    
+    for (let wave = 1; wave <= 6; wave++) {
+        const ns = document.getElementById(`w${wave}ns`)?.value;
+        const ne = document.getElementById(`w${wave}ne`)?.value;
+        const vs = document.getElementById(`w${wave}vs`)?.value;
+        const ve = document.getElementById(`w${wave}ve`)?.value;
+        
+        if (ns) schedule[`wave${wave}NominationStart`] = ns;
+        if (ne) schedule[`wave${wave}NominationEnd`] = ne;
+        if (vs) schedule[`wave${wave}VotingStart`] = vs;
+        if (ve) schedule[`wave${wave}VotingEnd`] = ve;
+    }
+    
+    const resultEl = document.getElementById('schedule-result');
+    try {
+        if (resultEl) resultEl.innerHTML = 'Saving...';
+        
+        const { data } = await App.apiPost(`/admin/convention/${convId}/schedule`, { schedule });
+        
+        if (data.success) {
+            if (resultEl) resultEl.innerHTML = `<span style="color: var(--success);">✅ ${data.message}</span>`;
+            setTimeout(() => App.pages.admin(), 1500);
+        } else {
+            if (resultEl) resultEl.innerHTML = `<span style="color: var(--danger);">❌ ${data.error}</span>`;
+        }
+    } catch (err) {
+        if (resultEl) resultEl.innerHTML = `<span style="color: var(--danger);">❌ ${err.message}</span>`;
+    }
+};
+
 App.toggleAutoMode = async function(enabled) {
     try {
         const { data } = await App.apiPost('/admin/auto-mode', { enabled });
@@ -664,15 +843,6 @@ App.advanceConvention = async function(convId) {
         const { data } = await App.apiPost(`/admin/convention/${convId}/advance`, {});
         App.showAdminResult(data.message || data.error);
         App.pages.admin();
-    } catch (err) {
-        App.showAdminResult('Error: ' + err.message);
-    }
-};
-
-App.createWaveRaces = async function(convId) {
-    try {
-        const { data } = await App.apiPost(`/admin/convention/${convId}/create-wave-races`, {});
-        App.showAdminResult(data.message || data.error);
     } catch (err) {
         App.showAdminResult('Error: ' + err.message);
     }
@@ -774,6 +944,7 @@ App.showAdminResult = function(message) {
 App.createNewConvention = async function() {
     const name = document.getElementById('new-conv-name')?.value?.trim();
     const year = parseInt(document.getElementById('new-conv-year')?.value);
+    const startDate = document.getElementById('new-conv-start')?.value;
     const resultEl = document.getElementById('create-conv-result');
     
     if (!name || !year) {
@@ -787,16 +958,18 @@ App.createNewConvention = async function() {
     try {
         if (resultEl) {
             resultEl.style.display = 'block';
-            resultEl.innerHTML = 'Creating convention...';
+            resultEl.innerHTML = 'Creating convention and generating schedule...';
         }
         
-        const { data } = await App.apiPost('/admin/conventions', { name, year });
+        const { data } = await App.apiPost('/admin/conventions', { name, year, startDate });
         
         if (data.success) {
             if (resultEl) {
-                resultEl.innerHTML = `<span style="color: var(--success);">${data.message}</span>`;
+                // Format the message with line breaks
+                const formattedMsg = data.message.replace(/\n/g, '<br>');
+                resultEl.innerHTML = `<div style="color: var(--success); white-space: pre-line;">${formattedMsg}</div>`;
             }
-            setTimeout(() => App.pages.admin(), 1500);
+            setTimeout(() => App.pages.admin(), 3000); // Longer delay to read schedule
         } else {
             if (resultEl) {
                 resultEl.innerHTML = `<span style="color: var(--danger);">${data.error}</span>`;
@@ -903,23 +1076,42 @@ App.deleteConvention = async function(convId) {
 };
 
 // ============================================
-// NOMINATION ACTIONS
+// CANDIDACY & NOMINATION ACTIONS
 // ============================================
 
-App.acceptNomination = async function(convId, raceId) {
-    if (!App.currentUser) { alert('Please select a user first'); return; }
+/**
+ * Declare candidacy for the current convention
+ * Anyone can run - no nominations required!
+ */
+App.declareCandidacy = async function(convId) {
+    if (!App.currentUser) { 
+        alert('Please select a user first'); 
+        return; 
+    }
+    
+    if (!confirm('Are you sure you want to run for office? You will be added as a candidate in your riding.')) {
+        return;
+    }
     
     try {
-        const { response, data } = await App.apiPost(`/conventions/${convId}/accept-nomination`, { userId: App.currentUser.id, raceId });
+        const { response, data } = await App.apiPost(`/conventions/${convId}/declare-candidacy`, { 
+            userId: App.currentUser.id 
+        });
+        
         if (data.success) {
-            alert('✅ Nomination accepted! You are now a candidate.');
+            alert(`🏃 ${data.message}`);
             App.pages.profile();
         } else {
-            alert('❌ ' + (data.error || 'Failed to accept nomination'));
+            alert('❌ ' + (data.error || 'Failed to declare candidacy'));
         }
     } catch (err) {
         alert('❌ Error: ' + err.message);
     }
+};
+
+App.acceptNomination = async function(convId, raceId) {
+    // Legacy support - now just calls declare candidacy
+    App.declareCandidacy(convId);
 };
 
 App.declineNomination = async function(convId, raceId) {
@@ -960,15 +1152,20 @@ App.withdrawFromRace = async function(convId, raceId) {
 
 App.showMemberDetail = async function(userId) {
     try {
-        const [user, conventions] = await Promise.all([
+        const [user, conventions, endorsements] = await Promise.all([
             App.api(`/users/${userId}`),
-            App.api('/conventions')
+            App.api('/conventions'),
+            App.api(`/users/${userId}/endorsements`).catch(() => [])
         ]);
         
         const activeConv = conventions.find(c => c.status !== 'completed');
-        const isNominationsOpen = activeConv?.status?.includes('nominations');
         const hasLocation = user.location && user.location.id;
-        const locationType = user.location?.type || 'FederalRiding';
+        
+        // Nominations are PERMANENT - can be made anytime, no convention required!
+        const canNominate = hasLocation && App.currentUser && App.currentUser.id !== userId;
+        
+        // Get user's nomination count
+        const nominationCount = user.nominationCount || 0;
         
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -989,18 +1186,52 @@ App.showMemberDetail = async function(userId) {
                     <div class="member-stats">
                         <div class="member-stat"><span class="stat-value">${user.points || 0}</span><span class="stat-label">Points</span></div>
                         <div class="member-stat"><span class="stat-value">${user.endorsementCount || 0}</span><span class="stat-label">Endorsements</span></div>
+                        <div class="member-stat"><span class="stat-value">${nominationCount}</span><span class="stat-label">Nominations</span></div>
                     </div>
                     ${user.skills?.length ? `<div class="member-section"><h4>Skills</h4><div class="tags">${user.skills.map(s => `<span class="tag">${s}</span>`).join('')}</div></div>` : ''}
+                    
+                    ${endorsements.length > 0 ? `
+                        <div class="member-section endorsements-section">
+                            <h4>✍️ Endorsements (${endorsements.length})</h4>
+                            <div class="endorsements-list">
+                                ${endorsements.map(e => `
+                                    <div class="endorsement-item">
+                                        <div class="endorsement-header">
+                                            <span class="endorser-name">${e.endorser?.name || 'Anonymous'}</span>
+                                            <span class="endorsement-date">${e.createdAt ? new Date(e.createdAt).toLocaleDateString() : ''}</span>
+                                        </div>
+                                        <div class="endorsement-message">"${e.message || 'No message'}"</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
                     <hr class="modal-divider">
                     <div class="nominate-section">
-                        <h4>📝 Nominate for Convention</h4>
+                        <h4>📝 Nominate This Member</h4>
+                        <p class="nominate-explanation">Nominations are <strong>permanent</strong> and show your support for this person to run for office.</p>
                         ${!App.currentUser ? '<p class="nominate-hint">Select yourself from the "Playing as" dropdown to nominate this member.</p>' :
                           App.currentUser.id === userId ? '<p class="nominate-hint">You cannot nominate yourself.</p>' :
-                          !isNominationsOpen ? '<p class="nominate-hint">Nominations are not currently open.</p>' :
                           !hasLocation ? '<p class="nominate-hint">This member hasn\'t set their riding yet.</p>' :
-                          `<p class="nominate-info">Nominate <strong>${user.name}</strong> to run in <strong>${user.location.name}</strong></p>
-                           <button class="btn btn-primary" id="nominate-member-btn">🗳️ Nominate ${user.name}</button>
+                          `<div class="nomination-form">
+                               <textarea id="nomination-message" class="form-textarea" placeholder="Optional: Why are you nominating this person?" rows="2"></textarea>
+                               <button class="btn btn-primary" id="nominate-member-btn">📝 Nominate ${user.name}</button>
+                           </div>
                            <div id="nominate-feedback" class="nomination-feedback"></div>`}
+                    </div>
+                    
+                    <hr class="modal-divider">
+                    <div class="endorse-section">
+                        <h4>✍️ Write an Endorsement</h4>
+                        <p class="nominate-explanation">Endorsements are personal recommendations. Write why you think this person would be a good representative.</p>
+                        ${!App.currentUser ? '<p class="nominate-hint">Select yourself from the "Playing as" dropdown to endorse this member.</p>' :
+                          App.currentUser.id === userId ? '<p class="nominate-hint">You cannot endorse yourself.</p>' :
+                          `<div class="endorsement-form">
+                               <textarea id="endorsement-message" class="form-textarea" placeholder="Write your endorsement... (required)" rows="3"></textarea>
+                               <button class="btn btn-secondary" id="endorse-member-btn">✍️ Endorse ${user.name}</button>
+                           </div>
+                           <div id="endorse-feedback" class="nomination-feedback"></div>`}
                     </div>
                 </div>
             </div>
@@ -1012,29 +1243,72 @@ App.showMemberDetail = async function(userId) {
         if (nominateBtn) {
             nominateBtn.addEventListener('click', async () => {
                 const feedback = modal.querySelector('#nominate-feedback');
+                const messageInput = modal.querySelector('#nomination-message');
+                const message = messageInput?.value || '';
+                
                 nominateBtn.disabled = true;
                 nominateBtn.textContent = 'Nominating...';
                 
                 try {
-                    const { response, data } = await App.apiPost(`/conventions/${activeConv.id}/nominate`, {
+                    // Use a dummy convention ID - nominations are not tied to conventions anymore
+                    const convId = activeConv?.id || 'general';
+                    const { response, data } = await App.apiPost(`/conventions/${convId}/nominate`, {
                         nominatorId: App.currentUser.id,
                         nomineeId: userId,
-                        ridingId: user.location.id,
-                        ridingType: locationType
+                        message
                     });
                     
                     if (response.ok && data.success) {
-                        feedback.innerHTML = `<span class="success">✅ ${user.name} has been nominated!</span>`;
+                        feedback.innerHTML = `<span class="success">✅ ${data.message}</span>`;
                         nominateBtn.textContent = '✅ Nominated!';
                     } else {
                         feedback.innerHTML = `<span class="error">❌ ${data.error || 'Failed'}</span>`;
                         nominateBtn.disabled = false;
-                        nominateBtn.textContent = `🗳️ Nominate ${user.name}`;
+                        nominateBtn.textContent = `📝 Nominate ${user.name}`;
                     }
                 } catch (err) {
                     feedback.innerHTML = `<span class="error">❌ ${err.message}</span>`;
                     nominateBtn.disabled = false;
-                    nominateBtn.textContent = `🗳️ Nominate ${user.name}`;
+                    nominateBtn.textContent = `📝 Nominate ${user.name}`;
+                }
+            });
+        }
+        
+        // Endorse button handler
+        const endorseBtn = modal.querySelector('#endorse-member-btn');
+        if (endorseBtn) {
+            endorseBtn.addEventListener('click', async () => {
+                const feedback = modal.querySelector('#endorse-feedback');
+                const messageInput = modal.querySelector('#endorsement-message');
+                const message = messageInput?.value?.trim() || '';
+                
+                if (!message) {
+                    feedback.innerHTML = `<span class="error">Please write an endorsement message.</span>`;
+                    return;
+                }
+                
+                endorseBtn.disabled = true;
+                endorseBtn.textContent = 'Endorsing...';
+                
+                try {
+                    const { response, data } = await App.apiPost(`/users/${App.currentUser.id}/endorse`, {
+                        targetUserId: userId,
+                        message
+                    });
+                    
+                    if (response.ok && data.success) {
+                        feedback.innerHTML = `<span class="success">✅ Endorsement submitted!</span>`;
+                        endorseBtn.textContent = '✅ Endorsed!';
+                        messageInput.value = '';
+                    } else {
+                        feedback.innerHTML = `<span class="error">❌ ${data.error || 'Failed'}</span>`;
+                        endorseBtn.disabled = false;
+                        endorseBtn.textContent = `✍️ Endorse ${user.name}`;
+                    }
+                } catch (err) {
+                    feedback.innerHTML = `<span class="error">❌ ${err.message}</span>`;
+                    endorseBtn.disabled = false;
+                    endorseBtn.textContent = `✍️ Endorse ${user.name}`;
                 }
             });
         }
@@ -1044,6 +1318,11 @@ App.showMemberDetail = async function(userId) {
     } catch (err) {
         alert('Error loading member details');
     }
+};
+
+// Shortcut to open member detail for nomination
+App.nominateMember = function(userId) {
+    App.showMemberDetail(userId);
 };
 
 App.showRaceDetail = async function(raceId) {

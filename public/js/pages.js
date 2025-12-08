@@ -58,287 +58,512 @@ App.pages.dashboard = async function() {
 };
 
 // ============================================
-// BROWSE IDEAS
+// BROWSE IDEAS (Three-Panel Layout)
 // ============================================
 
 App.pages.browse = async function() {
     const content = document.getElementById('content');
-    content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    const pageId = 'ideas';
+    
+    content.innerHTML = App.createThreePanelLayout({
+        pageId,
+        panel1Title: '🌍 Locations',
+        panel2Title: '💡 Ideas',
+        panel3Title: '📄 Details',
+        emptyIcon2: '🗺️',
+        emptyText2: 'Select a location to view ideas',
+        emptyIcon3: '💡',
+        emptyText3: 'Select an idea to view details'
+    });
+    
+    await App.initLocationTree(pageId, App.onIdeasLocationSelect);
+};
+
+App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = false) {
+    const pageId = 'ideas';
+    App.showSelectedBadge(pageId, name);
+    App.showListLoading(pageId);
+    App.showDetailEmpty(pageId, '💡', 'Select an idea to view details');
     
     try {
-        const countries = await App.api('/locations/countries');
+        const ideas = await App.api(`/locations/${type}/${id}/ideas`);
         
-        content.innerHTML = `
-            <div class="browse-layout">
-                <div class="browse-panel" id="location-panel">
-                    <div class="browse-panel-header">🌍 Locations</div>
-                    <div class="location-tree" id="location-tree">${await App.renderLocationTree(countries)}</div>
-                </div>
-                <div class="browse-panel" id="ideas-panel">
-                    <div class="browse-panel-header">💡 Ideas</div>
-                    <div id="selected-location-badge"></div>
-                    <div class="ideas-list" id="ideas-list">
-                        <div class="panel-empty"><div class="panel-empty-icon">🗺️</div><div class="panel-empty-text">Select a location to view ideas</div></div>
-                    </div>
-                </div>
-                <div class="browse-panel" id="detail-panel">
-                    <div class="browse-panel-header">📄 Details</div>
-                    <div id="idea-detail">
-                        <div class="panel-empty"><div class="panel-empty-icon">💡</div><div class="panel-empty-text">Select an idea to view details</div></div>
-                    </div>
+        if (!ideas.length) {
+            App.showListEmpty(pageId, '💭', 'No ideas from this location yet');
+            return;
+        }
+        
+        App.panelState[pageId].currentItems = ideas;
+        
+        const list = document.getElementById(`${pageId}-list`);
+        list.innerHTML = ideas.map((idea, index) => `
+            <div class="list-item" data-index="${index}" data-id="${idea.id}">
+                <div class="list-item-title">${idea.title}</div>
+                <div class="list-item-meta">
+                    <span class="list-item-stat">👍 ${idea.supportCount || 0}</span>
+                    <span>${idea.author?.name || 'Anonymous'}</span>
                 </div>
             </div>
-        `;
+        `).join('');
         
-        App.attachTreeListeners();
+        document.querySelectorAll(`#${pageId}-list .list-item`).forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll(`#${pageId}-list .list-item`).forEach(i => i.classList.remove('selected'));
+                item.classList.add('selected');
+                const idx = parseInt(item.dataset.index);
+                App.showIdeaDetailPanel(App.panelState[pageId].currentItems[idx]);
+            });
+        });
+        
+        // Auto-select first item if requested
+        if (autoSelectFirst && ideas.length > 0) {
+            const firstItem = document.querySelector(`#${pageId}-list .list-item`);
+            if (firstItem) {
+                firstItem.classList.add('selected');
+                App.showIdeaDetailPanel(ideas[0]);
+            }
+        }
     } catch (err) {
-        content.innerHTML = `<div class="card"><div class="card-body">Error: ${err.message}</div></div>`;
+        App.showListEmpty(pageId, '⚠️', `Error: ${err.message}`);
     }
 };
 
+App.showIdeaDetailPanel = function(idea) {
+    const detail = document.getElementById('ideas-detail');
+    detail.innerHTML = `
+        <div class="detail-content">
+            <div class="detail-header">
+                <h2 class="detail-title">${idea.title}</h2>
+                <p class="detail-subtitle">${idea.author ? `Posted by ${idea.author.name}` : 'Posted anonymously'}${idea.region ? ` • ${idea.region}` : ''}</p>
+            </div>
+            <div class="detail-stats">
+                <div class="detail-stat">
+                    <div class="detail-stat-value">${idea.supportCount || 0}</div>
+                    <div class="detail-stat-label">Supporters</div>
+                </div>
+            </div>
+            <div class="detail-body">${idea.description || 'No description provided.'}</div>
+            ${idea.tags?.length ? `<div class="detail-tags">${idea.tags.map(tag => `<span class="tag accent">${tag}</span>`).join('')}</div>` : ''}
+        </div>
+    `;
+};
+
 // ============================================
-// CANDIDATES
+// CANDIDATES (Three-Panel Layout)
 // ============================================
 
 App.pages.candidates = async function() {
     const content = document.getElementById('content');
-    content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    const pageId = 'candidates';
+    
+    content.innerHTML = App.createThreePanelLayout({
+        pageId,
+        panel1Title: '🌍 Locations',
+        panel2Title: '🎯 Candidates',
+        panel3Title: '📄 Profile',
+        emptyIcon2: '🗳️',
+        emptyText2: 'Select a location to view candidates',
+        emptyIcon3: '👤',
+        emptyText3: 'Select a candidate to view profile'
+    });
+    
+    await App.initLocationTree(pageId, App.onCandidatesLocationSelect);
+};
+
+App.onCandidatesLocationSelect = async function(type, id, name, autoSelectFirst = false) {
+    const pageId = 'candidates';
+    App.showSelectedBadge(pageId, name);
+    App.showListLoading(pageId);
+    App.showDetailEmpty(pageId, '👤', 'Select a candidate to view profile');
     
     try {
-        const countries = await App.api('/locations/countries');
+        const candidates = await App.api(`/locations/${type}/${id}/candidates`);
         
-        content.innerHTML = `
-            <div class="browse-layout">
-                <div class="browse-panel" id="location-panel">
-                    <div class="browse-panel-header">🌍 Locations</div>
-                    <div class="location-tree" id="location-tree">${await App.renderLocationTreeForCandidates(countries)}</div>
-                </div>
-                <div class="browse-panel" id="candidates-panel">
-                    <div class="browse-panel-header">🎯 Candidates</div>
-                    <div id="selected-location-badge-candidates"></div>
-                    <div class="candidates-list" id="candidates-list">
-                        <div class="panel-empty"><div class="panel-empty-icon">🗳️</div><div class="panel-empty-text">Select a location to view candidates</div></div>
-                    </div>
-                </div>
-                <div class="browse-panel" id="detail-panel">
-                    <div class="browse-panel-header">📄 Profile</div>
-                    <div id="candidate-detail">
-                        <div class="panel-empty"><div class="panel-empty-icon">👤</div><div class="panel-empty-text">Select a candidate to view profile</div></div>
-                    </div>
-                </div>
-            </div>
-        `;
+        if (!candidates.length) {
+            App.showListEmpty(pageId, '🗳️', 'No candidates in this location yet');
+            return;
+        }
         
-        App.attachTreeListenersForCandidates();
+        App.panelState[pageId].currentItems = candidates;
+        App.renderCandidatesListPanel(autoSelectFirst);
     } catch (err) {
-        content.innerHTML = `<div class="card"><div class="card-body">Error: ${err.message}</div></div>`;
+        App.showListEmpty(pageId, '⚠️', `Error: ${err.message}`);
     }
 };
 
+App.renderCandidatesListPanel = function(autoSelectFirst = false) {
+    const pageId = 'candidates';
+    const state = App.panelState[pageId];
+    const list = document.getElementById(`${pageId}-list`);
+    const candidates = [...state.currentItems];
+    
+    // Sort candidates
+    if (state.sortBy === 'points') {
+        candidates.sort((a, b) => (b.points || 0) - (a.points || 0));
+    } else if (state.sortBy === 'nominations') {
+        candidates.sort((a, b) => (b.nominationCount || 0) - (a.nominationCount || 0));
+    } else {
+        candidates.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    
+    let html = `
+        <div class="sort-controls">
+            <span class="sort-label">Sort:</span>
+            <label class="sort-option"><input type="radio" name="candSort" value="name" ${state.sortBy === 'name' ? 'checked' : ''}><span class="sort-option-label">Name</span></label>
+            <label class="sort-option"><input type="radio" name="candSort" value="points" ${state.sortBy === 'points' ? 'checked' : ''}><span class="sort-option-label">⭐ Points</span></label>
+            <label class="sort-option"><input type="radio" name="candSort" value="nominations" ${state.sortBy === 'nominations' ? 'checked' : ''}><span class="sort-option-label">👍 Nominations</span></label>
+        </div>
+    `;
+    
+    html += candidates.map((c, index) => `
+        <div class="list-item with-avatar" data-index="${index}" data-id="${c.id}">
+            <div class="list-item-avatar">${App.getInitials(c.name)}</div>
+            <div class="list-item-content">
+                <div class="list-item-title">${c.name}</div>
+                <div class="list-item-meta">
+                    <span class="list-item-stat">⭐ ${c.points || 0}</span>
+                    <span class="list-item-stat">👍 ${c.endorsementCount || 0}</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    list.innerHTML = html;
+    state.currentItems = candidates;
+    
+    // Sort listeners
+    document.querySelectorAll('input[name="candSort"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            state.sortBy = e.target.value;
+            App.renderCandidatesListPanel();
+        });
+    });
+    
+    // Item click listeners
+    document.querySelectorAll(`#${pageId}-list .list-item`).forEach(item => {
+        item.addEventListener('click', () => {
+            document.querySelectorAll(`#${pageId}-list .list-item`).forEach(i => i.classList.remove('selected'));
+            item.classList.add('selected');
+            const idx = parseInt(item.dataset.index);
+            App.showCandidateDetailPanel(state.currentItems[idx]);
+        });
+    });
+    
+    // Auto-select first item if requested
+    if (autoSelectFirst && candidates.length > 0) {
+        const firstItem = document.querySelector(`#${pageId}-list .list-item`);
+        if (firstItem) {
+            firstItem.classList.add('selected');
+            App.showCandidateDetailPanel(candidates[0]);
+        }
+    }
+};
+
+App.showCandidateDetailPanel = function(candidate) {
+    const detail = document.getElementById('candidates-detail');
+    detail.innerHTML = `
+        <div class="detail-content">
+            <div class="detail-header with-avatar">
+                <div class="detail-avatar">${App.getInitials(candidate.name)}</div>
+                <div>
+                    <h2 class="detail-title">${candidate.name}</h2>
+                    <p class="detail-subtitle">📍 ${candidate.region || 'Unknown location'}</p>
+                </div>
+            </div>
+            <div class="detail-stats">
+                <div class="detail-stat">
+                    <div class="detail-stat-value accent">${candidate.points || 0}</div>
+                    <div class="detail-stat-label">Points</div>
+                </div>
+                <div class="detail-stat">
+                    <div class="detail-stat-value">${candidate.endorsementCount || 0}</div>
+                    <div class="detail-stat-label">Endorsements</div>
+                </div>
+            </div>
+            ${candidate.platform ? `<div class="detail-section"><h3>Platform</h3><p>${candidate.platform}</p></div>` : ''}
+            <div class="detail-section"><h3>About</h3><p>${candidate.bio || 'No bio provided.'}</p></div>
+            ${candidate.skills?.length ? `<div class="detail-section"><h3>Skills</h3><div class="detail-tags">${candidate.skills.map(s => `<span class="tag">${s}</span>`).join('')}</div></div>` : ''}
+            ${candidate.interests?.length ? `<div class="detail-section"><h3>Interests</h3><div class="detail-tags">${candidate.interests.map(i => `<span class="tag accent">${i}</span>`).join('')}</div></div>` : ''}
+        </div>
+    `;
+};
+
 // ============================================
-// MEMBERS (Users)
+// MEMBERS (Three-Panel Layout)
 // ============================================
 
 App.pages.users = async function() {
     const content = document.getElementById('content');
-    content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    const pageId = 'members';
+    
+    content.innerHTML = App.createThreePanelLayout({
+        pageId,
+        panel1Title: '🌍 Locations',
+        panel2Title: '👥 Members',
+        panel3Title: '📄 Profile',
+        emptyIcon2: '🗺️',
+        emptyText2: 'Select a location to view members',
+        emptyIcon3: '👤',
+        emptyText3: 'Select a member to view profile'
+    });
+    
+    await App.initLocationTree(pageId, App.onMembersLocationSelect);
+};
+
+App.onMembersLocationSelect = async function(type, id, name, autoSelectFirst = false) {
+    const pageId = 'members';
+    App.showSelectedBadge(pageId, name);
+    App.showListLoading(pageId);
+    App.showDetailEmpty(pageId, '👤', 'Select a member to view profile');
     
     try {
-        const users = await App.api('/users');
+        const members = await App.api(`/locations/${type}/${id}/users`);
         
-        content.innerHTML = `
-            <header class="page-header">
-                <h1 class="page-title">Members</h1>
-                <p class="page-subtitle">${users.length} community members - Click to view & nominate</p>
-            </header>
-            
-            <div class="cards-grid">
-                ${users.map(user => `
-                    <div class="card member-card" data-user-id="${user.id}" style="cursor: pointer;">
-                        <div class="user-card">
-                            <div class="avatar">${App.getInitials(user.name)}</div>
-                            <div class="user-info">
-                                <h3 class="card-title">${user.name}</h3>
-                                <p class="card-subtitle">${user.bio || ''}</p>
-                                <div class="user-meta">
-                                    <span>${user.location?.name || user.region || 'No location'}</span>
-                                    ${user.candidate ? '<span class="badge-small">Candidate</span>' : ''}
-                                </div>
-                            </div>
-                        </div>
-                        ${user.skills?.length ? `<div class="card-footer">${App.renderTags(user.skills)}</div>` : ''}
-                    </div>
-                `).join('')}
-            </div>
-        `;
+        if (!members.length) {
+            App.showListEmpty(pageId, '👥', 'No members in this location yet');
+            return;
+        }
         
-        document.querySelectorAll('.member-card').forEach(card => {
-            card.addEventListener('click', () => App.showMemberDetail(card.dataset.userId));
-        });
+        App.panelState[pageId].currentItems = members;
+        App.renderMembersListPanel(autoSelectFirst);
     } catch (err) {
-        content.innerHTML = `<div class="card"><div class="card-body">Error: ${err.message}</div></div>`;
+        App.showListEmpty(pageId, '⚠️', `Error: ${err.message}`);
     }
 };
 
-// ============================================
-// IDEAS
-// ============================================
-
-App.pages.ideas = async function() {
-    const content = document.getElementById('content');
-    content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+App.renderMembersListPanel = function(autoSelectFirst = false) {
+    const pageId = 'members';
+    const state = App.panelState[pageId];
+    const list = document.getElementById(`${pageId}-list`);
+    const members = [...state.currentItems];
     
-    try {
-        const ideas = await App.api('/ideas');
-        
-        content.innerHTML = `
-            <header class="page-header">
-                <div class="page-header-row">
-                    <div>
-                        <h1 class="page-title">Ideas</h1>
-                        <p class="page-subtitle">${ideas.length} community proposals</p>
-                    </div>
-                    ${App.currentUser ? `<button class="btn btn-primary" id="add-idea-btn">+ New Idea</button>` : ''}
-                </div>
-            </header>
-            
-            <!-- Add Idea Form (hidden by default) -->
-            <div id="add-idea-form" class="card" style="display: none; margin-bottom: 20px;">
-                <div class="card-header"><h3 class="card-title">Submit New Idea</h3></div>
-                <div class="card-body">
-                    <div class="form-group">
-                        <label>Title</label>
-                        <input type="text" id="idea-title" class="form-input" placeholder="Your idea title...">
-                    </div>
-                    <div class="form-group">
-                        <label>Description</label>
-                        <textarea id="idea-description" class="form-textarea" rows="4" placeholder="Describe your idea..."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Tags (comma separated)</label>
-                        <input type="text" id="idea-tags" class="form-input" placeholder="policy, environment, education">
-                    </div>
-                    <div class="form-actions">
-                        <button class="btn btn-primary" id="submit-idea-btn">Submit Idea</button>
-                        <button class="btn btn-secondary" id="cancel-idea-btn">Cancel</button>
-                    </div>
-                    <div id="idea-feedback" class="form-feedback"></div>
+    // Sort by name
+    if (state.sortBy === 'endorsements') {
+        members.sort((a, b) => (b.endorsementCount || 0) - (a.endorsementCount || 0));
+    } else {
+        members.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    
+    let html = `
+        <div class="sort-controls">
+            <span class="sort-label">Sort:</span>
+            <label class="sort-option"><input type="radio" name="memberSort" value="name" ${state.sortBy !== 'endorsements' ? 'checked' : ''}><span class="sort-option-label">Name</span></label>
+            <label class="sort-option"><input type="radio" name="memberSort" value="endorsements" ${state.sortBy === 'endorsements' ? 'checked' : ''}><span class="sort-option-label">👍 Endorsements</span></label>
+        </div>
+    `;
+    
+    html += members.map((m, index) => `
+        <div class="list-item with-avatar" data-index="${index}" data-id="${m.id}">
+            <div class="list-item-avatar">${App.getInitials(m.name)}</div>
+            <div class="list-item-content">
+                <div class="list-item-title">${m.name}</div>
+                <div class="list-item-meta">
+                    ${m.candidate ? '<span class="badge-small">Candidate</span>' : ''}
+                    <span class="list-item-stat">👍 ${m.endorsementCount || 0}</span>
                 </div>
             </div>
-            
-            <div class="cards-grid">
-                ${ideas.map(idea => `
-                    <div class="card">
-                        <div class="card-header">
-                            <div><h3 class="card-title">${idea.title}</h3><p class="card-subtitle">${idea.author ? `by ${idea.author.name}` : 'Anonymous'} • ${idea.region}</p></div>
-                            <div class="support-count">👍 ${idea.supportCount || 0}</div>
-                        </div>
-                        <div class="card-body"><p>${idea.description}</p></div>
-                        ${idea.tags?.length ? `<div class="card-footer">${App.renderTags(idea.tags, true)}</div>` : ''}
-                    </div>
-                `).join('')}
-            </div>
-        `;
-        
-        // Add idea form handlers
-        const addBtn = document.getElementById('add-idea-btn');
-        const form = document.getElementById('add-idea-form');
-        const cancelBtn = document.getElementById('cancel-idea-btn');
-        const submitBtn = document.getElementById('submit-idea-btn');
-        const feedback = document.getElementById('idea-feedback');
-        
-        addBtn?.addEventListener('click', () => {
-            form.style.display = 'block';
-            addBtn.style.display = 'none';
+        </div>
+    `).join('');
+    
+    list.innerHTML = html;
+    state.currentItems = members;
+    
+    // Sort listeners
+    document.querySelectorAll('input[name="memberSort"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            state.sortBy = e.target.value;
+            App.renderMembersListPanel();
         });
-        
-        cancelBtn?.addEventListener('click', () => {
-            form.style.display = 'none';
-            addBtn.style.display = 'block';
+    });
+    
+    // Item click listeners
+    document.querySelectorAll(`#${pageId}-list .list-item`).forEach(item => {
+        item.addEventListener('click', () => {
+            document.querySelectorAll(`#${pageId}-list .list-item`).forEach(i => i.classList.remove('selected'));
+            item.classList.add('selected');
+            const idx = parseInt(item.dataset.index);
+            App.showMemberDetailPanel(state.currentItems[idx]);
         });
-        
-        submitBtn?.addEventListener('click', async () => {
-            const title = document.getElementById('idea-title').value.trim();
-            const description = document.getElementById('idea-description').value.trim();
-            const tagsStr = document.getElementById('idea-tags').value.trim();
-            
-            if (!title || !description) {
-                feedback.innerHTML = '<span class="error">Title and description are required</span>';
-                return;
-            }
-            
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Submitting...';
-            
-            try {
-                const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t) : [];
-                const response = await fetch('/api/ideas', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        id: 'idea-' + Date.now(),
-                        title,
-                        description,
-                        tags,
-                        authorId: App.currentUser.id,
-                        region: App.currentUser.region || 'Unknown'
-                    })
-                });
-                
-                if (response.ok) {
-                    feedback.innerHTML = '<span class="success">Idea submitted!</span>';
-                    setTimeout(() => App.pages.ideas(), 1000);
-                } else {
-                    const data = await response.json();
-                    feedback.innerHTML = `<span class="error">${data.error || 'Failed to submit'}</span>`;
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Submit Idea';
-                }
-            } catch (err) {
-                feedback.innerHTML = `<span class="error">${err.message}</span>`;
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Submit Idea';
-            }
-        });
-    } catch (err) {
-        content.innerHTML = `<div class="card"><div class="card-body">Error: ${err.message}</div></div>`;
+    });
+    
+    // Auto-select first item if requested
+    if (autoSelectFirst && members.length > 0) {
+        const firstItem = document.querySelector(`#${pageId}-list .list-item`);
+        if (firstItem) {
+            firstItem.classList.add('selected');
+            App.showMemberDetailPanel(members[0]);
+        }
     }
 };
 
+App.showMemberDetailPanel = function(member) {
+    const detail = document.getElementById('members-detail');
+    detail.innerHTML = `
+        <div class="detail-content">
+            <div class="detail-header with-avatar">
+                <div class="detail-avatar">${App.getInitials(member.name)}</div>
+                <div>
+                    <h2 class="detail-title">${member.name}</h2>
+                    <p class="detail-subtitle">📍 ${member.location?.name || member.region || 'Unknown location'}</p>
+                </div>
+            </div>
+            <div class="detail-stats">
+                <div class="detail-stat">
+                    <div class="detail-stat-value">${member.endorsementCount || 0}</div>
+                    <div class="detail-stat-label">Endorsements</div>
+                </div>
+                ${member.candidate ? `<div class="detail-stat"><div class="detail-stat-value accent">✓</div><div class="detail-stat-label">Candidate</div></div>` : ''}
+            </div>
+            <div class="detail-section"><h3>About</h3><p>${member.bio || 'No bio provided.'}</p></div>
+            ${member.skills?.length ? `<div class="detail-section"><h3>Skills</h3><div class="detail-tags">${member.skills.map(s => `<span class="tag">${s}</span>`).join('')}</div></div>` : ''}
+            ${member.interests?.length ? `<div class="detail-section"><h3>Interests</h3><div class="detail-tags">${member.interests.map(i => `<span class="tag accent">${i}</span>`).join('')}</div></div>` : ''}
+            
+            <div class="detail-actions">
+                <button class="btn btn-primary" onclick="App.showMemberDetail('${member.id}')">View Full Profile</button>
+                ${App.currentUser && App.currentUser.id !== member.id ? `
+                    <button class="btn btn-secondary" onclick="App.nominateMember('${member.id}')">Nominate</button>
+                ` : ''}
+            </div>
+        </div>
+    `;
+};
+
 // ============================================
-// EVENTS
+// EVENTS (Three-Panel Layout)
 // ============================================
 
 App.pages.events = async function() {
     const content = document.getElementById('content');
-    content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    const pageId = 'events';
+    
+    content.innerHTML = App.createThreePanelLayout({
+        pageId,
+        panel1Title: '🌍 Locations',
+        panel2Title: '📅 Events',
+        panel3Title: '📄 Details',
+        emptyIcon2: '🗺️',
+        emptyText2: 'Select a location to view events',
+        emptyIcon3: '📅',
+        emptyText3: 'Select an event to view details'
+    });
+    
+    await App.initLocationTree(pageId, App.onEventsLocationSelect);
+};
+
+App.onEventsLocationSelect = async function(type, id, name, autoSelectFirst = false) {
+    const pageId = 'events';
+    App.showSelectedBadge(pageId, name);
+    App.showListLoading(pageId);
+    App.showDetailEmpty(pageId, '📅', 'Select an event to view details');
     
     try {
-        const events = await App.api('/events');
+        const events = await App.api(`/locations/${type}/${id}/events`);
         
-        content.innerHTML = `
-            <header class="page-header">
-                <h1 class="page-title">Assembly Events</h1>
-                <p class="page-subtitle">${events.length} scheduled events</p>
-            </header>
-            
-            <div class="cards-grid">
-                ${events.map(event => `
-                    <div class="card">
-                        <div class="card-header">
-                            <div><span class="event-type">${event.type || 'event'}</span><h3 class="card-title">${event.title}</h3></div>
-                            <div class="badge success">👥 ${event.participantCount || 0}</div>
-                        </div>
-                        <div class="event-time">📅 ${App.formatDate(event.startTime)} • ${App.formatTime(event.startTime)} - ${App.formatTime(event.endTime)}</div>
-                        <div class="card-body"><p>${event.description}</p></div>
-                        <div class="card-footer"><span class="tag">📍 ${event.region}</span></div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
+        if (!events.length) {
+            App.showListEmpty(pageId, '📅', 'No events in this location yet');
+            return;
+        }
+        
+        App.panelState[pageId].currentItems = events;
+        App.renderEventsListPanel(autoSelectFirst);
     } catch (err) {
-        content.innerHTML = `<div class="card"><div class="card-body">Error: ${err.message}</div></div>`;
+        App.showListEmpty(pageId, '⚠️', `Error: ${err.message}`);
     }
+};
+
+App.renderEventsListPanel = function(autoSelectFirst = false) {
+    const pageId = 'events';
+    const state = App.panelState[pageId];
+    const list = document.getElementById(`${pageId}-list`);
+    const events = [...state.currentItems];
+    
+    // Sort by date (newest first) or by participants
+    if (state.sortBy === 'participants') {
+        events.sort((a, b) => (b.participantCount || 0) - (a.participantCount || 0));
+    } else {
+        events.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+    }
+    
+    let html = `
+        <div class="sort-controls">
+            <span class="sort-label">Sort:</span>
+            <label class="sort-option"><input type="radio" name="eventSort" value="date" ${state.sortBy !== 'participants' ? 'checked' : ''}><span class="sort-option-label">📅 Date</span></label>
+            <label class="sort-option"><input type="radio" name="eventSort" value="participants" ${state.sortBy === 'participants' ? 'checked' : ''}><span class="sort-option-label">👥 Participants</span></label>
+        </div>
+    `;
+    
+    html += events.map((e, index) => `
+        <div class="list-item" data-index="${index}" data-id="${e.id}">
+            <div class="list-item-type">${e.type || 'event'}</div>
+            <div class="list-item-title">${e.title}</div>
+            <div class="list-item-meta">
+                <span>📅 ${App.formatDate(e.startTime)}</span>
+                <span class="list-item-stat">👥 ${e.participantCount || 0}</span>
+            </div>
+        </div>
+    `).join('');
+    
+    list.innerHTML = html;
+    state.currentItems = events;
+    
+    // Sort listeners
+    document.querySelectorAll('input[name="eventSort"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            state.sortBy = e.target.value;
+            App.renderEventsListPanel();
+        });
+    });
+    
+    // Item click listeners
+    document.querySelectorAll(`#${pageId}-list .list-item`).forEach(item => {
+        item.addEventListener('click', () => {
+            document.querySelectorAll(`#${pageId}-list .list-item`).forEach(i => i.classList.remove('selected'));
+            item.classList.add('selected');
+            const idx = parseInt(item.dataset.index);
+            App.showEventDetailPanel(state.currentItems[idx]);
+        });
+    });
+    
+    // Auto-select first item if requested
+    if (autoSelectFirst && events.length > 0) {
+        const firstItem = document.querySelector(`#${pageId}-list .list-item`);
+        if (firstItem) {
+            firstItem.classList.add('selected');
+            App.showEventDetailPanel(events[0]);
+        }
+    }
+};
+
+App.showEventDetailPanel = function(event) {
+    const detail = document.getElementById('events-detail');
+    detail.innerHTML = `
+        <div class="detail-content">
+            <div class="detail-header">
+                <span class="event-type-badge">${event.type || 'event'}</span>
+                <h2 class="detail-title">${event.title}</h2>
+                <p class="detail-subtitle">📍 ${event.region}</p>
+            </div>
+            <div class="detail-stats">
+                <div class="detail-stat">
+                    <div class="detail-stat-value">${event.participantCount || 0}</div>
+                    <div class="detail-stat-label">Participants</div>
+                </div>
+            </div>
+            <div class="event-datetime">
+                <div class="event-date">📅 ${App.formatDate(event.startTime)}</div>
+                <div class="event-time">🕐 ${App.formatTime(event.startTime)} - ${App.formatTime(event.endTime)}</div>
+            </div>
+            <div class="detail-section">
+                <h3>Description</h3>
+                <p>${event.description || 'No description provided.'}</p>
+            </div>
+            ${App.currentUser ? `
+                <div class="detail-actions">
+                    <button class="btn btn-primary" onclick="App.joinEvent('${event.id}')">Join Event</button>
+                </div>
+            ` : ''}
+        </div>
+    `;
 };
 
 // ============================================

@@ -37,7 +37,9 @@ const CONSTRAINTS = [
     'CREATE CONSTRAINT convention_id IF NOT EXISTS FOR (c:Convention) REQUIRE c.id IS UNIQUE',
     'CREATE CONSTRAINT nominationRace_id IF NOT EXISTS FOR (nr:NominationRace) REQUIRE nr.id IS UNIQUE',
     'CREATE CONSTRAINT votingRound_id IF NOT EXISTS FOR (vr:VotingRound) REQUIRE vr.id IS UNIQUE',
-    'CREATE CONSTRAINT membership_id IF NOT EXISTS FOR (m:Membership) REQUIRE m.id IS UNIQUE'
+    'CREATE CONSTRAINT membership_id IF NOT EXISTS FOR (m:Membership) REQUIRE m.id IS UNIQUE',
+    // Only ONE active convention allowed at a time (property exists only on active convention)
+    'CREATE CONSTRAINT convention_active IF NOT EXISTS FOR (c:Convention) REQUIRE c.isActive IS UNIQUE'
 ];
 
 // ============================================

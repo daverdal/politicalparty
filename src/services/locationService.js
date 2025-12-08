@@ -281,6 +281,119 @@ async function getCandidatesForLocation({ locationId, locationType }) {
     }
 }
 
+/**
+ * Get all users/members for a location (with hierarchy bubbling)
+ */
+async function getUsersForLocation({ locationId, locationType }) {
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+    
+    try {
+        let query;
+        
+        if (locationType === 'Country') {
+            query = `
+                MATCH (c:Country {id: $locationId})-[:HAS_PROVINCE]->(prov:Province)-[]->(childLoc)<-[:LOCATED_IN]-(user:User)
+                OPTIONAL MATCH (endorser:User)-[:ENDORSED]->(user)
+                WITH DISTINCT user, childLoc,
+                     count(DISTINCT endorser) as endorsementCount
+                RETURN user, childLoc as location, endorsementCount
+                ORDER BY user.name
+            `;
+        } else if (locationType === 'Province') {
+            query = `
+                MATCH (prov:Province {id: $locationId})-[]->(childLoc)<-[:LOCATED_IN]-(user:User)
+                OPTIONAL MATCH (endorser:User)-[:ENDORSED]->(user)
+                WITH DISTINCT user, childLoc,
+                     count(DISTINCT endorser) as endorsementCount
+                RETURN user, childLoc as location, endorsementCount
+                ORDER BY user.name
+            `;
+        } else {
+            query = `
+                MATCH (loc:${locationType} {id: $locationId})<-[:LOCATED_IN]-(user:User)
+                OPTIONAL MATCH (endorser:User)-[:ENDORSED]->(user)
+                WITH user, loc,
+                     count(DISTINCT endorser) as endorsementCount
+                RETURN user, loc as location, endorsementCount
+                ORDER BY user.name
+            `;
+        }
+        
+        const result = await session.run(query, { locationId });
+        
+        return result.records.map(record => ({
+            ...record.get('user').properties,
+            location: record.get('location')?.properties,
+            endorsementCount: toNumber(record.get('endorsementCount'))
+        }));
+    } finally {
+        await session.close();
+    }
+}
+
+/**
+ * Get events for a location (with hierarchy bubbling)
+ */
+async function getEventsForLocation({ locationId, locationType }) {
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+    
+    try {
+        let query;
+        
+        if (locationType === 'Country') {
+            // Get all events in the country (match by region containing province names or 'All')
+            query = `
+                MATCH (c:Country {id: $locationId})-[:HAS_PROVINCE]->(prov:Province)
+                WITH collect(prov.name) as provinceNames
+                MATCH (event:AssemblyEvent)
+                WHERE event.region IN provinceNames OR event.region = 'All' OR event.region = $locationId
+                OPTIONAL MATCH (participant:User)-[:PARTICIPATES_IN]->(event)
+                WITH event, count(DISTINCT participant) as participantCount
+                RETURN event, participantCount
+                ORDER BY event.startTime DESC
+            `;
+        } else if (locationType === 'Province') {
+            // Get events for this province
+            query = `
+                MATCH (prov:Province {id: $locationId})
+                WITH prov.name as provinceName
+                MATCH (event:AssemblyEvent)
+                WHERE event.region = provinceName OR event.region = 'All'
+                OPTIONAL MATCH (participant:User)-[:PARTICIPATES_IN]->(event)
+                WITH event, count(DISTINCT participant) as participantCount
+                RETURN event, participantCount
+                ORDER BY event.startTime DESC
+            `;
+        } else {
+            // Leaf locations - match by region name or get events linked to users in this location
+            query = `
+                MATCH (loc:${locationType} {id: $locationId})
+                WITH loc.name as locationName
+                OPTIONAL MATCH (event:AssemblyEvent)
+                WHERE event.region = locationName OR event.region = 'All'
+                OPTIONAL MATCH (participant:User)-[:PARTICIPATES_IN]->(event)
+                WITH event, count(DISTINCT participant) as participantCount
+                WHERE event IS NOT NULL
+                RETURN event, participantCount
+                ORDER BY event.startTime DESC
+            `;
+        }
+        
+        const result = await session.run(query, { locationId });
+        
+        return result.records
+            .filter(record => record.get('event') !== null)
+            .map(record => ({
+                ...record.get('event').properties,
+                participantCount: toNumber(record.get('participantCount'))
+            }));
+    } finally {
+        await session.close();
+    }
+}
+
 module.exports = {
     getAllCountries,
     getAllProvinces,
@@ -289,6 +402,8 @@ module.exports = {
     getRidingsForProvince,
     getFederalRidings,
     getIdeasForLocation,
-    getCandidatesForLocation
+    getCandidatesForLocation,
+    getUsersForLocation,
+    getEventsForLocation
 };
 

@@ -42,10 +42,18 @@ const VALID_STATUSES = [
 // AUTO-MODE STATE
 // ============================================
 
-let autoModeEnabled = false;
+let autoModeEnabled = true; // Enabled by default
 let schedulerInterval = null;
 let lastCheck = null;
 let lastAction = null;
+
+// Start the scheduler automatically when this module loads
+setTimeout(() => {
+    if (autoModeEnabled && !schedulerInterval) {
+        console.log('🤖 Auto-mode starting automatically...');
+        startScheduler();
+    }
+}, 2000); // Small delay to let the server fully initialize
 
 // ============================================
 // HELPERS
@@ -273,6 +281,11 @@ async function getConventionAdminInfo(convId) {
 }
 
 async function setConventionPhase({ convId, status, currentWave }) {
+    // Block manual phase changes when Auto Mode is on
+    if (autoModeEnabled) {
+        throw new Error('Cannot manually change phases while Auto Mode is enabled. Disable Auto Mode first, or let the system advance automatically based on the schedule.');
+    }
+    
     if (!VALID_STATUSES.includes(status)) {
         throw new Error(`Invalid status. Valid: ${VALID_STATUSES.join(', ')}`);
     }
@@ -281,11 +294,21 @@ async function setConventionPhase({ convId, status, currentWave }) {
     const session = driver.session({ database: getDatabase() });
     
     try {
-        await session.run(`
-            MATCH (c:Convention {id: $convId})
-            SET c.status = $status, c.currentWave = $currentWave
-            RETURN c
-        `, { convId, status, currentWave: currentWave || 0 });
+        // Update status and handle isActive flag
+        if (status === 'completed') {
+            await session.run(`
+                MATCH (c:Convention {id: $convId})
+                SET c.status = $status, c.currentWave = $currentWave
+                REMOVE c.isActive
+                RETURN c
+            `, { convId, status, currentWave: currentWave || 0 });
+        } else {
+            await session.run(`
+                MATCH (c:Convention {id: $convId})
+                SET c.status = $status, c.currentWave = $currentWave, c.isActive = true
+                RETURN c
+            `, { convId, status, currentWave: currentWave || 0 });
+        }
         
         let raceInfo = null;
         let message = `Convention set to: ${status}`;
@@ -313,6 +336,11 @@ async function setConventionPhase({ convId, status, currentWave }) {
 }
 
 async function advanceConventionPhase(convId) {
+    // Block manual advancement when Auto Mode is on
+    if (autoModeEnabled) {
+        throw new Error('Cannot manually advance phases while Auto Mode is enabled. Disable Auto Mode first, or let the system advance automatically based on the schedule.');
+    }
+    
     const driver = getDriver();
     const session = driver.session({ database: getDatabase() });
     
@@ -349,10 +377,19 @@ async function advanceConventionPhase(convId) {
             return { message: 'Convention already completed', status: currentStatus };
         }
         
-        await session.run(`
-            MATCH (c:Convention {id: $convId})
-            SET c.status = $newStatus, c.currentWave = $newWave
-        `, { convId, newStatus, newWave });
+        // Update convention status (remove isActive if completed)
+        if (newStatus === 'completed') {
+            await session.run(`
+                MATCH (c:Convention {id: $convId})
+                SET c.status = $newStatus, c.currentWave = $newWave
+                REMOVE c.isActive
+            `, { convId, newStatus, newWave });
+        } else {
+            await session.run(`
+                MATCH (c:Convention {id: $convId})
+                SET c.status = $newStatus, c.currentWave = $newWave
+            `, { convId, newStatus, newWave });
+        }
         
         let raceInfo = null;
         let message = `⏩ Advanced: ${currentStatus} → ${newStatus}`;
@@ -468,6 +505,11 @@ async function getConventionStats(convId) {
 // ============================================
 
 async function resetConvention(convId) {
+    // Block reset when Auto Mode is on
+    if (autoModeEnabled) {
+        throw new Error('Cannot reset convention while Auto Mode is enabled. Disable Auto Mode first.');
+    }
+    
     const driver = getDriver();
     const session = driver.session({ database: getDatabase() });
     
@@ -521,10 +563,94 @@ async function resetConvention(convId) {
 }
 
 // ============================================
+// UPDATE CONVENTION SCHEDULE
+// ============================================
+
+async function updateConventionSchedule(convId, schedule) {
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+    
+    try {
+        // Build the SET clause dynamically based on provided dates
+        const setStatements = [];
+        const params = { convId };
+        
+        for (let wave = 1; wave <= 6; wave++) {
+            const fields = [
+                `wave${wave}NominationStart`,
+                `wave${wave}NominationEnd`,
+                `wave${wave}VotingStart`,
+                `wave${wave}VotingEnd`
+            ];
+            
+            for (const field of fields) {
+                if (schedule[field]) {
+                    const paramName = `w${wave}${field.includes('Nomination') ? 'n' : 'v'}${field.includes('Start') ? 's' : 'e'}`;
+                    setStatements.push(`c.${field} = datetime($${paramName})`);
+                    params[paramName] = new Date(schedule[field]).toISOString();
+                }
+            }
+        }
+        
+        if (setStatements.length === 0) {
+            throw new Error('No valid dates provided');
+        }
+        
+        const query = `
+            MATCH (c:Convention {id: $convId})
+            SET ${setStatements.join(', ')}
+            RETURN c.name as name
+        `;
+        
+        const result = await session.run(query, params);
+        
+        if (result.records.length === 0) {
+            throw new Error('Convention not found');
+        }
+        
+        const convName = result.records[0].get('name');
+        
+        return {
+            success: true,
+            message: `Schedule updated for ${convName}`
+        };
+    } finally {
+        await session.close();
+    }
+}
+
+// ============================================
 // CREATE NEW CONVENTION
 // ============================================
 
-async function createConvention({ name, year, countryId = 'ca' }) {
+/**
+ * Generate schedule dates for all 6 waves
+ * Each wave: 2 weeks nomination + 1 week voting = 3 weeks
+ * Total convention duration: ~18 weeks (4.5 months)
+ */
+function generateConventionSchedule(startDate) {
+    const schedule = {};
+    let currentDate = new Date(startDate);
+    
+    for (let wave = 1; wave <= 6; wave++) {
+        // Nomination period: 2 weeks
+        schedule[`wave${wave}NominationStart`] = new Date(currentDate).toISOString();
+        currentDate.setDate(currentDate.getDate() + 14); // +2 weeks
+        schedule[`wave${wave}NominationEnd`] = new Date(currentDate).toISOString();
+        
+        // Voting period: 1 week
+        schedule[`wave${wave}VotingStart`] = new Date(currentDate).toISOString();
+        currentDate.setDate(currentDate.getDate() + 7); // +1 week
+        schedule[`wave${wave}VotingEnd`] = new Date(currentDate).toISOString();
+        
+        // 1 day gap before next wave
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return schedule;
+}
+
+async function createConvention({ name, year, countryId = 'ca', startDate }) {
     const driver = getDriver();
     const session = driver.session({ database: getDatabase() });
     
@@ -532,7 +658,7 @@ async function createConvention({ name, year, countryId = 'ca' }) {
         // Generate ID from year
         const convId = `conv-${year}`;
         
-        // Check if convention already exists
+        // Check if convention already exists for this year
         const existing = await session.run(`
             MATCH (c:Convention {id: $convId})
             RETURN c
@@ -542,7 +668,23 @@ async function createConvention({ name, year, countryId = 'ca' }) {
             throw new Error(`Convention for ${year} already exists`);
         }
         
-        // Create the convention
+        // Check if there's already an active convention (not completed)
+        const activeConv = await session.run(`
+            MATCH (c:Convention)
+            WHERE c.status <> 'completed'
+            RETURN c.name as name, c.year as year, c.status as status
+        `);
+        
+        if (activeConv.records.length > 0) {
+            const active = activeConv.records[0];
+            throw new Error(`Cannot create new convention. "${active.get('name')}" (${active.get('year')}) is still active with status: ${active.get('status')}. Complete or delete it first.`);
+        }
+        
+        // Generate schedule dates (default: January 15 of convention year)
+        const defaultStart = startDate || `${year}-01-15`;
+        const schedule = generateConventionSchedule(defaultStart);
+        
+        // Create the convention with isActive flag and schedule
         const result = await session.run(`
             MATCH (country:Country {id: $countryId})
             CREATE (c:Convention {
@@ -551,17 +693,77 @@ async function createConvention({ name, year, countryId = 'ca' }) {
                 year: $year,
                 status: 'upcoming',
                 currentWave: 0,
-                createdAt: datetime()
+                isActive: true,
+                createdAt: datetime(),
+                wave1NominationStart: datetime($w1ns),
+                wave1NominationEnd: datetime($w1ne),
+                wave1VotingStart: datetime($w1vs),
+                wave1VotingEnd: datetime($w1ve),
+                wave2NominationStart: datetime($w2ns),
+                wave2NominationEnd: datetime($w2ne),
+                wave2VotingStart: datetime($w2vs),
+                wave2VotingEnd: datetime($w2ve),
+                wave3NominationStart: datetime($w3ns),
+                wave3NominationEnd: datetime($w3ne),
+                wave3VotingStart: datetime($w3vs),
+                wave3VotingEnd: datetime($w3ve),
+                wave4NominationStart: datetime($w4ns),
+                wave4NominationEnd: datetime($w4ne),
+                wave4VotingStart: datetime($w4vs),
+                wave4VotingEnd: datetime($w4ve),
+                wave5NominationStart: datetime($w5ns),
+                wave5NominationEnd: datetime($w5ne),
+                wave5VotingStart: datetime($w5vs),
+                wave5VotingEnd: datetime($w5ve),
+                wave6NominationStart: datetime($w6ns),
+                wave6NominationEnd: datetime($w6ne),
+                wave6VotingStart: datetime($w6vs),
+                wave6VotingEnd: datetime($w6ve)
             })
             CREATE (c)-[:FOR_COUNTRY]->(country)
             RETURN c
-        `, { convId, name, year, countryId });
+        `, { 
+            convId, name, year, countryId,
+            w1ns: schedule.wave1NominationStart,
+            w1ne: schedule.wave1NominationEnd,
+            w1vs: schedule.wave1VotingStart,
+            w1ve: schedule.wave1VotingEnd,
+            w2ns: schedule.wave2NominationStart,
+            w2ne: schedule.wave2NominationEnd,
+            w2vs: schedule.wave2VotingStart,
+            w2ve: schedule.wave2VotingEnd,
+            w3ns: schedule.wave3NominationStart,
+            w3ne: schedule.wave3NominationEnd,
+            w3vs: schedule.wave3VotingStart,
+            w3ve: schedule.wave3VotingEnd,
+            w4ns: schedule.wave4NominationStart,
+            w4ne: schedule.wave4NominationEnd,
+            w4vs: schedule.wave4VotingStart,
+            w4ve: schedule.wave4VotingEnd,
+            w5ns: schedule.wave5NominationStart,
+            w5ne: schedule.wave5NominationEnd,
+            w5vs: schedule.wave5VotingStart,
+            w5ve: schedule.wave5VotingEnd,
+            w6ns: schedule.wave6NominationStart,
+            w6ne: schedule.wave6NominationEnd,
+            w6vs: schedule.wave6VotingStart,
+            w6ve: schedule.wave6VotingEnd
+        });
         
         if (result.records.length === 0) {
             throw new Error('Failed to create convention. Make sure the country exists.');
         }
         
         const conv = result.records[0].get('c').properties;
+        
+        // Format schedule for response
+        const scheduleDisplay = `
+Wave 1: ${new Date(schedule.wave1NominationStart).toLocaleDateString()} - ${new Date(schedule.wave1VotingEnd).toLocaleDateString()}
+Wave 2: ${new Date(schedule.wave2NominationStart).toLocaleDateString()} - ${new Date(schedule.wave2VotingEnd).toLocaleDateString()}
+Wave 3: ${new Date(schedule.wave3NominationStart).toLocaleDateString()} - ${new Date(schedule.wave3VotingEnd).toLocaleDateString()}
+Wave 4: ${new Date(schedule.wave4NominationStart).toLocaleDateString()} - ${new Date(schedule.wave4VotingEnd).toLocaleDateString()}
+Wave 5: ${new Date(schedule.wave5NominationStart).toLocaleDateString()} - ${new Date(schedule.wave5VotingEnd).toLocaleDateString()}
+Wave 6: ${new Date(schedule.wave6NominationStart).toLocaleDateString()} - ${new Date(schedule.wave6VotingEnd).toLocaleDateString()}`;
         
         return {
             success: true,
@@ -571,7 +773,8 @@ async function createConvention({ name, year, countryId = 'ca' }) {
                 year: toNumber(conv.year),
                 status: conv.status
             },
-            message: `✅ Created "${name}" convention for ${year}`
+            schedule,
+            message: `✅ Created "${name}" convention for ${year}\n\n📅 Auto-generated schedule:\n${scheduleDisplay}\n\nEnable Auto-Mode to automatically advance phases!`
         };
     } finally {
         await session.close();
@@ -602,6 +805,14 @@ async function getAllConventions() {
         
         return result.records.map(r => {
             const conv = r.get('c').properties;
+            
+            // Helper to convert Neo4j datetime to ISO string
+            const toDateStr = (val) => {
+                if (!val) return null;
+                if (val.toString) return val.toString();
+                return val;
+            };
+            
             return {
                 id: conv.id,
                 name: conv.name,
@@ -610,7 +821,32 @@ async function getAllConventions() {
                 currentWave: toNumber(conv.currentWave),
                 totalRaces: toNumber(r.get('totalRaces')),
                 totalCandidates: toNumber(r.get('totalCandidates')),
-                winnersDecided: toNumber(r.get('winnersDecided'))
+                winnersDecided: toNumber(r.get('winnersDecided')),
+                // Include all wave schedule dates
+                wave1NominationStart: toDateStr(conv.wave1NominationStart),
+                wave1NominationEnd: toDateStr(conv.wave1NominationEnd),
+                wave1VotingStart: toDateStr(conv.wave1VotingStart),
+                wave1VotingEnd: toDateStr(conv.wave1VotingEnd),
+                wave2NominationStart: toDateStr(conv.wave2NominationStart),
+                wave2NominationEnd: toDateStr(conv.wave2NominationEnd),
+                wave2VotingStart: toDateStr(conv.wave2VotingStart),
+                wave2VotingEnd: toDateStr(conv.wave2VotingEnd),
+                wave3NominationStart: toDateStr(conv.wave3NominationStart),
+                wave3NominationEnd: toDateStr(conv.wave3NominationEnd),
+                wave3VotingStart: toDateStr(conv.wave3VotingStart),
+                wave3VotingEnd: toDateStr(conv.wave3VotingEnd),
+                wave4NominationStart: toDateStr(conv.wave4NominationStart),
+                wave4NominationEnd: toDateStr(conv.wave4NominationEnd),
+                wave4VotingStart: toDateStr(conv.wave4VotingStart),
+                wave4VotingEnd: toDateStr(conv.wave4VotingEnd),
+                wave5NominationStart: toDateStr(conv.wave5NominationStart),
+                wave5NominationEnd: toDateStr(conv.wave5NominationEnd),
+                wave5VotingStart: toDateStr(conv.wave5VotingStart),
+                wave5VotingEnd: toDateStr(conv.wave5VotingEnd),
+                wave6NominationStart: toDateStr(conv.wave6NominationStart),
+                wave6NominationEnd: toDateStr(conv.wave6NominationEnd),
+                wave6VotingStart: toDateStr(conv.wave6VotingStart),
+                wave6VotingEnd: toDateStr(conv.wave6VotingEnd)
             };
         });
     } finally {
@@ -688,12 +924,20 @@ async function getConventionResults(convId) {
 // ============================================
 
 async function deleteConvention(convId) {
+    // Block delete when Auto Mode is on
+    if (autoModeEnabled) {
+        throw new Error('Cannot delete convention while Auto Mode is enabled. Disable Auto Mode first.');
+    }
+    
     const driver = getDriver();
     const session = driver.session({ database: getDatabase() });
     
     try {
-        // First reset to clean up related data
+        // First reset to clean up related data (skip auto-mode check since we already checked)
+        const tempAutoMode = autoModeEnabled;
+        autoModeEnabled = false;
         await resetConvention(convId);
+        autoModeEnabled = tempAutoMode;
         
         // Now delete the convention itself
         const result = await session.run(`
@@ -730,6 +974,7 @@ module.exports = {
     createRacesForCurrentWave,
     getConventionStats,
     resetConvention,
+    updateConventionSchedule,
     
     // Convention CRUD
     createConvention,

@@ -6,7 +6,419 @@
 window.App = window.App || {};
 
 // ============================================
-// LOCATION TREE (for Browse Ideas)
+// THREE-PANEL LAYOUT TEMPLATE
+// ============================================
+
+/**
+ * Creates a three-panel browse layout
+ * @param {Object} config - Configuration object
+ * @param {string} config.pageId - Unique page identifier (members, ideas, candidates)
+ * @param {string} config.panel1Title - Title for location panel
+ * @param {string} config.panel2Title - Title for list panel
+ * @param {string} config.panel3Title - Title for detail panel
+ * @param {string} config.emptyIcon2 - Icon for empty list panel
+ * @param {string} config.emptyText2 - Text for empty list panel
+ * @param {string} config.emptyIcon3 - Icon for empty detail panel
+ * @param {string} config.emptyText3 - Text for empty detail panel
+ * @returns {string} HTML string
+ */
+App.createThreePanelLayout = function(config) {
+    const {
+        pageId,
+        panel1Title = '🌍 Locations',
+        panel2Title = '📋 List',
+        panel3Title = '📄 Details',
+        emptyIcon2 = '🗺️',
+        emptyText2 = 'Select a location',
+        emptyIcon3 = '📄',
+        emptyText3 = 'Select an item to view details'
+    } = config;
+    
+    return `
+        <div class="browse-layout" data-page="${pageId}">
+            <div class="browse-panel" id="${pageId}-location-panel">
+                <div class="browse-panel-header">${panel1Title}</div>
+                <div class="location-tree" id="${pageId}-location-tree">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+            <div class="browse-panel" id="${pageId}-list-panel">
+                <div class="browse-panel-header">${panel2Title}</div>
+                <div id="${pageId}-selected-badge"></div>
+                <div class="panel-list" id="${pageId}-list">
+                    <div class="panel-empty">
+                        <div class="panel-empty-icon">${emptyIcon2}</div>
+                        <div class="panel-empty-text">${emptyText2}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="browse-panel" id="${pageId}-detail-panel">
+                <div class="browse-panel-header">${panel3Title}</div>
+                <div id="${pageId}-detail">
+                    <div class="panel-empty">
+                        <div class="panel-empty-icon">${emptyIcon3}</div>
+                        <div class="panel-empty-text">${emptyText3}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+// ============================================
+// UNIFIED LOCATION TREE
+// ============================================
+
+/**
+ * Initializes the location tree for any three-panel page
+ * @param {string} pageId - The page identifier
+ * @param {Function} onLocationSelect - Callback when location is selected (type, id, name)
+ */
+App.initLocationTree = async function(pageId, onLocationSelect) {
+    const treeContainer = document.getElementById(`${pageId}-location-tree`);
+    if (!treeContainer) return;
+    
+    // Initialize state for this page if not exists
+    if (!App.panelState) App.panelState = {};
+    if (!App.panelState[pageId]) {
+        App.panelState[pageId] = {
+            expandedNodes: new Set(),
+            selectedLocation: null,
+            selectedLocationType: null,
+            currentItems: [],
+            sortBy: 'name'
+        };
+    }
+    
+    try {
+        const countries = await App.api('/locations/countries');
+        treeContainer.innerHTML = App.renderUnifiedLocationTree(countries, pageId);
+        App.attachUnifiedTreeListeners(pageId, onLocationSelect);
+        
+        // Auto-select Canada if available
+        const canada = countries.find(c => c.name === 'Canada');
+        if (canada && onLocationSelect) {
+            const state = App.panelState[pageId];
+            const countryId = `${pageId}-country-${canada.id}`;
+            
+            // Expand Canada in the tree
+            state.expandedNodes.add(countryId);
+            const toggle = document.querySelector(`[data-tree-toggle="${countryId}"] .tree-toggle`);
+            const children = document.getElementById(countryId);
+            if (toggle) toggle.classList.add('expanded');
+            if (children) {
+                children.classList.add('expanded');
+                // Load provinces
+                await App.renderUnifiedProvinces(canada.id, children, pageId, onLocationSelect);
+            }
+            
+            // Mark Canada as selected in the tree
+            const canadaHeader = document.querySelector(`[data-tree-toggle="${countryId}"]`);
+            if (canadaHeader) {
+                document.querySelectorAll(`[data-tree-page="${pageId}"].tree-header`).forEach(h => h.classList.remove('active'));
+                canadaHeader.classList.add('active');
+            }
+            
+            // Call the location select callback with autoSelectFirst flag
+            onLocationSelect('countries', canada.id, 'Canada', true);
+        }
+    } catch (err) {
+        treeContainer.innerHTML = `<div class="panel-empty-text">Error: ${err.message}</div>`;
+    }
+};
+
+App.renderUnifiedLocationTree = function(countries, pageId) {
+    const state = App.panelState[pageId];
+    let html = '';
+    
+    for (const country of countries) {
+        const countryId = `${pageId}-country-${country.id}`;
+        const isExpanded = state.expandedNodes.has(countryId);
+        
+        html += `
+            <div class="tree-item" data-type="country" data-id="${country.id}">
+                <div class="tree-header" data-tree-toggle="${countryId}" data-tree-selectable="true" data-tree-type="countries" data-tree-location-id="${country.id}" data-tree-page="${pageId}">
+                    <span class="tree-toggle ${isExpanded ? 'expanded' : ''}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 18l6-6-6-6"/>
+                        </svg>
+                    </span>
+                    <span class="tree-label">${country.name}</span>
+                </div>
+                <div class="tree-children ${isExpanded ? 'expanded' : ''}" id="${countryId}">
+                    <div class="loading" style="padding: 12px;"><div class="spinner" style="width: 16px; height: 16px;"></div></div>
+                </div>
+            </div>
+        `;
+    }
+    
+    return html;
+};
+
+App.renderUnifiedProvinces = async function(countryId, containerEl, pageId, onLocationSelect) {
+    const state = App.panelState[pageId];
+    
+    try {
+        const provinces = await App.api(`/locations/countries/${countryId}/provinces`);
+        
+        let html = '';
+        for (const province of provinces) {
+            const provId = `${pageId}-province-${province.id}`;
+            const isExpanded = state.expandedNodes.has(provId);
+            
+            html += `
+                <div class="tree-item" data-type="province" data-id="${province.id}">
+                    <div class="tree-header" data-tree-toggle="${provId}" data-tree-selectable="true" data-tree-type="provinces" data-tree-location-id="${province.id}" data-tree-page="${pageId}">
+                        <span class="tree-toggle ${isExpanded ? 'expanded' : ''}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                        </span>
+                        <span class="tree-label">${province.name}</span>
+                    </div>
+                    <div class="tree-children ${isExpanded ? 'expanded' : ''}" id="${provId}">
+                        <div class="loading" style="padding: 12px;"><div class="spinner" style="width: 16px; height: 16px;"></div></div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        containerEl.innerHTML = html || '<div class="panel-empty-text" style="padding: 12px;">No provinces found</div>';
+        App.attachUnifiedTreeListeners(pageId, onLocationSelect);
+    } catch (err) {
+        containerEl.innerHTML = `<div style="padding: 12px; color: var(--text-muted);">Error loading provinces</div>`;
+    }
+};
+
+App.renderUnifiedProvinceDetails = async function(provinceId, containerEl, pageId, onLocationSelect, categories) {
+    const state = App.panelState[pageId];
+    
+    try {
+        containerEl.innerHTML = '<div class="loading" style="padding: 12px;"><div class="spinner" style="width: 16px; height: 16px;"></div></div>';
+        
+        // Default categories if not specified
+        const defaultCategories = ['federal-ridings', 'provincial-ridings', 'towns', 'first-nations', 'adhoc-groups'];
+        const categoriesToLoad = categories || defaultCategories;
+        
+        const dataPromises = [];
+        const categoryNames = [];
+        
+        if (categoriesToLoad.includes('federal-ridings')) {
+            dataPromises.push(App.api(`/locations/provinces/${provinceId}/federal-ridings`));
+            categoryNames.push({ key: 'federal-ridings', title: 'Federal Ridings', type: 'federal-ridings' });
+        }
+        if (categoriesToLoad.includes('provincial-ridings')) {
+            dataPromises.push(App.api(`/locations/provinces/${provinceId}/provincial-ridings`));
+            categoryNames.push({ key: 'provincial-ridings', title: 'Provincial Ridings', type: 'provincial-ridings' });
+        }
+        if (categoriesToLoad.includes('towns')) {
+            dataPromises.push(App.api(`/locations/provinces/${provinceId}/towns`));
+            categoryNames.push({ key: 'towns', title: 'Towns & Cities', type: 'towns' });
+        }
+        if (categoriesToLoad.includes('first-nations')) {
+            dataPromises.push(App.api(`/locations/provinces/${provinceId}/first-nations`));
+            categoryNames.push({ key: 'first-nations', title: 'First Nations', type: 'first-nations' });
+        }
+        if (categoriesToLoad.includes('adhoc-groups')) {
+            dataPromises.push(App.api(`/locations/provinces/${provinceId}/adhoc-groups`));
+            categoryNames.push({ key: 'adhoc-groups', title: 'Groups', type: 'adhoc-groups' });
+        }
+        
+        const results = await Promise.all(dataPromises);
+        
+        let html = '';
+        results.forEach((items, index) => {
+            const cat = categoryNames[index];
+            html += App.renderUnifiedCategory(`${pageId}-cat-${provinceId}-${cat.key}`, cat.title, items, cat.type, pageId);
+        });
+        
+        containerEl.innerHTML = html || '<div class="panel-empty-text" style="padding: 12px;">No locations found</div>';
+        App.attachUnifiedTreeListeners(pageId, onLocationSelect);
+        App.attachUnifiedCategoryListeners(pageId);
+    } catch (err) {
+        containerEl.innerHTML = `<div style="padding: 12px; color: var(--text-muted);">Error: ${err.message}</div>`;
+    }
+};
+
+App.renderUnifiedCategory = function(categoryId, title, items, itemType, pageId) {
+    if (!items?.length) return '';
+    
+    const state = App.panelState[pageId];
+    const isExpanded = state.expandedNodes.has(categoryId);
+    
+    let itemsHtml = '';
+    for (const item of items) {
+        itemsHtml += `
+            <div class="tree-item">
+                <div class="tree-header" data-tree-selectable="true" data-tree-type="${itemType}" data-tree-location-id="${item.id}" data-tree-page="${pageId}">
+                    <span class="tree-label">${item.name}</span>
+                </div>
+            </div>
+        `;
+    }
+    
+    return `
+        <div class="tree-item category-section">
+            <div class="tree-header category-header" data-tree-category-toggle="${categoryId}" data-tree-page="${pageId}">
+                <span class="tree-toggle ${isExpanded ? 'expanded' : ''}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 18l6-6-6-6"/>
+                    </svg>
+                </span>
+                <span class="tree-label">${title}</span>
+                <span class="tree-count">${items.length}</span>
+            </div>
+            <div class="tree-children category-items ${isExpanded ? 'expanded' : ''}" id="${categoryId}">
+                ${itemsHtml}
+            </div>
+        </div>
+    `;
+};
+
+App.attachUnifiedTreeListeners = function(pageId, onLocationSelect) {
+    const state = App.panelState[pageId];
+    
+    // Tree toggle headers
+    document.querySelectorAll(`.tree-header[data-tree-toggle][data-tree-page="${pageId}"]`).forEach(header => {
+        const newHeader = header.cloneNode(true);
+        header.parentNode.replaceChild(newHeader, header);
+        
+        newHeader.addEventListener('click', async (e) => {
+            const toggleId = newHeader.dataset.treeToggle;
+            const toggle = newHeader.querySelector('.tree-toggle');
+            const children = document.getElementById(toggleId);
+            
+            if (!children) return;
+            
+            const isExpanded = state.expandedNodes.has(toggleId);
+            
+            if (isExpanded) {
+                state.expandedNodes.delete(toggleId);
+                toggle?.classList.remove('expanded');
+                children.classList.remove('expanded');
+            } else {
+                state.expandedNodes.add(toggleId);
+                toggle?.classList.add('expanded');
+                children.classList.add('expanded');
+                
+                if (children.querySelector('.loading')) {
+                    if (toggleId.includes('-country-')) {
+                        const countryId = toggleId.split('-country-')[1];
+                        await App.renderUnifiedProvinces(countryId, children, pageId, onLocationSelect);
+                    } else if (toggleId.includes('-province-')) {
+                        const provinceId = toggleId.split('-province-')[1];
+                        await App.renderUnifiedProvinceDetails(provinceId, children, pageId, onLocationSelect);
+                    }
+                }
+            }
+            
+            if (newHeader.dataset.treeSelectable && onLocationSelect) {
+                const type = newHeader.dataset.treeType;
+                const id = newHeader.dataset.treeLocationId;
+                const name = newHeader.querySelector('.tree-label')?.textContent || 'Unknown';
+                
+                document.querySelectorAll(`[data-tree-page="${pageId}"].tree-header`).forEach(h => h.classList.remove('active'));
+                newHeader.classList.add('active');
+                
+                onLocationSelect(type, id, name);
+            }
+        });
+    });
+    
+    // Selectable items without toggle
+    document.querySelectorAll(`.tree-header[data-tree-selectable]:not([data-tree-toggle])[data-tree-page="${pageId}"]`).forEach(header => {
+        const newHeader = header.cloneNode(true);
+        header.parentNode.replaceChild(newHeader, header);
+        
+        newHeader.addEventListener('click', () => {
+            if (onLocationSelect) {
+                const type = newHeader.dataset.treeType;
+                const id = newHeader.dataset.treeLocationId;
+                const name = newHeader.querySelector('.tree-label')?.textContent || 'Unknown';
+                
+                document.querySelectorAll(`[data-tree-page="${pageId}"].tree-header`).forEach(h => h.classList.remove('active'));
+                newHeader.classList.add('active');
+                
+                onLocationSelect(type, id, name);
+            }
+        });
+    });
+};
+
+App.attachUnifiedCategoryListeners = function(pageId) {
+    const state = App.panelState[pageId];
+    
+    document.querySelectorAll(`.category-header[data-tree-category-toggle][data-tree-page="${pageId}"]`).forEach(header => {
+        const newHeader = header.cloneNode(true);
+        header.parentNode.replaceChild(newHeader, header);
+        
+        newHeader.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const categoryId = newHeader.dataset.treeCategoryToggle;
+            const toggle = newHeader.querySelector('.tree-toggle');
+            const children = document.getElementById(categoryId);
+            
+            if (!children) return;
+            
+            const isExpanded = state.expandedNodes.has(categoryId);
+            
+            if (isExpanded) {
+                state.expandedNodes.delete(categoryId);
+                toggle?.classList.remove('expanded');
+                children.classList.remove('expanded');
+            } else {
+                state.expandedNodes.add(categoryId);
+                toggle?.classList.add('expanded');
+                children.classList.add('expanded');
+            }
+        });
+    });
+};
+
+// ============================================
+// PANEL HELPERS
+// ============================================
+
+App.showSelectedBadge = function(pageId, locationName) {
+    const badge = document.getElementById(`${pageId}-selected-badge`);
+    if (badge) {
+        badge.innerHTML = `<div class="selected-location"><span>${locationName}</span></div>`;
+    }
+};
+
+App.showListLoading = function(pageId) {
+    const list = document.getElementById(`${pageId}-list`);
+    if (list) {
+        list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    }
+};
+
+App.showListEmpty = function(pageId, icon, message) {
+    const list = document.getElementById(`${pageId}-list`);
+    if (list) {
+        list.innerHTML = `
+            <div class="panel-empty">
+                <div class="panel-empty-icon">${icon}</div>
+                <div class="panel-empty-text">${message}</div>
+            </div>
+        `;
+    }
+};
+
+App.showDetailEmpty = function(pageId, icon, message) {
+    const detail = document.getElementById(`${pageId}-detail`);
+    if (detail) {
+        detail.innerHTML = `
+            <div class="panel-empty">
+                <div class="panel-empty-icon">${icon}</div>
+                <div class="panel-empty-text">${message}</div>
+            </div>
+        `;
+    }
+};
+
+// ============================================
+// LOCATION TREE (for Browse Ideas) - LEGACY
 // ============================================
 
 App.renderLocationTree = async function(countries) {

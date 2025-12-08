@@ -109,34 +109,68 @@ router.get('/races/:raceId', async (req, res) => {
     }
 });
 
-// POST /api/conventions/:convId/nominate - Nominate someone for a race
+// POST /api/conventions/:convId/nominate - Nominate someone (permanent, not convention-tied)
 router.post('/:convId/nominate', async (req, res) => {
-    const { nominatorId, nomineeId, ridingId, ridingType, raceId, message } = req.body;
-    const convId = req.params.convId;
+    const { nominatorId, nomineeId, message } = req.body;
     
     // Input validation
     if (!nominatorId || !nomineeId) {
         return res.status(400).json({ error: 'nominatorId and nomineeId are required' });
     }
     
-    if (!raceId && (!ridingId || !ridingType)) {
-        return res.status(400).json({ error: 'Either raceId OR (ridingId and ridingType) are required' });
-    }
-    
     try {
         const result = await conventionService.createNomination({
             nominatorId,
             nomineeId,
-            raceId,
-            ridingId,
-            ridingType,
-            convId,
             message
         });
         res.json(result);
     } catch (error) {
         console.error('Error nominating:', error);
         res.status(400).json({ error: error.message || 'Failed to nominate' });
+    }
+});
+
+// POST /api/conventions/:convId/declare-candidacy - User declares they want to run
+router.post('/:convId/declare-candidacy', async (req, res) => {
+    const { userId } = req.body;
+    const convId = req.params.convId;
+    
+    if (!userId) {
+        return res.status(400).json({ error: 'userId is required' });
+    }
+    
+    try {
+        const result = await conventionService.declareCandidacy({ userId, convId });
+        res.json(result);
+    } catch (error) {
+        console.error('Error declaring candidacy:', error);
+        res.status(400).json({ error: error.message || 'Failed to declare candidacy' });
+    }
+});
+
+// GET /api/conventions/:convId/candidacy/:userId - Get user's candidacy status
+router.get('/:convId/candidacy/:userId', async (req, res) => {
+    try {
+        const status = await conventionService.getCandidacyStatus({
+            userId: req.params.userId,
+            convId: req.params.convId
+        });
+        res.json(status);
+    } catch (error) {
+        console.error('Error fetching candidacy status:', error);
+        res.status(500).json({ error: 'Failed to fetch candidacy status' });
+    }
+});
+
+// GET /api/users/:userId/nominations - Get a user's nomination history
+router.get('/users/:userId/nominations', async (req, res) => {
+    try {
+        const nominations = await conventionService.getUserNominations(req.params.userId);
+        res.json(nominations);
+    } catch (error) {
+        console.error('Error fetching nominations:', error);
+        res.status(500).json({ error: 'Failed to fetch nominations' });
     }
 });
 
@@ -195,13 +229,14 @@ router.post('/:convId/decline-nomination', async (req, res) => {
 // POST /api/conventions/:convId/withdraw - Withdraw from a race
 router.post('/:convId/withdraw', async (req, res) => {
     const { userId, raceId } = req.body;
+    const convId = req.params.convId;
     
     if (!userId || !raceId) {
         return res.status(400).json({ error: 'userId and raceId are required' });
     }
     
     try {
-        const result = await conventionService.withdrawFromRace({ userId, raceId });
+        const result = await conventionService.withdrawFromRace({ userId, raceId, convId });
         res.json(result);
     } catch (error) {
         console.error('Error withdrawing:', error);

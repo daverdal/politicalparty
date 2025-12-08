@@ -244,6 +244,60 @@ router.get('/:type/:id/candidates', async (req, res) => {
     }
 });
 
+// GET /api/locations/:type/:id/users - Get all users/members for a location
+router.get('/:type/:id/users', async (req, res) => {
+    const { type, id } = req.params;
+    
+    const typeMap = {
+        'countries': 'Country',
+        'provinces': 'Province',
+        'federal-ridings': 'FederalRiding',
+        'provincial-ridings': 'ProvincialRiding',
+        'towns': 'Town',
+        'first-nations': 'FirstNation',
+        'adhoc-groups': 'AdhocGroup'
+    };
+    
+    const locationType = typeMap[type];
+    if (!locationType) {
+        return res.status(400).json({ error: 'Invalid location type' });
+    }
+    
+    try {
+        const users = await locationService.getUsersForLocation({ locationId: id, locationType });
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /api/locations/:type/:id/events - Get events for a location
+router.get('/:type/:id/events', async (req, res) => {
+    const { type, id } = req.params;
+    
+    const typeMap = {
+        'countries': 'Country',
+        'provinces': 'Province',
+        'federal-ridings': 'FederalRiding',
+        'provincial-ridings': 'ProvincialRiding',
+        'towns': 'Town',
+        'first-nations': 'FirstNation',
+        'adhoc-groups': 'AdhocGroup'
+    };
+    
+    const locationType = typeMap[type];
+    if (!locationType) {
+        return res.status(400).json({ error: 'Invalid location type' });
+    }
+    
+    try {
+        const events = await locationService.getEventsForLocation({ locationId: id, locationType });
+        res.json(events);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // POST /api/locations/towns - Create a new town
 router.post('/towns', async (req, res) => {
     const session = getSession();

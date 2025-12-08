@@ -100,6 +100,23 @@ router.post('/convention/:id/reset', async (req, res) => {
     }
 });
 
+// POST /api/admin/convention/:id/schedule - Update convention schedule
+router.post('/convention/:id/schedule', async (req, res) => {
+    const { schedule } = req.body;
+    
+    if (!schedule || typeof schedule !== 'object') {
+        return res.status(400).json({ error: 'Schedule object is required' });
+    }
+    
+    try {
+        const result = await adminService.updateConventionSchedule(req.params.id, schedule);
+        res.json(result);
+    } catch (error) {
+        console.error('Error updating schedule:', error);
+        res.status(500).json({ error: 'Failed to update schedule' });
+    }
+});
+
 // GET /api/admin/conventions - Get all conventions
 router.get('/conventions', async (req, res) => {
     try {
@@ -113,14 +130,18 @@ router.get('/conventions', async (req, res) => {
 
 // POST /api/admin/conventions - Create a new convention
 router.post('/conventions', async (req, res) => {
-    const { name, year } = req.body;
+    const { name, year, startDate } = req.body;
     
     if (!name || !year) {
         return res.status(400).json({ error: 'Name and year are required' });
     }
     
     try {
-        const result = await adminService.createConvention({ name, year: parseInt(year) });
+        const result = await adminService.createConvention({ 
+            name, 
+            year: parseInt(year),
+            startDate // Optional: defaults to Jan 15 of convention year
+        });
         res.json(result);
     } catch (error) {
         console.error('Error creating convention:', error);
