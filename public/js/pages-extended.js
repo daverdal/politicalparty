@@ -859,6 +859,267 @@ App.switchConventionTab = function(tabName) {
 };
 
 // ============================================
+// REFERENDUMS PAGE
+// ============================================
+
+App.pages.referendums = async function() {
+    const content = document.getElementById('content');
+    content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+    try {
+        const referendums = await App.api('/referendums');
+
+        if (!referendums.length) {
+            content.innerHTML = `
+                <header class="page-header">
+                    <h1 class="page-title">📑 Referendums</h1>
+                    <p class="page-subtitle">Questions and arguments from the community</p>
+                </header>
+                <div class="card"><div class="card-body">
+                    <p class="empty-text">No referendums have been created yet.</p>
+                </div></div>
+            `;
+            return;
+        }
+
+        const first = referendums[0];
+
+        content.innerHTML = `
+            <header class="page-header">
+                <h1 class="page-title">📑 Referendums</h1>
+                <p class="page-subtitle">Read the question, explore arguments, and add your voice.</p>
+            </header>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">All Questions</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="referendum-list">
+                            ${referendums
+                                .map(
+                                    (q) => `
+                                <div class="list-item" data-ref-id="${q.id}">
+                                    <div class="list-item-title">${q.title}</div>
+                                    <div class="list-item-meta">
+                                        <span>${q.locationName || q.scope || 'All members'}</span>
+                                        <span class="list-item-stat">${q.argumentCount || 0} arguments</span>
+                                    </div>
+                                </div>
+                            `
+                                )
+                                .join('')}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" id="referendum-detail-card" style="grid-column: span 2;">
+                    <div class="card-body" id="referendum-detail-body">
+                        <!-- Filled by App.loadReferendumDetail -->
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Wire list clicks
+        document.querySelectorAll('#referendum-list .list-item').forEach((item) => {
+            item.addEventListener('click', () => {
+                document
+                    .querySelectorAll('#referendum-list .list-item')
+                    .forEach((i) => i.classList.remove('selected'));
+                item.classList.add('selected');
+                const id = item.getAttribute('data-ref-id');
+                App.loadReferendumDetail(id);
+            });
+        });
+
+        // Auto-select first
+        const firstItem = document.querySelector('#referendum-list .list-item');
+        if (firstItem) {
+            firstItem.classList.add('selected');
+            App.loadReferendumDetail(first.id);
+        }
+    } catch (err) {
+        content.innerHTML = `<div class="card"><div class="card-body">Error: ${err.message}</div></div>`;
+    }
+};
+
+App.loadReferendumDetail = async function(refId) {
+    const body = document.getElementById('referendum-detail-body');
+    if (!body) return;
+
+    body.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+    try {
+        const [ref, args] = await Promise.all([
+            App.api(`/referendums/${refId}`),
+            App.api(`/referendums/${refId}/arguments`)
+        ]);
+
+        const groupBySide = { pro: [], con: [], neutral: [] };
+        for (const a of args) {
+            if (groupBySide[a.side]) {
+                groupBySide[a.side].push(a);
+            } else {
+                groupBySide.neutral.push(a);
+            }
+        }
+
+        const renderArgumentList = (list, sideLabel) => {
+            if (!list.length) {
+                return `<p class="empty-text">No ${sideLabel} arguments yet.</p>`;
+            }
+            return list
+                .map(
+                    (a) => `
+                <div class="argument-card">
+                    <div class="argument-header">
+                        <span class="argument-author">${a.displayName}</span>
+                        <span class="argument-meta">${a.visibility === 'ANON' ? 'Anonymous' : a.visibility === 'PSEUDO' ? 'Pseudonymous' : 'Public'} • ${a.votes || 0} votes</span>
+                    </div>
+                    <div class="argument-body">${a.body}</div>
+                    <div class="argument-actions">
+                        <button class="btn btn-secondary btn-sm" data-arg-id="${a.id}" data-ref-id="${refId}">👍 Support</button>
+                    </div>
+                </div>
+            `
+                )
+                .join('');
+        };
+
+        body.innerHTML = `
+            <div class="referendum-detail">
+                <h2 class="detail-title">${ref.title}</h2>
+                <p class="detail-subtitle">
+                    ${ref.locationName || ref.scope || 'All members'} • Status: ${ref.status || 'open'}
+                </p>
+                <div class="detail-body" style="margin-top: 8px;">${ref.body}</div>
+
+                <div class="card" style="margin-top: 20px;">
+                    <div class="card-header">
+                        <h3 class="card-title">Add Your Argument</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="argument-form">
+                            <div class="form-group">
+                                <label>Side</label>
+                                <div class="radio-row">
+                                    <label><input type="radio" name="side" value="pro" checked> For</label>
+                                    <label><input type="radio" name="side" value="con"> Against</label>
+                                    <label><input type="radio" name="side" value="neutral"> Neutral</label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Your argument</label>
+                                <textarea name="body" class="form-input" rows="4" required placeholder="Explain your reasoning..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Privacy</label>
+                                <div class="radio-column">
+                                    <label><input type="radio" name="visibility" value="PUBLIC" checked> Public (show your name)</label>
+                                    <label><input type="radio" name="visibility" value="PSEUDO"> Pseudonymous (first name + initial only)</label>
+                                    <label><input type="radio" name="visibility" value="ANON"> Anonymous (shown as \"Anonymous member\")</label>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Post argument</button>
+                            <div id="argument-feedback" class="form-feedback"></div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="cards-grid" style="margin-top: 24px;">
+                    <div class="card">
+                        <div class="card-header"><h3 class="card-title">✅ For</h3></div>
+                        <div class="card-body">
+                            ${renderArgumentList(groupBySide.pro, 'supporting')}
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h3 class="card-title">❌ Against</h3></div>
+                        <div class="card-body">
+                            ${renderArgumentList(groupBySide.con, 'opposing')}
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h3 class="card-title">💬 Neutral</h3></div>
+                        <div class="card-body">
+                            ${renderArgumentList(groupBySide.neutral, 'neutral')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Wire argument form
+        const form = document.getElementById('argument-form');
+        if (form) {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!App.requireVerifiedAuth()) return;
+
+                const feedback = document.getElementById('argument-feedback');
+                feedback.textContent = '';
+
+                const formData = new FormData(form);
+                const side = formData.get('side') || 'pro';
+                const bodyText = (formData.get('body') || '').toString().trim();
+                const visibility = formData.get('visibility') || 'PUBLIC';
+
+                if (!bodyText) {
+                    feedback.textContent = 'Please write an argument before submitting.';
+                    feedback.classList.add('error');
+                    return;
+                }
+
+                try {
+                    const { response, data } = await App.apiPost(`/referendums/${refId}/arguments`, {
+                        side,
+                        body: bodyText,
+                        visibility
+                    });
+                    if (!response.ok) {
+                        feedback.textContent = data.error || 'Could not save argument.';
+                        feedback.classList.add('error');
+                        return;
+                    }
+                    form.reset();
+                    feedback.textContent = 'Argument posted.';
+                    feedback.classList.remove('error');
+                    feedback.classList.add('success');
+                    // Reload arguments
+                    App.loadReferendumDetail(refId);
+                } catch (err) {
+                    feedback.textContent = err.message;
+                    feedback.classList.add('error');
+                }
+            });
+        }
+
+        // Wire upvote buttons
+        document.querySelectorAll('.argument-actions button').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                if (!App.requireVerifiedAuth()) return;
+                const argId = btn.getAttribute('data-arg-id');
+                const rId = btn.getAttribute('data-ref-id');
+                try {
+                    const { response, data } = await App.apiPost(`/referendums/${rId}/arguments/${argId}/upvote`, {});
+                    if (!response.ok) {
+                        alert(data.error || 'Could not support argument.');
+                        return;
+                    }
+                    App.loadReferendumDetail(rId);
+                } catch (err) {
+                    alert(err.message);
+                }
+            });
+        });
+    } catch (err) {
+        body.innerHTML = `<div class="card"><div class="card-body">Error: ${err.message}</div></div>`;
+    }
+};
+
+// ============================================
 // ADMIN PAGE
 // ============================================
 

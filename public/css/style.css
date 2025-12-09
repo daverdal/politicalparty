@@ -1867,6 +1867,49 @@ a:hover {
   font-size: 11px;
 }
 
+.referendum-detail .detail-body {
+  white-space: pre-wrap;
+}
+
+.argument-card {
+  border-bottom: 1px solid var(--border-color);
+  padding: 8px 0;
+}
+
+.argument-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.argument-author {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.argument-meta {
+  font-size: 11px;
+}
+
+.argument-actions {
+  margin-top: 4px;
+}
+
+.radio-row {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.radio-column {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
 .profile-platform {
   padding: 12px;
   background: var(--bg-tertiary);
