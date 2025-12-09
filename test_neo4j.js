@@ -5,6 +5,7 @@
 
 require('dotenv').config();
 const neo4j = require('neo4j-driver');
+const bcrypt = require('bcryptjs');
 const canadaData = require('./seed');
 
 // Connection settings
@@ -12,6 +13,11 @@ const URI = process.env.NEO4J_URI || 'bolt://127.0.0.1:7687';
 const USERNAME = process.env.NEO4J_USERNAME || 'neo4j';
 const PASSWORD = process.env.NEO4J_PASSWORD || 'Dwall123';
 const DATABASE = process.env.NEO4J_DATABASE || 'neo4j';
+
+// Admin seed user (for auth system)
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'daverdal@gmail.com';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'changeme123';
+const ADMIN_NAME = process.env.ADMIN_NAME || 'Admin User';
 
 // ============================================
 // CONSTRAINTS
@@ -435,6 +441,46 @@ async function seedUsers(driver) {
         }
         const candidateCount = USERS.filter(u => u.candidate).length;
         console.log(`✓ Created ${USERS.length} users (${candidateCount} candidates)`);
+    } finally {
+        await session.close();
+    }
+}
+
+async function seedAdminUser(driver) {
+    console.log('\n[4b] Seeding Admin Auth User...');
+    const session = driver.session({ database: DATABASE });
+
+    const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
+    const adminId = 'admin-' + ADMIN_EMAIL.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+    try {
+        await session.run(
+            `
+            MERGE (u:User {email: $email})
+            ON CREATE SET
+                u.id = $id,
+                u.name = $name,
+                u.passwordHash = $passwordHash,
+                u.role = 'admin',
+                u.verifiedAt = datetime(),
+                u.createdAt = datetime(),
+                u.updatedAt = datetime()
+            ON MATCH SET
+                u.name = $name,
+                u.passwordHash = $passwordHash,
+                u.role = 'admin',
+                u.verifiedAt = coalesce(u.verifiedAt, datetime()),
+                u.updatedAt = datetime()
+        `,
+            {
+                id: adminId,
+                email: ADMIN_EMAIL.trim().toLowerCase(),
+                name: ADMIN_NAME,
+                passwordHash
+            }
+        );
+
+        console.log(`✓ Admin auth user ensured for ${ADMIN_EMAIL} (default password: "${ADMIN_PASSWORD}")`);
     } finally {
         await session.close();
     }
@@ -1055,6 +1101,7 @@ async function main() {
         await createConstraints(driver);
         await clearExistingData(driver);
         await seedUsers(driver);
+        await seedAdminUser(driver);
         await seedIdeas(driver);
         await seedAssemblyEvents(driver);
         await seedVoteSessions(driver);

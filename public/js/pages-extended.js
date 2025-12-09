@@ -13,6 +13,16 @@ App.updateAuthUi = function() {
     const container = document.getElementById('auth-status');
     if (!container) return;
 
+    // Toggle Admin nav link visibility based on auth role
+    const adminLink = document.getElementById('nav-admin-link') || document.querySelector('[data-page="admin"]');
+    if (adminLink) {
+        if (App.authUser && App.authUser.role === 'admin') {
+            adminLink.style.display = '';
+        } else {
+            adminLink.style.display = 'none';
+        }
+    }
+
     if (App.authUser) {
         const verifiedText = App.authUser.verified ? '✅ Verified' : '✉️ Not verified';
         container.innerHTML = `
