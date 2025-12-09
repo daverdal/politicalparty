@@ -42,7 +42,7 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
     } catch (err) {
         // eslint-disable-next-line no-console
         console.error('[referendums] create error:', err);
-        res.status(500).json({ error: 'Failed to create referendum' });
+        res.status(400).json({ error: err.message || 'Failed to create referendum' });
     }
 });
 
@@ -77,7 +77,7 @@ router.get('/:id/arguments', async (req, res) => {
 router.post('/:id/arguments', authenticate, requireVerifiedUser, async (req, res) => {
     const { side, body, visibility } = req.body;
     if (!body || body.trim().length === 0) {
-        return res.status(400).json({ error: 'Argument body is required' });
+        return res.status(400).json({ error: 'Perspective text is required' });
     }
 
     try {
@@ -92,7 +92,7 @@ router.post('/:id/arguments', authenticate, requireVerifiedUser, async (req, res
     } catch (err) {
         // eslint-disable-next-line no-console
         console.error('[referendums] create arg error:', err);
-        res.status(500).json({ error: 'Failed to create argument' });
+        res.status(400).json({ error: err.message || 'Failed to create perspective' });
     }
 });
 
@@ -104,13 +104,13 @@ router.post('/:id/arguments/:argId/upvote', authenticate, requireVerifiedUser, a
             argumentId: req.params.argId
         });
         if (!ok) {
-            return res.status(404).json({ error: 'Argument not found' });
+            return res.status(404).json({ error: 'Perspective not found' });
         }
         res.json({ success: true });
     } catch (err) {
         // eslint-disable-next-line no-console
         console.error('[referendums] upvote arg error:', err);
-        res.status(500).json({ error: 'Failed to upvote argument' });
+        res.status(400).json({ error: err.message || 'Failed to support perspective' });
     }
 });
 

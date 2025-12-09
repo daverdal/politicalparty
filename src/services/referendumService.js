@@ -19,17 +19,30 @@ function generateId(prefix) {
 async function createReferendumQuestion({ title, body, scope, locationId, opensAt, closesAt, authorId }) {
     const session = getSession();
     const id = generateId('ref');
+    const finalScope = scope || 'national';
 
     try {
         const result = await session.run(
             `
             MATCH (u:User {id: $authorId})
-            OPTIONAL MATCH (loc {id: $locationId})
+            OPTIONAL MATCH (explicitLoc {id: $locationId})
+            OPTIONAL MATCH (u)-[:LOCATED_IN]->(userLoc)
+            WITH u, explicitLoc, userLoc, $scope as scope,
+                 CASE
+                    WHEN scope = 'riding' AND explicitLoc IS NULL THEN userLoc
+                    ELSE explicitLoc
+                 END AS loc
+            // If riding-scoped but no location, block creation
+            CALL apoc.util.validate(
+                scope = 'riding' AND loc IS NULL,
+                'You must set your riding in your profile before creating a riding-level referendum.',
+                []
+            )
             CREATE (q:ReferendumQuestion {
                 id: $id,
                 title: $title,
                 body: $body,
-                scope: $scope,
+                scope: scope,
                 status: 'open',
                 opensAt: $opensAt,
                 closesAt: $closesAt,
@@ -46,7 +59,7 @@ async function createReferendumQuestion({ title, body, scope, locationId, opensA
                 id,
                 title,
                 body: body || '',
-                scope: scope || 'global',
+                scope: finalScope,
                 locationId: locationId || null,
                 opensAt: opensAt || null,
                 closesAt: closesAt || null,
@@ -131,6 +144,46 @@ async function getReferendumById(id) {
 }
 
 // -------------------------------
+// Eligibility helper
+// -------------------------------
+
+async function ensureUserEligibleForReferendum(referId, userId) {
+    const session = getSession();
+    try {
+        const result = await session.run(
+            `
+            MATCH (q:ReferendumQuestion {id: $referId})
+            OPTIONAL MATCH (q)-[:FOR_LOCATION]->(loc)
+            OPTIONAL MATCH (u:User {id: $userId})-[:LOCATED_IN]->(userLoc)
+            RETURN q.scope as scope,
+                   loc.id as locationId,
+                   loc.name as locationName,
+                   userLoc.id as userLocId,
+                   userLoc.name as userLocName
+        `,
+            { referId, userId }
+        );
+
+        if (!result.records.length) {
+            throw new Error('Referendum not found.');
+        }
+
+        const record = result.records[0];
+        const scope = record.get('scope');
+        const locationId = record.get('locationId');
+        const locationName = record.get('locationName');
+        const userLocId = record.get('userLocId');
+
+        if (scope === 'riding' && locationId && (!userLocId || userLocId !== locationId)) {
+            const name = locationName || 'this riding';
+            throw new Error(`This referendum is limited to members from ${name}.`);
+        }
+    } finally {
+        await session.close();
+    }
+}
+
+// -------------------------------
 // Arguments (with privacy modes)
 // -------------------------------
 
@@ -150,6 +203,8 @@ function computeDisplayName({ visibility, userName }) {
 }
 
 async function createArgument({ referId, userId, side, body, visibility }) {
+    await ensureUserEligibleForReferendum(referId, userId);
+
     const session = getSession();
     const id = generateId('arg');
     const normalizedSide = ['pro', 'con', 'neutral'].includes(side) ? side : 'pro';
@@ -244,6 +299,23 @@ async function listArguments(referId) {
 async function upvoteArgument({ userId, argumentId }) {
     const session = getSession();
     try {
+        // Find referendum for this argument and check eligibility
+        const refResult = await session.run(
+            `
+            MATCH (a:Argument {id: $argumentId})-[:FOR_QUESTION]->(q:ReferendumQuestion)
+            RETURN q.id as referId
+        `,
+            { argumentId }
+        );
+
+        if (!refResult.records.length) {
+            return false;
+        }
+
+        const referId = refResult.records[0].get('referId');
+
+        await ensureUserEligibleForReferendum(referId, userId);
+
         const result = await session.run(
             `
             MATCH (u:User {id: $userId}), (a:Argument {id: $argumentId})
