@@ -657,8 +657,8 @@ App.pages.votes = async function() {
         
         content.innerHTML = `
             <header class="page-header">
-                <h1 class="page-title">Vote Sessions</h1>
-                <p class="page-subtitle">${votes.length} voting sessions</p>
+                <h1 class="page-title">Convention Voting</h1>
+                <p class="page-subtitle">${votes.length} vote session(s)</p>
             </header>
             
             <div class="cards-grid">
