@@ -21,6 +21,29 @@ App.pages.dashboard = async function() {
             App.api('/events'),
             App.api('/votes')
         ]);
+
+        let pointsSummary = null;
+        let localLeaderboard = null;
+
+        if (App.authUser) {
+            try {
+                pointsSummary = await App.api('/points/me');
+                if (pointsSummary && pointsSummary.location) {
+                    const { id, type } = pointsSummary.location;
+                    localLeaderboard = await App.api(
+                        `/points/leaderboard?locationId=${encodeURIComponent(id)}&locationType=${encodeURIComponent(type)}&limit=5`
+                    );
+                }
+            } catch (e) {
+                // Points are optional on dashboard; ignore failures
+                // eslint-disable-next-line no-console
+                console.warn('Points summary unavailable:', e.message || e);
+            }
+        }
+        
+        const hasPoints = !!pointsSummary;
+        const leaderboardUsers = localLeaderboard?.users || [];
+        const locationName = pointsSummary?.location?.name;
         
         content.innerHTML = `
             <header class="page-header">
@@ -38,7 +61,10 @@ App.pages.dashboard = async function() {
             <div class="cards-grid">
                 <div class="card">
                     <div class="card-header">
-                        <div><h3 class="card-title">Welcome to Political Party</h3><p class="card-subtitle">Community engagement platform</p></div>
+                        <div>
+                            <h3 class="card-title">Welcome to Political Party</h3>
+                            <p class="card-subtitle">Community engagement platform</p>
+                        </div>
                     </div>
                     <div class="card-body">
                         <p>This platform enables democratic participation through:</p>
@@ -48,6 +74,58 @@ App.pages.dashboard = async function() {
                             <li>Assembly events and participation</li>
                             <li>Transparent voting sessions</li>
                         </ul>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <h3 class="card-title">Local Points</h3>
+                            <p class="card-subtitle">Support earned from your neighbours</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        ${
+                            hasPoints
+                                ? `
+                            <p>You are based in <strong>${locationName}</strong>.</p>
+                            <div class="stats-row small">
+                                <div class="stat-card">
+                                    <div class="stat-label">Local points</div>
+                                    <div class="stat-value">${pointsSummary.localPoints}</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Global points</div>
+                                    <div class="stat-value">${pointsSummary.globalPoints}</div>
+                                </div>
+                            </div>
+                            ${
+                                leaderboardUsers.length
+                                    ? `
+                                <h4 style="margin-top: 16px;">Top contributors in ${locationName}</h4>
+                                <ul class="simple-list">
+                                    ${leaderboardUsers
+                                        .map(
+                                            (u, idx) => `
+                                        <li class="simple-list-item">
+                                            <span class="rank-badge">#${idx + 1}</span>
+                                            <span class="simple-list-name">${u.name}</span>
+                                            <span class="simple-list-meta">${u.localPoints} local • ${u.globalPoints} global</span>
+                                        </li>
+                                    `
+                                        )
+                                        .join('')}
+                                </ul>
+                            `
+                                    : '<p class="empty-text">No local points yet. Post ideas and earn support from your community!</p>'
+                            }
+                        `
+                                : `
+                            <p class="empty-text">
+                                Sign in and set your riding/location in your profile to start earning local points.
+                            </p>
+                        `
+                        }
                     </div>
                 </div>
             </div>

@@ -671,6 +671,10 @@ a:hover {
   margin-bottom: 32px;
 }
 
+.stats-row.small {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .stat-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -693,6 +697,48 @@ a:hover {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.simple-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.simple-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  font-size: 13px;
+}
+
+.simple-list-item:last-child {
+  border-bottom: none;
+}
+
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--bg-hover);
+  color: var(--accent-secondary);
+  font-size: 12px;
+  margin-right: 8px;
+}
+
+.simple-list-name {
+  flex: 1;
+}
+
+.simple-list-meta {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-left: 8px;
 }
 
 /* User Card */
