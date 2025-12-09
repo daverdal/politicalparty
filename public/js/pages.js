@@ -174,15 +174,24 @@ App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = fal
         App.panelState[pageId].currentItems = ideas;
         
         const list = document.getElementById(`${pageId}-list`);
-        list.innerHTML = ideas.map((idea, index) => `
-            <div class="list-item" data-index="${index}" data-id="${idea.id}">
-                <div class="list-item-title">${idea.title}</div>
-                <div class="list-item-meta">
-                    <span class="list-item-stat">👍 ${idea.supportCount || 0}</span>
-                    <span>${idea.author?.name || 'Anonymous'}</span>
-                </div>
+        const showMapLink = type === 'provinces' || type === 'countries';
+        list.innerHTML = `
+            ${showMapLink ? `
+            <div class="panel-toolbar">
+                <span class="panel-toolbar-title">${name}</span>
+                <button class="map-link-btn" id="ideas-map-link">🗺️ Map (coming soon)</button>
             </div>
-        `).join('');
+            ` : ''}
+            ${ideas.map((idea, index) => `
+                <div class="list-item" data-index="${index}" data-id="${idea.id}">
+                    <div class="list-item-title">${idea.title}</div>
+                    <div class="list-item-meta">
+                        <span class="list-item-stat">👍 ${idea.supportCount || 0}</span>
+                        <span>${idea.author?.name || 'Anonymous'}</span>
+                    </div>
+                </div>
+            `).join('')}
+        `;
         
         document.querySelectorAll(`#${pageId}-list .list-item`).forEach(item => {
             item.addEventListener('click', () => {
@@ -193,6 +202,28 @@ App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = fal
             });
         });
         
+        // Map link (placeholder)
+        const mapLink = document.getElementById('ideas-map-link');
+        if (mapLink) {
+            mapLink.addEventListener('click', () => {
+                const detail = document.getElementById(`${pageId}-detail`);
+                if (!detail) return;
+                const existing = detail.querySelector('.province-map-placeholder');
+                if (existing) {
+                    existing.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    return;
+                }
+                const div = document.createElement('div');
+                div.className = 'province-map-placeholder';
+                div.innerHTML = `
+                    <strong>🗺️ Province Map (coming soon)</strong>
+                    <p>Here you’ll see an interactive map of ${name}, with pins for each riding once we load Saskatchewan, Alberta, and BC data.</p>
+                `;
+                detail.appendChild(div);
+                div.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        }
+
         // Auto-select first item if requested
         if (autoSelectFirst && ideas.length > 0) {
             const firstItem = document.querySelector(`#${pageId}-list .list-item`);

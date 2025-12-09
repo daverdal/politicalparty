@@ -851,6 +851,42 @@ a:hover {
   border-bottom: 1px solid var(--border-color);
 }
 
+.panel-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.panel-toolbar-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.map-link-btn {
+  border: none;
+  background: none;
+  color: var(--accent-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.map-link-btn:hover {
+  text-decoration: underline;
+}
+
+.province-map-placeholder {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border-color);
+  background: rgba(0, 168, 255, 0.03);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
 /* Location Tree */
 .location-tree {
   font-size: 14px;
