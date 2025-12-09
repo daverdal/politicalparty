@@ -43,6 +43,9 @@ App.setAuthUser = function(user) {
     if (typeof App.updateAuthUi === 'function') {
         App.updateAuthUi();
     }
+    if (typeof App.refreshNotifications === 'function') {
+        App.refreshNotifications();
+    }
 };
 
 App.loadAuthUser = async function() {

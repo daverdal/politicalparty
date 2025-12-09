@@ -64,6 +64,104 @@ App.updateAuthUi = function() {
     }
 };
 
+// ============================================
+// NOTIFICATIONS UI
+// ============================================
+
+App.notifications = [];
+
+App.refreshNotifications = async function() {
+    const countEl = document.getElementById('notifications-count');
+    const listEl = document.getElementById('notifications-list');
+    const panelEl = document.getElementById('notifications-panel');
+
+    if (!countEl || !listEl || !panelEl) return;
+
+    // If not signed in, clear UI
+    if (!App.authUser) {
+        App.notifications = [];
+        countEl.style.display = 'none';
+        listEl.innerHTML = '<div class="empty-text">Sign in to see notifications.</div>';
+        panelEl.classList.add('hidden');
+        return;
+    }
+
+    try {
+        const items = await App.api('/notifications?unreadOnly=false&limit=50');
+        App.notifications = items;
+        App.renderNotifications();
+    } catch (err) {
+        console.error('Failed to load notifications', err);
+    }
+};
+
+App.renderNotifications = function() {
+    const countEl = document.getElementById('notifications-count');
+    const listEl = document.getElementById('notifications-list');
+    if (!countEl || !listEl) return;
+
+    const unreadCount = App.notifications.filter((n) => !n.read).length;
+    if (unreadCount > 0) {
+        countEl.style.display = 'inline-block';
+        countEl.textContent = unreadCount > 9 ? '9+' : String(unreadCount);
+    } else {
+        countEl.style.display = 'none';
+    }
+
+    if (!App.notifications.length) {
+        listEl.innerHTML = '<div class="empty-text">No notifications yet.</div>';
+        return;
+    }
+
+    listEl.innerHTML = App.notifications
+        .map((n) => {
+            const createdAt = n.createdAt || n.createdAtISO || n.createdAtUtc;
+            return `
+                <div class="notification-item ${n.read ? '' : 'unread'}">
+                    <div class="notification-title">${n.title || n.type || 'Notification'}</div>
+                    ${n.body ? `<div class="notification-body">${n.body}</div>` : ''}
+                    ${createdAt ? `<div class="notification-meta">${App.formatDate(createdAt)} ${App.formatTime(createdAt)}</div>` : ''}
+                </div>
+            `;
+        })
+        .join('');
+};
+
+App.initNotificationsUi = function() {
+    const toggleBtn = document.getElementById('notifications-toggle');
+    const panelEl = document.getElementById('notifications-panel');
+    const markAllBtn = document.getElementById('notifications-mark-all');
+
+    if (!toggleBtn || !panelEl) return;
+
+    toggleBtn.addEventListener('click', async () => {
+        if (!App.authUser) {
+            if (typeof App.showAuthModal === 'function') {
+                App.showAuthModal('login');
+            }
+            return;
+        }
+        panelEl.classList.toggle('hidden');
+        if (!panelEl.classList.contains('hidden')) {
+            await App.refreshNotifications();
+        }
+    });
+
+    if (markAllBtn) {
+        markAllBtn.addEventListener('click', async () => {
+            if (!App.authUser) return;
+            try {
+                await App.apiPostNoBody('/notifications/mark-all-read');
+                // Optimistically mark all as read
+                App.notifications = App.notifications.map((n) => ({ ...n, read: true }));
+                App.renderNotifications();
+            } catch (err) {
+                console.error('Failed to mark notifications read', err);
+            }
+        });
+    }
+};
+
 App.showAuthModal = function(initialTab = 'login') {
     const existing = document.querySelector('.modal-overlay.auth-modal');
     if (existing) existing.remove();
@@ -822,22 +920,27 @@ App.pages.admin = async function() {
                 <div class="card">
                     <div class="card-header"><h3 class="card-title">➕ Create New Convention</h3></div>
                     <div class="card-body">
-                        <div class="form-group">
-                            <label>Convention Name</label>
-                            <input type="text" id="new-conv-name" class="form-input" placeholder="e.g., ${currentYear + 1} National Convention" value="${currentYear + 1} National Convention">
+                        <button class="admin-btn primary" id="toggle-create-conv-form" style="margin-bottom: 12px;">
+                            ➕ Create New Convention
+                        </button>
+                        <div id="create-conv-form" style="display: none;">
+                            <div class="form-group">
+                                <label>Convention Name</label>
+                                <input type="text" id="new-conv-name" class="form-input" placeholder="e.g., ${currentYear + 1} National Convention" value="${currentYear + 1} National Convention">
+                            </div>
+                            <div class="form-group">
+                                <label>Year</label>
+                                <input type="number" id="new-conv-year" class="form-input" min="2020" max="2100" value="${currentYear + 1}">
+                            </div>
+                            <div class="form-group">
+                                <label>Start Date <span style="color: var(--text-muted); font-weight: normal;">(Wave 1 nominations begin)</span></label>
+                                <input type="date" id="new-conv-start" class="form-input" value="${currentYear + 1}-01-15">
+                            </div>
+                            <p class="form-help" style="margin: 8px 0; color: var(--text-muted); font-size: 0.85rem;">
+                                📅 Schedule is auto-generated: 2 weeks nominations + 1 week voting per wave (6 waves total, ~18 weeks)
+                            </p>
+                            <button class="admin-btn primary" onclick="App.createNewConvention()" style="margin-top: 12px;">➕ Create Convention</button>
                         </div>
-                        <div class="form-group">
-                            <label>Year</label>
-                            <input type="number" id="new-conv-year" class="form-input" min="2020" max="2100" value="${currentYear + 1}">
-                        </div>
-                        <div class="form-group">
-                            <label>Start Date <span style="color: var(--text-muted); font-weight: normal;">(Wave 1 nominations begin)</span></label>
-                            <input type="date" id="new-conv-start" class="form-input" value="${currentYear + 1}-01-15">
-                        </div>
-                        <p class="form-help" style="margin: 8px 0; color: var(--text-muted); font-size: 0.85rem;">
-                            📅 Schedule is auto-generated: 2 weeks nominations + 1 week voting per wave (6 waves total, ~18 weeks)
-                        </p>
-                        <button class="admin-btn primary" onclick="App.createNewConvention()" style="margin-top: 12px;">➕ Create Convention</button>
                         <div id="create-conv-result" style="margin-top: 12px; display: none;"></div>
                     </div>
                 </div>
@@ -991,6 +1094,17 @@ App.pages.admin = async function() {
                 </div>
             </div>
         `;
+
+        // Hook up toggle for Create New Convention form
+        const toggleConvFormBtn = document.getElementById('toggle-create-conv-form');
+        const createConvForm = document.getElementById('create-conv-form');
+        if (toggleConvFormBtn && createConvForm) {
+            toggleConvFormBtn.addEventListener('click', () => {
+                const isHidden = createConvForm.style.display === 'none' || createConvForm.style.display === '';
+                createConvForm.style.display = isHidden ? 'block' : 'none';
+                toggleConvFormBtn.textContent = isHidden ? 'Hide Create Convention Form' : '➕ Create New Convention';
+            });
+        }
     } catch (err) {
         content.innerHTML = `<div class="card"><div class="card-body">Error: ${err.message}</div></div>`;
     }

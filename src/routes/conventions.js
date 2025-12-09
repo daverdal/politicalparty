@@ -10,6 +10,7 @@ const conventionService = require('../services/conventionService');
 const { getDriver, getDatabase } = require('../config/db');
 const { toNumber, toISODate } = require('../utils/neo4jHelpers');
 const { authenticate, requireVerifiedUser, requireAdmin } = require('../middleware/auth');
+const notificationService = require('../services/notificationService');
 
 // GET /api/conventions - List all conventions
 router.get('/', async (req, res) => {
@@ -125,6 +126,27 @@ router.post('/:convId/nominate', authenticate, requireVerifiedUser, async (req, 
             nomineeId,
             message
         });
+
+        // Notify nominee of new nomination
+        try {
+            await notificationService.createNotification({
+                userId: nomineeId,
+                type: 'NOMINATION',
+                title: 'You received a new nomination',
+                body: result.message,
+                payload: {
+                    nominatorId,
+                    nomineeId,
+                    ridingName: result.ridingName,
+                    nominationCount: result.nominationCount
+                }
+            });
+        } catch (notifyErr) {
+            // Best-effort: log but do not fail the main request
+            // eslint-disable-next-line no-console
+            console.error('[notifications] failed to create nomination notification:', notifyErr);
+        }
+
         res.json(result);
     } catch (error) {
         console.error('Error nominating:', error);

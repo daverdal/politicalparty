@@ -24,9 +24,26 @@
           <option value="">Loading users...</option>
         </select>
       </div>
-      <!-- Auth status -->
-      <div id="auth-status" class="user-selector" style="margin-top: 8px;">
-        <!-- Filled dynamically by App.updateAuthUi -->
+      <!-- Auth & notifications -->
+      <div class="sidebar-status">
+        <div id="auth-status" class="user-selector">
+          <!-- Filled dynamically by App.updateAuthUi -->
+        </div>
+        <div id="notifications-container" class="notifications-container">
+          <button id="notifications-toggle" class="icon-button" title="Notifications">
+            <span class="icon">🔔</span>
+            <span id="notifications-count" class="badge-count" style="display: none;">0</span>
+          </button>
+          <div id="notifications-panel" class="notifications-panel hidden">
+            <div class="notifications-header">
+              <span>Notifications</span>
+              <button id="notifications-mark-all" class="link-button">Mark all read</button>
+            </div>
+            <div id="notifications-list" class="notifications-list">
+              <div class="empty-text">No notifications yet.</div>
+            </div>
+          </div>
+        </div>
       </div>
       <nav class="sidebar-nav">
         <a href="#profile" class="nav-link" data-page="profile">

@@ -16,6 +16,7 @@ const locationsRouter = require('./locations');
 const conventionsRouter = require('./conventions');
 const adminRouter = require('./admin');
 const votingRouter = require('./voting');
+const notificationsRouter = require('./notifications');
 
 // Register all routes
 router.use('/auth', authRouter);
@@ -28,6 +29,7 @@ router.use('/locations', locationsRouter);
 router.use('/conventions', conventionsRouter);
 router.use('/admin', adminRouter);
 router.use('/voting', votingRouter);
+router.use('/notifications', notificationsRouter);
 
 // Health check endpoint
 router.get('/health', (req, res) => {

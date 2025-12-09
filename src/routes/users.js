@@ -9,6 +9,7 @@ const router = express.Router();
 const userService = require('../services/userService');
 const { getSession } = require('../config/db');
 const { authenticate, requireVerifiedUser, requireAdmin } = require('../middleware/auth');
+const notificationService = require('../services/notificationService');
 
 // GET /api/users - Get all users
 router.get('/', async (req, res) => {
@@ -165,6 +166,26 @@ router.post('/:id/endorse', authenticate, requireVerifiedUser, async (req, res) 
             toUserId: targetUserId,
             message
         });
+
+        // Notify endorsed user
+        try {
+            await notificationService.createNotification({
+                userId: targetUserId,
+                type: 'ENDORSEMENT',
+                title: 'You received a new endorsement',
+                body: result.message,
+                payload: {
+                    fromUserId: req.user.id,
+                    targetUserId,
+                    message
+                }
+            });
+        } catch (notifyErr) {
+            // Best-effort only
+            // eslint-disable-next-line no-console
+            console.error('[notifications] failed to create endorsement notification:', notifyErr);
+        }
+
         res.status(201).json(result);
     } catch (error) {
         res.status(400).json({ error: error.message });

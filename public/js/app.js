@@ -44,6 +44,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize user selector
     await App.initUserSelector();
 
+    // Initialize notifications UI
+    if (typeof App.initNotificationsUi === 'function') {
+        App.initNotificationsUi();
+    }
+
     // Load authenticated user (if any) and update auth UI
     if (typeof App.loadAuthUser === 'function') {
         await App.loadAuthUser();

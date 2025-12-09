@@ -24,6 +24,14 @@ App.apiPost = async function(endpoint, data) {
     return { response, data: await response.json() };
 };
 
+App.apiPostNoBody = async function(endpoint) {
+    const response = await fetch(`/api${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    });
+    return { response, data: await response.json().catch(() => ({})) };
+};
+
 App.apiPut = async function(endpoint, data) {
     const response = await fetch(`/api${endpoint}`, {
         method: 'PUT',
