@@ -11,6 +11,7 @@ const { toNumber } = require('../utils'); // re-exported neo4jHelpers
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_jwt_secret_change_me';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const OWNER_EMAIL = (process.env.OWNER_EMAIL || process.env.ADMIN_EMAIL || '').trim().toLowerCase() || null;
 
 if (JWT_SECRET === 'dev_jwt_secret_change_me') {
     // eslint-disable-next-line no-console
@@ -25,6 +26,10 @@ function generateId() {
 }
 
 function generateEmailVerificationToken() {
+    return crypto.randomBytes(32).toString('hex');
+}
+
+function generatePasswordResetToken() {
     return crypto.randomBytes(32).toString('hex');
 }
 
@@ -75,12 +80,13 @@ async function findUserByEmail(email) {
     const session = driver.session({ database: getDatabase() });
 
     try {
+        const normalizedEmail = email.trim().toLowerCase();
         const result = await session.run(
             `
             MATCH (u:User {email: $email})
             RETURN u
         `,
-            { email: email.trim().toLowerCase() }
+            { email: normalizedEmail }
         );
 
         if (!result.records.length) return null;
@@ -142,14 +148,73 @@ async function validatePassword(user, password) {
 }
 
 function createJwtForUser(user) {
+    let role = user.role || 'member';
+
+    // Protect the configured owner email: always treat as admin
+    if (OWNER_EMAIL && user.email && user.email.toLowerCase() === OWNER_EMAIL) {
+        role = 'admin';
+    }
+
     const payload = {
         sub: user.id,
         email: user.email,
-        role: user.role || 'member',
+        role,
         verified: !!user.verifiedAt
     };
 
     return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+}
+
+async function createPasswordResetToken(email) {
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+    const normalizedEmail = email.trim().toLowerCase();
+    const token = generatePasswordResetToken();
+
+    try {
+        const result = await session.run(
+            `
+            MATCH (u:User {email: $email})
+            SET u.passwordResetToken = $token,
+                u.passwordResetExpiresAt = datetime() + duration('PT1H'),
+                u.updatedAt = datetime()
+            RETURN u
+        `,
+            { email: normalizedEmail, token }
+        );
+
+        if (!result.records.length) return null;
+        return token;
+    } finally {
+        await session.close();
+    }
+}
+
+async function resetPasswordByToken(token, newPassword) {
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    try {
+        const result = await session.run(
+            `
+            MATCH (u:User {passwordResetToken: $token})
+            WHERE u.passwordResetExpiresAt IS NULL
+               OR u.passwordResetExpiresAt > datetime()
+            SET u.passwordHash = $passwordHash,
+                u.passwordResetToken = null,
+                u.passwordResetExpiresAt = null,
+                u.updatedAt = datetime()
+            RETURN u
+        `,
+            { token, passwordHash }
+        );
+
+        if (!result.records.length) return null;
+        return mapUser(result.records[0].get('u'));
+    } finally {
+        await session.close();
+    }
 }
 
 function mapUser(node) {
@@ -172,7 +237,9 @@ module.exports = {
     findUserById,
     verifyEmailByToken,
     validatePassword,
-    createJwtForUser
+    createJwtForUser,
+    createPasswordResetToken,
+    resetPasswordByToken
 };
 
 

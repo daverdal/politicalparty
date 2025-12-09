@@ -86,8 +86,56 @@ async function sendVerificationEmail({ to, token }) {
     });
 }
 
+async function sendPasswordResetEmail({ to, token }) {
+    const appUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+    const from = process.env.EMAIL_FROM || 'no-reply@political-party.local';
+
+    const resetUrl = `${appUrl}/api/auth/reset-password?token=${encodeURIComponent(token)}`;
+
+    const subject = 'Reset your password for Political Party';
+    const text = [
+        'You requested a password reset for your Political Party account.',
+        '',
+        'If this was you, click the link below to set a new password:',
+        resetUrl,
+        '',
+        'If you did NOT request this, you can safely ignore this email.'
+    ].join('\n');
+
+    const html = `
+        <p>You requested a password reset for your Political Party account.</p>
+        <p>If this was you, click the button below to set a new password:</p>
+        <p>
+            <a href="${resetUrl}" style="display:inline-block;padding:10px 16px;background:#1f7a8c;color:#ffffff;text-decoration:none;border-radius:4px;">
+                Reset Password
+            </a>
+        </p>
+        <p>Or copy and paste this link into your browser:</p>
+        <p><code>${resetUrl}</code></p>
+        <p>If you did NOT request this, you can safely ignore this email.</p>
+    `;
+
+    const tx = getTransporter();
+
+    if (!tx) {
+        // Fallback for development: log the URL so it can be clicked manually
+        // eslint-disable-next-line no-console
+        console.log(`[email] Password reset email for ${to}: ${resetUrl}`);
+        return;
+    }
+
+    await tx.sendMail({
+        from,
+        to,
+        subject,
+        text,
+        html
+    });
+}
+
 module.exports = {
-    sendVerificationEmail
+    sendVerificationEmail,
+    sendPasswordResetEmail
 };
 
 

@@ -189,6 +189,116 @@ router.get('/verify-email', async (req, res) => {
     }
 });
 
+// POST /api/auth/request-password-reset
+router.post('/request-password-reset', loginLimiter, async (req, res) => {
+    const { email } = req.body || {};
+
+    if (!email) {
+        return res.status(400).json({ error: 'Email is required.' });
+    }
+
+    try {
+        const normalizedEmail = String(email).trim().toLowerCase();
+
+        // Always respond with success to avoid leaking which emails exist
+        try {
+            const user = await authService.findUserByEmail(normalizedEmail);
+            if (user) {
+                const token = await authService.createPasswordResetToken(normalizedEmail);
+                if (token) {
+                    await emailService.sendPasswordResetEmail({ to: normalizedEmail, token });
+                }
+            }
+        } catch (innerErr) {
+            // Log but do not leak details to the client
+            // eslint-disable-next-line no-console
+            console.error('[auth] request-password-reset error:', innerErr);
+        }
+
+        return res.json({
+            success: true,
+            message: 'If that email is registered, a password reset link has been sent.'
+        });
+    } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('[auth] request-password-reset outer error:', err);
+        return res.status(500).json({ error: 'Unable to process password reset right now.' });
+    }
+});
+
+// GET /api/auth/reset-password?token=...
+router.get('/reset-password', (req, res) => {
+    const { token } = req.query;
+
+    if (!token) {
+        return res
+            .status(400)
+            .send('<h1>Password reset error</h1><p>Missing or invalid reset token.</p>');
+    }
+
+    // Simple HTML form to set a new password
+    return res.send(`
+        <h1>Reset your password</h1>
+        <form method="POST" action="/api/auth/reset-password" style="max-width:400px;">
+            <input type="hidden" name="token" value="${String(token).replace(/"/g, '&quot;')}" />
+            <div style="margin-bottom:8px;">
+                <label>New password<br/>
+                    <input type="password" name="password" minlength="8" required />
+                </label>
+            </div>
+            <div style="margin-bottom:8px;">
+                <label>Confirm password<br/>
+                    <input type="password" name="confirmPassword" minlength="8" required />
+                </label>
+            </div>
+            <button type="submit">Set new password</button>
+        </form>
+    `);
+});
+
+// POST /api/auth/reset-password
+router.post('/reset-password', async (req, res) => {
+    const { token, password, confirmPassword } = req.body || {};
+
+    if (!token || !password) {
+        return res
+            .status(400)
+            .send('<h1>Password reset error</h1><p>Missing token or password.</p>');
+    }
+
+    if (password !== confirmPassword) {
+        return res
+            .status(400)
+            .send('<h1>Password reset error</h1><p>Passwords do not match.</p>');
+    }
+
+    if (typeof password !== 'string' || password.length < 8) {
+        return res
+            .status(400)
+            .send('<h1>Password reset error</h1><p>Password must be at least 8 characters long.</p>');
+    }
+
+    try {
+        const user = await authService.resetPasswordByToken(token, password);
+        if (!user) {
+            return res
+                .status(400)
+                .send('<h1>Password reset error</h1><p>This reset link is invalid or has expired.</p>');
+        }
+
+        const appUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+        return res.send(
+            `<h1>Password updated</h1><p>Your password has been changed. You can now close this window and sign in at <a href="${appUrl}">${appUrl}</a>.</p>`
+        );
+    } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('[auth] reset-password error:', err);
+        return res
+            .status(500)
+            .send('<h1>Password reset error</h1><p>Something went wrong. Please try again later.</p>');
+    }
+});
+
 module.exports = router;
 
 

@@ -108,7 +108,24 @@ router.put('/:id', authenticate, requireVerifiedUser, async (req, res) => {
 // DELETE /api/users/:id - Delete a user (admin only)
 router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
     const session = getSession();
+    const OWNER_EMAIL = (process.env.OWNER_EMAIL || process.env.ADMIN_EMAIL || '').trim().toLowerCase() || null;
+
     try {
+        // Check if this user is the owner account
+        const check = await session.run(
+            'MATCH (u:User {id: $id}) RETURN u.email as email',
+            { id: req.params.id }
+        );
+
+        if (!check.records.length) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const email = (check.records[0].get('email') || '').toString().trim().toLowerCase();
+        if (OWNER_EMAIL && email === OWNER_EMAIL) {
+            return res.status(403).json({ error: 'Owner account cannot be deleted.' });
+        }
+
         const result = await session.run(
             'MATCH (u:User {id: $id}) DETACH DELETE u RETURN count(u) as deleted',
             { id: req.params.id }
