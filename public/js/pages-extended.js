@@ -872,8 +872,8 @@ App.pages.referendums = async function() {
         if (!referendums.length) {
             content.innerHTML = `
                 <header class="page-header">
-                    <h1 class="page-title">📑 Referendums</h1>
-                    <p class="page-subtitle">Questions and arguments from the community</p>
+                <h1 class="page-title">📑 Referendums</h1>
+                <p class="page-subtitle">Questions and perspectives from the community</p>
                 </header>
                 <div class="card"><div class="card-body">
                     <p class="empty-text">No referendums have been created yet.</p>
@@ -887,7 +887,7 @@ App.pages.referendums = async function() {
         content.innerHTML = `
             <header class="page-header">
                 <h1 class="page-title">📑 Referendums</h1>
-                <p class="page-subtitle">Read the question, explore arguments, and add your voice.</p>
+                <p class="page-subtitle">Read the question, explore perspectives, and add your voice.</p>
             </header>
 
             <div class="cards-grid">
@@ -904,7 +904,7 @@ App.pages.referendums = async function() {
                                     <div class="list-item-title">${q.title}</div>
                                     <div class="list-item-meta">
                                         <span>${q.locationName || q.scope || 'All members'}</span>
-                                        <span class="list-item-stat">${q.argumentCount || 0} arguments</span>
+                                        <span class="list-item-stat">${q.argumentCount || 0} perspectives</span>
                                     </div>
                                 </div>
                             `
@@ -968,7 +968,7 @@ App.loadReferendumDetail = async function(refId) {
 
         const renderArgumentList = (list, sideLabel) => {
             if (!list.length) {
-                return `<p class="empty-text">No ${sideLabel} arguments yet.</p>`;
+                return `<p class="empty-text">No ${sideLabel} perspectives yet.</p>`;
             }
             return list
                 .map(
@@ -998,7 +998,7 @@ App.loadReferendumDetail = async function(refId) {
 
                 <div class="card" style="margin-top: 20px;">
                     <div class="card-header">
-                        <h3 class="card-title">Add Your Argument</h3>
+                        <h3 class="card-title">Share Your Perspective</h3>
                     </div>
                     <div class="card-body">
                         <form id="argument-form">
@@ -1011,7 +1011,7 @@ App.loadReferendumDetail = async function(refId) {
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label>Your argument</label>
+                                <label>Your perspective</label>
                                 <textarea name="body" class="form-input" rows="4" required placeholder="Explain your reasoning..."></textarea>
                             </div>
                             <div class="form-group">
@@ -1022,7 +1022,7 @@ App.loadReferendumDetail = async function(refId) {
                                     <label><input type="radio" name="visibility" value="ANON"> Anonymous (shown as \"Anonymous member\")</label>
                                 </div>
                             </div>
-                            <button type="submit" class="btn btn-primary">Post argument</button>
+                            <button type="submit" class="btn btn-primary">Post perspective</button>
                             <div id="argument-feedback" class="form-feedback"></div>
                         </form>
                     </div>
@@ -1067,7 +1067,7 @@ App.loadReferendumDetail = async function(refId) {
                 const visibility = formData.get('visibility') || 'PUBLIC';
 
                 if (!bodyText) {
-                    feedback.textContent = 'Please write an argument before submitting.';
+                    feedback.textContent = 'Please write a perspective before submitting.';
                     feedback.classList.add('error');
                     return;
                 }
@@ -1079,12 +1079,12 @@ App.loadReferendumDetail = async function(refId) {
                         visibility
                     });
                     if (!response.ok) {
-                        feedback.textContent = data.error || 'Could not save argument.';
+                        feedback.textContent = data.error || 'Could not save perspective.';
                         feedback.classList.add('error');
                         return;
                     }
                     form.reset();
-                    feedback.textContent = 'Argument posted.';
+                    feedback.textContent = 'Perspective posted.';
                     feedback.classList.remove('error');
                     feedback.classList.add('success');
                     // Reload arguments
