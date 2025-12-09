@@ -555,6 +555,45 @@ App.pages.profile = async function() {
             </div>
         `;
         
+        // Wire Create Referendum form (admin-only)
+        const createRefForm = document.getElementById('create-ref-form');
+        if (createRefForm) {
+            createRefForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const feedback = document.getElementById('create-ref-feedback');
+                feedback.textContent = '';
+                const formData = new FormData(createRefForm);
+                const title = (formData.get('title') || '').toString().trim();
+                const body = (formData.get('body') || '').toString().trim();
+                const scope = (formData.get('scope') || 'national').toString();
+
+                if (!title || !body) {
+                    feedback.textContent = 'Title and description are required.';
+                    feedback.classList.add('error');
+                    return;
+                }
+
+                try {
+                    const { response, data } = await App.apiPost('/referendums', {
+                        title,
+                        body,
+                        scope
+                    });
+                    if (!response.ok) {
+                        feedback.textContent = data.error || 'Could not create referendum.';
+                        feedback.classList.add('error');
+                        return;
+                    }
+                    feedback.textContent = 'Referendum created.';
+                    feedback.classList.remove('error');
+                    feedback.classList.add('success');
+                } catch (err) {
+                    feedback.textContent = err.message;
+                    feedback.classList.add('error');
+                }
+            });
+        }
+
         // Location selector handlers
         const provinceSelect = document.getElementById('province-select');
         const federalSelect = document.getElementById('federal-riding-select');
@@ -883,13 +922,13 @@ App.pages.referendums = async function() {
         }
 
         const first = referendums[0];
-
+        
         content.innerHTML = `
             <header class="page-header">
                 <h1 class="page-title">📑 Referendums</h1>
                 <p class="page-subtitle">Read the question, explore perspectives, and add your voice.</p>
             </header>
-
+            
             <div class="cards-grid">
                 <div class="card">
                     <div class="card-header">
@@ -913,7 +952,7 @@ App.pages.referendums = async function() {
                         </div>
                     </div>
                 </div>
-
+                
                 <div class="card" id="referendum-detail-card" style="grid-column: span 2;">
                     <div class="card-body" id="referendum-detail-body">
                         <!-- Filled by App.loadReferendumDetail -->
@@ -1228,6 +1267,36 @@ App.pages.admin = async function() {
                             <button class="admin-btn primary" onclick="App.createNewConvention()" style="margin-top: 12px;">➕ Create Convention</button>
                         </div>
                         <div id="create-conv-result" style="margin-top: 12px; display: none;"></div>
+                    </div>
+                </div>
+
+                <!-- Create Referendum Card -->
+                <div class="card">
+                    <div class="card-header"><h3 class="card-title">📑 Create Referendum</h3></div>
+                    <div class="card-body">
+                        <p class="card-subtitle" style="margin-bottom: 8px;">
+                            Create a new question for members to share perspectives on.
+                        </p>
+                        <form id="create-ref-form">
+                            <div class="form-group">
+                                <label>Title</label>
+                                <input type="text" name="title" class="form-input" placeholder="Should we adopt ranked-choice voting for party leadership?" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Description</label>
+                                <textarea name="body" class="form-input" rows="3" placeholder="Explain what this referendum is about..." required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Scope</label>
+                                <select name="scope" class="form-select">
+                                    <option value="national">National (all members)</option>
+                                    <option value="province">Province-wide</option>
+                                    <option value="riding">Riding-level</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="admin-btn primary">Create Referendum</button>
+                            <div id="create-ref-feedback" class="form-feedback"></div>
+                        </form>
                     </div>
                 </div>
                 
