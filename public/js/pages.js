@@ -179,7 +179,7 @@ App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = fal
             ${showMapLink ? `
             <div class="panel-toolbar">
                 <span class="panel-toolbar-title">${name}</span>
-                <button class="map-link-btn" id="ideas-map-link">🗺️ Map (coming soon)</button>
+                <button class="map-link-btn" id="ideas-map-link">🗺️ Map</button>
             </div>
             ` : ''}
             ${ideas.map((idea, index) => `
@@ -202,28 +202,30 @@ App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = fal
             });
         });
         
-        // Map link (placeholder)
+        // Map link
         const mapLink = document.getElementById('ideas-map-link');
         if (mapLink) {
             mapLink.addEventListener('click', () => {
-                const detail = document.getElementById(`${pageId}-detail`);
-                if (!detail) return;
-                const existing = detail.querySelector('.province-map-placeholder');
-                if (existing) {
-                    existing.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    return;
+                if (type === 'provinces') {
+                    App.showProvinceMap(pageId, id, name);
+                } else {
+                    const detail = document.getElementById(`${pageId}-detail`);
+                    if (!detail) return;
+                    let placeholder = detail.querySelector('.province-map-placeholder');
+                    if (!placeholder) {
+                        placeholder = document.createElement('div');
+                        placeholder.className = 'province-map-placeholder';
+                        placeholder.innerHTML = `
+                            <strong>🗺️ Country Map (coming soon)</strong>
+                            <p>Once map data is loaded, you’ll see an overview of provinces with riding pins.</p>
+                        `;
+                        detail.appendChild(placeholder);
+                    }
+                    placeholder.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
-                const div = document.createElement('div');
-                div.className = 'province-map-placeholder';
-                div.innerHTML = `
-                    <strong>🗺️ Province Map (coming soon)</strong>
-                    <p>Here you’ll see an interactive map of ${name}, with pins for each riding once we load Saskatchewan, Alberta, and BC data.</p>
-                `;
-                detail.appendChild(div);
-                div.scrollIntoView({ behavior: 'smooth', block: 'start' });
             });
         }
-
+        
         // Auto-select first item if requested
         if (autoSelectFirst && ideas.length > 0) {
             const firstItem = document.querySelector(`#${pageId}-list .list-item`);
@@ -255,6 +257,94 @@ App.showIdeaDetailPanel = function(idea) {
             ${idea.tags?.length ? `<div class="detail-tags">${idea.tags.map(tag => `<span class="tag accent">${tag}</span>`).join('')}</div>` : ''}
         </div>
     `;
+};
+
+// Province map (using First Nations lat/lon when available)
+App.showProvinceMap = async function(pageId, provinceId, provinceName) {
+    const detail = document.getElementById(`${pageId}-detail`);
+    if (!detail) return;
+
+    // Remove any previous placeholder
+    const existingPlaceholder = detail.querySelector('.province-map-placeholder');
+    if (existingPlaceholder) {
+        existingPlaceholder.remove();
+    }
+
+    // Remove previous canvas
+    const existingCanvas = detail.querySelector('.province-map-canvas');
+    if (existingCanvas && existingCanvas.parentElement) {
+        existingCanvas.parentElement.remove();
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'province-map-wrapper';
+    const title = document.createElement('div');
+    title.className = 'panel-toolbar-title';
+    title.textContent = `Map of ${provinceName} (First Nations positions)`;
+    const canvas = document.createElement('div');
+    canvas.className = 'province-map-canvas';
+
+    wrapper.appendChild(title);
+    wrapper.appendChild(canvas);
+    detail.appendChild(wrapper);
+
+    try {
+        const fns = await App.api(`/locations/provinces/${provinceId}/first-nations`);
+        const points = [];
+
+        const getLatLon = (n) => {
+            const latRaw = n.lat ?? n.latitude ?? n.Latitude ?? n.LAT;
+            const lonRaw = n.lon ?? n.lng ?? n.longitude ?? n.Longitude ?? n.LON;
+            const lat = typeof latRaw === 'number' ? latRaw : parseFloat(latRaw);
+            const lon = typeof lonRaw === 'number' ? lonRaw : parseFloat(lonRaw);
+            if (!isFinite(lat) || !isFinite(lon)) return null;
+            return { lat, lon, name: n.name || n.id || 'Community' };
+        };
+
+        for (const n of fns) {
+            const p = getLatLon(n);
+            if (p) points.push(p);
+        }
+
+        if (!points.length) {
+            canvas.innerHTML = `
+                <div class="province-map-empty">
+                    No coordinate data found yet for First Nations in ${provinceName}. Once we add lat/long values in Neo4j, this will render a live map.
+                </div>
+            `;
+            return;
+        }
+
+        const lats = points.map((p) => p.lat);
+        const lons = points.map((p) => p.lon);
+        const minLat = Math.min(...lats);
+        const maxLat = Math.max(...lats);
+        const minLon = Math.min(...lons);
+        const maxLon = Math.max(...lons);
+        const latRange = maxLat - minLat || 1;
+        const lonRange = maxLon - minLon || 1;
+
+        points.forEach((p) => {
+            const x = ((p.lon - minLon) / lonRange) * 100;
+            const y = (1 - (p.lat - minLat) / latRange) * 100;
+
+            const dot = document.createElement('div');
+            dot.className = 'province-map-dot';
+            dot.style.left = `${x}%`;
+            dot.style.top = `${y}%`;
+
+            const label = document.createElement('div');
+            label.className = 'province-map-dot-label';
+            label.textContent = p.name;
+            label.style.left = `${x}%`;
+            label.style.top = `${y}%`;
+
+            canvas.appendChild(dot);
+            canvas.appendChild(label);
+        });
+    } catch (err) {
+        canvas.innerHTML = `<div class="province-map-empty">Error loading map data: ${err.message}</div>`;
+    }
 };
 
 // ============================================

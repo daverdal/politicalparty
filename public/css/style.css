@@ -887,6 +887,38 @@ a:hover {
   color: var(--text-secondary);
 }
 
+.province-map-canvas {
+  margin-top: 12px;
+  height: 260px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: radial-gradient(circle at top, rgba(0, 168, 255, 0.15), transparent 60%), var(--bg-tertiary);
+  position: relative;
+  overflow: hidden;
+}
+
+.province-map-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-secondary);
+  box-shadow: 0 0 6px rgba(0, 168, 255, 0.9);
+}
+
+.province-map-dot-label {
+  position: absolute;
+  transform: translate(10px, -4px);
+  font-size: 11px;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.province-map-empty {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
 /* Location Tree */
 .location-tree {
   font-size: 14px;
