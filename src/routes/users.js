@@ -10,6 +10,7 @@ const userService = require('../services/userService');
 const { getSession } = require('../config/db');
 const { authenticate, requireVerifiedUser, requireAdmin } = require('../middleware/auth');
 const notificationService = require('../services/notificationService');
+const badgeService = require('../services/badgeService');
 
 // GET /api/users - Get all users
 router.get('/', async (req, res) => {
@@ -189,6 +190,16 @@ router.post('/:id/endorse', authenticate, requireVerifiedUser, async (req, res) 
         res.status(201).json(result);
     } catch (error) {
         res.status(400).json({ error: error.message });
+    }
+});
+
+// GET /api/users/:id/badges - read-only badge shelf for a user
+router.get('/:id/badges', async (req, res) => {
+    try {
+        const badges = await badgeService.getBadgesForUser(req.params.id);
+        res.json(badges);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 

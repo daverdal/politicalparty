@@ -360,10 +360,11 @@ App.pages.profile = async function() {
     content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     
     try {
-        const [userDetails, conventions, provinces] = await Promise.all([
+        const [userDetails, conventions, provinces, badges] = await Promise.all([
             App.api(`/users/${App.currentUser.id}`),
             App.api('/conventions'),
-            App.api('/locations/provinces')
+            App.api('/locations/provinces'),
+            App.api(`/users/${App.currentUser.id}/badges`)
         ]);
         
         const activeConv = conventions.find(c => c.status !== 'completed');
@@ -404,6 +405,30 @@ App.pages.profile = async function() {
                     <div class="profile-stats">
                         <div class="profile-stat"><span class="profile-stat-value">${userDetails.points || 0}</span><span class="profile-stat-label">Points</span></div>
                         <div class="profile-stat"><span class="profile-stat-value">${userDetails.endorsementCount || 0}</span><span class="profile-stat-label">Endorsements</span></div>
+                    </div>
+
+                    <div class="badge-shelf">
+                        <div class="badge-shelf-title">Badges</div>
+                        ${
+                            badges && badges.length
+                                ? `
+                            <div class="badge-row">
+                                ${badges
+                                    .map((b) => {
+                                        const scopeLabel = b.scope === 'local' ? 'Local' : 'Global';
+                                        const levelLabel = b.level ? b.level.charAt(0).toUpperCase() + b.level.slice(1) : '';
+                                        return `
+                                            <span class="badge-chip ${b.scope}">
+                                                <span class="badge-chip-level">${levelLabel}</span>
+                                                <span class="badge-chip-scope">${scopeLabel}</span>
+                                            </span>
+                                        `;
+                                    })
+                                    .join('')}
+                            </div>
+                        `
+                                : '<p class="empty-text">Earn badges by collecting local and global support for your ideas.</p>'
+                        }
                     </div>
                     
                     <div class="location-selector-section">
