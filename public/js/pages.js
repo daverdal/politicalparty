@@ -958,7 +958,15 @@ App.pages.map = async function() {
             <p class="page-subtitle">Explore First Nations across all provinces and territories</p>
         </header>
         <div class="canada-map-layout">
-            <aside class="canada-map-controls">
+            <section class="canada-map-main">
+                <div class="province-map-canvas" id="canada-map-canvas">
+                    <div class="province-map-inner" id="canada-map-inner"></div>
+                </div>
+                <div class="province-map-info" id="canada-map-info">
+                    Hover or click a dot to see First Nation details.
+                </div>
+            </section>
+            <aside class="canada-map-controls canada-map-controls-bottom">
                 <h3 class="canada-map-controls-title">Layers</h3>
                 <label class="canada-map-layer">
                     <input type="checkbox" id="map-layer-firstnations" checked>
@@ -981,14 +989,6 @@ App.pages.map = async function() {
                     <span>Idea authors (coming soon)</span>
                 </label>
             </aside>
-            <section class="canada-map-main">
-                <div class="province-map-canvas" id="canada-map-canvas">
-                    <div class="province-map-inner" id="canada-map-inner"></div>
-                </div>
-                <div class="province-map-info" id="canada-map-info">
-                    Hover or click a dot to see First Nation details.
-                </div>
-            </section>
         </div>
     `;
 
@@ -1070,6 +1070,46 @@ App.pages.map = async function() {
             console.warn('Canada map aspect adjustment failed:', e);
         }
 
+        // Estimate a small rotation so that the 49th parallel (southern border)
+        // appears horizontal on screen. We approximate this by looking at
+        // First Nations whose latitude is near 49° and fitting a line.
+        let initialRotationDeg = 0;
+        try {
+            const borderCandidates = allPoints.filter((p) => p.lat >= 48 && p.lat <= 50);
+            if (borderCandidates.length >= 2) {
+                let sumX = 0;
+                let sumY = 0;
+                let sumXY = 0;
+                let sumXX = 0;
+                const n = borderCandidates.length;
+                borderCandidates.forEach((p) => {
+                    const x = ((p.lon - minLon) / lonRange) * 100;
+                    const y = (1 - (p.lat - minLat) / latRange) * 100;
+                    sumX += x;
+                    sumY += y;
+                    sumXY += x * y;
+                    sumXX += x * x;
+                });
+                const denom = n * sumXX - sumX * sumX;
+                if (Math.abs(denom) > 1e-6) {
+                    const slope = (n * sumXY - sumX * sumY) / denom;
+                    const angleRad = Math.atan(slope);
+                    // Rotate opposite the fitted slope so the border is flat.
+                    initialRotationDeg = -angleRad * (180 / Math.PI);
+                    // Guard against any wild values if data is noisy.
+                    if (!Number.isFinite(initialRotationDeg)) {
+                        initialRotationDeg = 0;
+                    } else {
+                        initialRotationDeg = Math.max(-25, Math.min(25, initialRotationDeg));
+                    }
+                }
+            }
+        } catch (e) {
+            // eslint-disable-next-line no-console
+            console.warn('Canada border rotation calculation failed:', e);
+            initialRotationDeg = 0;
+        }
+
         // Create points
         allPoints.forEach((p) => {
             const x = ((p.lon - minLon) / lonRange) * 100;
@@ -1109,11 +1149,13 @@ App.pages.map = async function() {
             layers.FirstNation.push(point);
         });
 
-        // Pan + zoom (same behavior as province map)
+        // Pan + zoom (same behavior as province map) with a fixed rotation
+        // so the southern border line appears horizontal.
         const state = {
             scale: 0.8,
             translateX: 0,
             translateY: 0,
+            rotation: initialRotationDeg,
             panning: false,
             startX: 0,
             startY: 0,
@@ -1122,7 +1164,7 @@ App.pages.map = async function() {
         };
 
         const applyTransform = () => {
-            inner.style.transform = `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale})`;
+            inner.style.transform = `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale}) rotate(${state.rotation}deg)`;
         };
 
         canvas.addEventListener('wheel', (e) => {

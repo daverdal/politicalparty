@@ -21,8 +21,8 @@ router.get('/', async (req, res) => {
     }
 });
 
-// POST /api/referendums - create a new question (admin only)
-router.post('/', authenticate, requireAdmin, async (req, res) => {
+// POST /api/referendums - create a new question (verified members)
+router.post('/', authenticate, requireVerifiedUser, async (req, res) => {
     const { title, body, scope, locationId, opensAt, closesAt } = req.body;
     if (!title || !body) {
         return res.status(400).json({ error: 'Title and body are required' });

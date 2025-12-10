@@ -1001,22 +1001,29 @@ a:hover {
 
 /* Canada Map page */
 .canada-map-layout {
-  display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: 24px;
-  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .canada-map-controls {
-  padding: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
   font-size: 13px;
 }
 
+.canada-map-controls-bottom {
+  margin-top: 4px;
+}
+
 .canada-map-controls-title {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
@@ -1026,7 +1033,7 @@ a:hover {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 6px;
+  margin-top: 0;
   color: var(--text-secondary);
 }
 

@@ -592,45 +592,15 @@ App.pages.profile = async function() {
             </div>
         `;
         
-        // Wire Create Referendum form (admin-only)
-        const createRefForm = document.getElementById('create-ref-form');
-        if (createRefForm) {
-            createRefForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const feedback = document.getElementById('create-ref-feedback');
-                feedback.textContent = '';
-                const formData = new FormData(createRefForm);
-                const title = (formData.get('title') || '').toString().trim();
-                const body = (formData.get('body') || '').toString().trim();
-                const scope = (formData.get('scope') || 'national').toString();
-
-                if (!title || !body) {
-                    feedback.textContent = 'Title and description are required.';
-                    feedback.classList.add('error');
-                    return;
-                }
-
-                try {
-                    const { response, data } = await App.apiPost('/referendums', {
-                        title,
-                        body,
-                        scope
-                    });
-                    if (!response.ok) {
-                        feedback.textContent = data.error || 'Could not create referendum.';
-                        feedback.classList.add('error');
-                        return;
-                    }
-                    feedback.textContent = 'Referendum created.';
-                    feedback.classList.remove('error');
-                    feedback.classList.add('success');
-                } catch (err) {
-                    feedback.textContent = err.message;
-                    feedback.classList.add('error');
-                }
+        // Wire Create Referendum form in Admin card (reuses shared helper)
+        if (typeof App.wireCreateReferendumForm === 'function') {
+            App.wireCreateReferendumForm({
+                formId: 'create-ref-form-admin',
+                feedbackId: 'create-ref-feedback-admin',
+                buttonClass: 'admin-btn primary'
             });
         }
-
+        
         // Location selector handlers
         const provinceSelect = document.getElementById('province-select');
         const federalSelect = document.getElementById('federal-riding-select');
@@ -935,6 +905,82 @@ App.switchConventionTab = function(tabName) {
 };
 
 // ============================================
+// SHARED HELPERS
+// ============================================
+
+/**
+ * Wire up a Create Referendum form so it can POST to /referendums.
+ * Options allow re-use on the Referendums page and Admin page.
+ */
+App.wireCreateReferendumForm = function(options = {}) {
+    const {
+        formId = 'create-ref-form',
+        feedbackId = 'create-ref-feedback'
+    } = options;
+
+    const existing = document.getElementById(formId);
+    if (!existing) return;
+
+    // Clone to avoid stacking multiple listeners if this is called more than once.
+    const form = existing.cloneNode(true);
+    existing.parentNode.replaceChild(form, existing);
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) {
+            return;
+        }
+
+        const feedback = document.getElementById(feedbackId);
+        if (feedback) {
+            feedback.textContent = '';
+            feedback.classList.remove('error', 'success');
+        }
+
+        const formData = new FormData(form);
+        const title = (formData.get('title') || '').toString().trim();
+        const body = (formData.get('body') || '').toString().trim();
+        const scope = (formData.get('scope') || 'national').toString();
+
+        if (!title || !body) {
+            if (feedback) {
+                feedback.textContent = 'Title and description are required.';
+                feedback.classList.add('error');
+            }
+            return;
+        }
+
+        try {
+            const { response, data } = await App.apiPost('/referendums', {
+                title,
+                body,
+                scope
+            });
+            if (!response.ok) {
+                if (feedback) {
+                    feedback.textContent = (data && data.error) || 'Could not create referendum.';
+                    feedback.classList.add('error');
+                }
+                return;
+            }
+
+            form.reset();
+            if (feedback) {
+                feedback.textContent = 'Referendum created.';
+                feedback.classList.remove('error');
+                feedback.classList.add('success');
+            }
+        } catch (err) {
+            if (feedback) {
+                feedback.textContent = err.message || 'Unexpected error creating referendum.';
+                feedback.classList.add('error');
+            }
+        }
+    });
+};
+
+// ============================================
 // REFERENDUMS PAGE
 // ============================================
 
@@ -944,28 +990,44 @@ App.pages.referendums = async function() {
 
     try {
         const referendums = await App.api('/referendums');
+        const hasAny = referendums.length > 0;
 
-        if (!referendums.length) {
-            content.innerHTML = `
-                <header class="page-header">
-                <h1 class="page-title">📑 Referendums</h1>
-                <p class="page-subtitle">Questions and perspectives from the community</p>
-                </header>
-                <div class="card"><div class="card-body">
-                    <p class="empty-text">No referendums have been created yet.</p>
-                </div></div>
-            `;
-            return;
-        }
-
-        const first = referendums[0];
-        
         content.innerHTML = `
             <header class="page-header">
                 <h1 class="page-title">📑 Referendums</h1>
-                <p class="page-subtitle">Read the question, explore perspectives, and add your voice.</p>
+                <p class="page-subtitle">Ask big questions, explore perspectives, and add your voice.</p>
             </header>
             
+            <div class="card">
+                <div class="card-header"><h3 class="card-title">Create a Referendum</h3></div>
+                <div class="card-body">
+                    <p class="card-subtitle" style="margin-bottom: 8px;">
+                        Any signed-in member can propose a new question. Email verification may be required to post.
+                    </p>
+                    <form id="create-ref-form">
+                        <div class="form-group">
+                            <label>Title</label>
+                            <input type="text" name="title" class="form-input" placeholder="Should we adopt ranked-choice voting for party leadership?" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea name="body" class="form-input" rows="3" placeholder="Explain what this referendum is about..." required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Scope</label>
+                            <select name="scope" class="form-select">
+                                <option value="national">National (all members)</option>
+                                <option value="province">Province-wide</option>
+                                <option value="riding">Riding-level</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create Referendum</button>
+                        <div id="create-ref-feedback" class="form-feedback"></div>
+                    </form>
+                </div>
+            </div>
+            
+            ${hasAny ? `
             <div class="cards-grid">
                 <div class="card">
                     <div class="card-header">
@@ -996,25 +1058,39 @@ App.pages.referendums = async function() {
                     </div>
                 </div>
             </div>
+            ` : `
+            <div class="card" style="margin-top: 16px;">
+                <div class="card-body">
+                    <p class="empty-text">No referendums have been created yet. Be the first to ask a question!</p>
+                </div>
+            </div>
+            `}
         `;
 
-        // Wire list clicks
-        document.querySelectorAll('#referendum-list .list-item').forEach((item) => {
-            item.addEventListener('click', () => {
-                document
-                    .querySelectorAll('#referendum-list .list-item')
-                    .forEach((i) => i.classList.remove('selected'));
-                item.classList.add('selected');
-                const id = item.getAttribute('data-ref-id');
-                App.loadReferendumDetail(id);
-            });
-        });
+        // Wire Create Referendum form for this page
+        if (typeof App.wireCreateReferendumForm === 'function') {
+            App.wireCreateReferendumForm();
+        }
 
-        // Auto-select first
-        const firstItem = document.querySelector('#referendum-list .list-item');
-        if (firstItem) {
-            firstItem.classList.add('selected');
-            App.loadReferendumDetail(first.id);
+        // Wire list clicks / auto-select first (when any referendums exist)
+        if (hasAny) {
+            document.querySelectorAll('#referendum-list .list-item').forEach((item) => {
+                item.addEventListener('click', () => {
+                    document
+                        .querySelectorAll('#referendum-list .list-item')
+                        .forEach((i) => i.classList.remove('selected'));
+                    item.classList.add('selected');
+                    const id = item.getAttribute('data-ref-id');
+                    App.loadReferendumDetail(id);
+                });
+            });
+
+            const first = referendums[0];
+            const firstItem = document.querySelector('#referendum-list .list-item');
+            if (firstItem) {
+                firstItem.classList.add('selected');
+                App.loadReferendumDetail(first.id);
+            }
         }
     } catch (err) {
         content.innerHTML = `<div class="card"><div class="card-body">Error: ${err.message}</div></div>`;
@@ -1307,14 +1383,14 @@ App.pages.admin = async function() {
                     </div>
                 </div>
 
-                <!-- Create Referendum Card -->
+                <!-- Create Referendum Card (Admin can also create from here) -->
                 <div class="card">
                     <div class="card-header"><h3 class="card-title">📑 Create Referendum</h3></div>
                     <div class="card-body">
                         <p class="card-subtitle" style="margin-bottom: 8px;">
                             Create a new question for members to share perspectives on.
                         </p>
-                        <form id="create-ref-form">
+                        <form id="create-ref-form-admin">
                             <div class="form-group">
                                 <label>Title</label>
                                 <input type="text" name="title" class="form-input" placeholder="Should we adopt ranked-choice voting for party leadership?" required>
@@ -1332,7 +1408,7 @@ App.pages.admin = async function() {
                                 </select>
                             </div>
                             <button type="submit" class="admin-btn primary">Create Referendum</button>
-                            <div id="create-ref-feedback" class="form-feedback"></div>
+                            <div id="create-ref-feedback-admin" class="form-feedback"></div>
                         </form>
                     </div>
                 </div>
