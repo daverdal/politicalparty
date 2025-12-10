@@ -192,6 +192,9 @@ App.showAuthModal = function(initialTab = 'login') {
                         <p class="auth-help">
                             Use the email and password you signed up with. We do not use Google or other third-party sign-in.
                         </p>
+                        <p class="auth-help">
+                            <button type="button" class="link-button" id="auth-forgot-password-btn">Forgot your password?</button>
+                        </p>
                         <button type="submit" class="btn btn-primary auth-submit-btn">Sign in</button>
                         <div class="auth-feedback" id="auth-login-feedback"></div>
                     </form>
@@ -275,6 +278,40 @@ App.showAuthModal = function(initialTab = 'login') {
             submitBtn.textContent = 'Sign in';
         }
     });
+
+    // Forgot password
+    const forgotBtn = modal.querySelector('#auth-forgot-password-btn');
+    if (forgotBtn) {
+        forgotBtn.addEventListener('click', async () => {
+            const loginFeedback = modal.querySelector('#auth-login-feedback');
+            loginFeedback.textContent = '';
+            loginFeedback.classList.remove('error');
+
+            const emailInput = loginForm.querySelector('input[name="email"]');
+            const email = emailInput ? String(emailInput.value).trim() : '';
+
+            if (!email) {
+                loginFeedback.textContent = 'Enter your email above first, then click "Forgot your password?".';
+                loginFeedback.classList.add('error');
+                return;
+            }
+
+            try {
+                const { response, data } = await App.apiPost('/auth/request-password-reset', { email });
+                if (!response.ok) {
+                    loginFeedback.textContent = (data && data.error) || 'Unable to start password reset.';
+                    loginFeedback.classList.add('error');
+                    return;
+                }
+
+                loginFeedback.textContent = data.message || 'If that email is registered, a reset link has been sent.';
+                loginFeedback.classList.remove('error');
+            } catch (err) {
+                loginFeedback.textContent = err.message;
+                loginFeedback.classList.add('error');
+            }
+        });
+    }
 
     // Signup submit
     const signupForm = modal.querySelector('#auth-signup-form');

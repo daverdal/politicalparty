@@ -172,8 +172,9 @@ async function getFederalRidings(provinceId) {
 
 /**
  * Get ideas for a location (with hierarchy bubbling)
+ * Optionally limit the number of returned ideas (already sorted by supportCount DESC).
  */
-async function getIdeasForLocation({ locationId, locationType }) {
+async function getIdeasForLocation({ locationId, locationType, limit }) {
     const driver = getDriver();
     const session = driver.session({ database: getDatabase() });
     
@@ -210,8 +211,18 @@ async function getIdeasForLocation({ locationId, locationType }) {
                 ORDER BY supportCount DESC
             `;
         }
+
+        // Apply a LIMIT (e.g. for "top 10 ideas") if requested
+        if (limit && Number.isFinite(limit)) {
+            query += `\nLIMIT $limit`;
+        }
         
-        const result = await session.run(query, { locationId });
+        const params = { locationId };
+        if (limit && Number.isFinite(limit)) {
+            params.limit = Math.max(1, Math.floor(limit));
+        }
+
+        const result = await session.run(query, params);
         
         return result.records.map(record => ({
             ...record.get('idea').properties,

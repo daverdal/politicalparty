@@ -124,6 +124,9 @@ async function sendPasswordResetEmail({ to, token }) {
         return;
     }
 
+    // eslint-disable-next-line no-console
+    console.log(`[email] Sending password reset email via SMTP to ${to} using host ${process.env.SMTP_HOST}`);
+
     await tx.sendMail({
         from,
         to,

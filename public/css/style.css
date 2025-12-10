@@ -827,11 +827,12 @@ a:hover {
 
 .browse-layout {
   display: grid;
-  grid-template-columns: 320px 1fr 400px;
+  grid-template-columns: 320px 1fr 2fr;
   gap: 1px;
   background: var(--border-color);
   height: calc(100vh - 64px);
   margin: -32px -40px;
+  min-width: 1600px;
 }
 
 .browse-panel {
@@ -889,16 +890,34 @@ a:hover {
 
 .province-map-canvas {
   margin-top: 12px;
-  height: 260px;
+  height: 720px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
-  background: radial-gradient(circle at top, rgba(0, 168, 255, 0.15), transparent 60%), var(--bg-tertiary);
+  background: radial-gradient(circle at top, rgba(0, 168, 255, 0.12), transparent 60%), var(--bg-tertiary);
   position: relative;
   overflow: hidden;
+  cursor: grab;
+}
+
+.province-map-canvas.panning {
+  cursor: grabbing;
+}
+
+.province-map-inner {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  transform-origin: 50% 50%;
+}
+
+.province-map-point {
+  position: absolute;
+  transform: translate(-50%, -50%);
 }
 
 .province-map-dot {
-  position: absolute;
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -908,15 +927,78 @@ a:hover {
 
 .province-map-dot-label {
   position: absolute;
-  transform: translate(10px, -4px);
+  top: -4px;
+  left: 12px;
+  padding: 2px 4px;
+  border-radius: 4px;
   font-size: 11px;
-  color: var(--text-primary);
+  color: #fff;
+  background: rgba(0, 0, 0, 0.7);
   white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.province-map-point:hover .province-map-dot-label {
+  opacity: 1;
 }
 
 .province-map-empty {
   font-size: 13px;
   color: var(--text-secondary);
+}
+
+.province-map-info {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.province-map-info-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.province-map-info-meta {
+  margin-top: 2px;
+}
+
+.province-map-ideas-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.province-map-idea-rank {
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.province-map-idea-title {
+  font-weight: 500;
+}
+
+.province-map-idea-support {
+  margin-left: 4px;
+  color: var(--text-muted);
+}
+
+/* Auth modal link-style buttons */
+.link-button {
+  border: none;
+  padding: 0;
+  background: none;
+  color: var(--accent-primary);
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+}
+
+.link-button:hover {
+  color: var(--accent-secondary);
 }
 
 /* Location Tree */
@@ -3336,17 +3418,6 @@ a:hover {
   font-style: italic;
   text-align: center;
   padding: 20px;
-}
-
-/* Responsive */
-@media (max-width: 1200px) {
-  .browse-layout {
-    grid-template-columns: 280px 1fr;
-  }
-  
-  .browse-panel:last-child {
-    display: none;
-  }
 }
 
 @media (max-width: 768px) {

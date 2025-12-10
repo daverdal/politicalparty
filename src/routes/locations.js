@@ -191,8 +191,10 @@ router.get('/provinces/:id/adhoc-groups', async (req, res) => {
 });
 
 // GET /api/locations/:type/:id/ideas - Get ideas for a location (with hierarchy bubbling)
+// Optional query param: ?limit=10 to get only the top N ideas by support
 router.get('/:type/:id/ideas', async (req, res) => {
     const { type, id } = req.params;
+    const { limit } = req.query;
     
     const typeMap = {
         'countries': 'Country',
@@ -210,7 +212,12 @@ router.get('/:type/:id/ideas', async (req, res) => {
     }
     
     try {
-        const ideas = await locationService.getIdeasForLocation({ locationId: id, locationType });
+        const numericLimit = limit ? parseInt(limit, 10) : undefined;
+        const ideas = await locationService.getIdeasForLocation({
+            locationId: id,
+            locationType,
+            limit: Number.isFinite(numericLimit) ? numericLimit : undefined
+        });
         res.json(ideas);
     } catch (error) {
         res.status(500).json({ error: error.message });

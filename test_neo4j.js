@@ -976,12 +976,17 @@ async function seedLocations(driver) {
             
             // First Nations
             if (provData.firstNations && provData.firstNations.length > 0) {
-                for (const name of provData.firstNations) {
+                for (const entry of provData.firstNations) {
+                    const name = typeof entry === 'string' ? entry : entry.name;
+                    const lat = (entry && typeof entry === 'object' && entry.lat != null) ? Number(entry.lat) : null;
+                    const lon = (entry && typeof entry === 'object' && entry.lon != null) ? Number(entry.lon) : null;
+
                     const id = generateId('fn-' + prov.code.toLowerCase(), name);
                     await session.run(`
                         MERGE (fn:FirstNation {id: $id})
                         ON CREATE SET fn.name = $name, fn.createdAt = datetime()
-                    `, { id, name });
+                        SET fn.lat = $lat, fn.lon = $lon
+                    `, { id, name, lat, lon });
                     await session.run(`
                         MATCH (p:Province {id: $provinceId}), (fn:FirstNation {id: $fnId})
                         MERGE (p)-[:HAS_FIRST_NATION]->(fn)

@@ -264,17 +264,8 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
     const detail = document.getElementById(`${pageId}-detail`);
     if (!detail) return;
 
-    // Remove any previous placeholder
-    const existingPlaceholder = detail.querySelector('.province-map-placeholder');
-    if (existingPlaceholder) {
-        existingPlaceholder.remove();
-    }
-
-    // Remove previous canvas
-    const existingCanvas = detail.querySelector('.province-map-canvas');
-    if (existingCanvas && existingCanvas.parentElement) {
-        existingCanvas.parentElement.remove();
-    }
+    // Clear any existing idea detail so the map fully owns the right pane
+    detail.innerHTML = '';
 
     const wrapper = document.createElement('div');
     wrapper.className = 'province-map-wrapper';
@@ -284,13 +275,23 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
     const canvas = document.createElement('div');
     canvas.className = 'province-map-canvas';
 
+    const inner = document.createElement('div');
+    inner.className = 'province-map-inner';
+    canvas.appendChild(inner);
+
+    const info = document.createElement('div');
+    info.className = 'province-map-info';
+    info.textContent = 'Hover or click a dot to see First Nation details.';
+
     wrapper.appendChild(title);
     wrapper.appendChild(canvas);
+    wrapper.appendChild(info);
     detail.appendChild(wrapper);
 
     try {
         const fns = await App.api(`/locations/provinces/${provinceId}/first-nations`);
         const points = [];
+        const ideasCache = {};
 
         const getLatLon = (n) => {
             const latRaw = n.lat ?? n.latitude ?? n.Latitude ?? n.LAT;
@@ -298,7 +299,12 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
             const lat = typeof latRaw === 'number' ? latRaw : parseFloat(latRaw);
             const lon = typeof lonRaw === 'number' ? lonRaw : parseFloat(lonRaw);
             if (!isFinite(lat) || !isFinite(lon)) return null;
-            return { lat, lon, name: n.name || n.id || 'Community' };
+            return {
+                id: n.id,
+                lat,
+                lon,
+                name: n.name || n.id || 'Community'
+            };
         };
 
         for (const n of fns) {
@@ -324,24 +330,149 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
         const latRange = maxLat - minLat || 1;
         const lonRange = maxLon - minLon || 1;
 
+        // Initial render positions (0–100%) inside the inner container
         points.forEach((p) => {
             const x = ((p.lon - minLon) / lonRange) * 100;
             const y = (1 - (p.lat - minLat) / latRange) * 100;
 
+            // Wrapper so we can show label on hover without stacking everything
+            const point = document.createElement('div');
+            point.className = 'province-map-point';
+            point.style.left = `${x}%`;
+            point.style.top = `${y}%`;
+
             const dot = document.createElement('div');
             dot.className = 'province-map-dot';
-            dot.style.left = `${x}%`;
-            dot.style.top = `${y}%`;
 
             const label = document.createElement('div');
             label.className = 'province-map-dot-label';
             label.textContent = p.name;
-            label.style.left = `${x}%`;
-            label.style.top = `${y}%`;
 
-            canvas.appendChild(dot);
-            canvas.appendChild(label);
+            point.appendChild(dot);
+            point.appendChild(label);
+
+            const showTopIdeas = async () => {
+                try {
+                    info.innerHTML = `
+                        <div class="province-map-info-name">${p.name}</div>
+                        <div class="province-map-info-meta">Loading top ideas...</div>
+                    `;
+
+                    if (!ideasCache[p.id]) {
+                        const ideas = await App.api(`/locations/first-nations/${encodeURIComponent(p.id)}/ideas?limit=10`);
+                        ideasCache[p.id] = ideas;
+                    }
+
+                    const ideas = ideasCache[p.id] || [];
+
+                    if (!ideas.length) {
+                        info.innerHTML = `
+                            <div class="province-map-info-name">${p.name}</div>
+                            <div class="province-map-info-meta">No ideas posted from this First Nation yet.</div>
+                        `;
+                        return;
+                    }
+
+                    const listHtml = ideas.map((idea, idx) => `
+                        <li>
+                            <span class="province-map-idea-rank">${idx + 1}.</span>
+                            <span class="province-map-idea-title">${idea.title}</span>
+                            <span class="province-map-idea-support">(${idea.supportCount || 0} supporters)</span>
+                        </li>
+                    `).join('');
+
+                    info.innerHTML = `
+                        <div class="province-map-info-name">${p.name}</div>
+                        <div class="province-map-info-meta">Top ideas from this First Nation:</div>
+                        <ol class="province-map-ideas-list">
+                            ${listHtml}
+                        </ol>
+                    `;
+                } catch (err) {
+                    info.innerHTML = `
+                        <div class="province-map-info-name">${p.name}</div>
+                        <div class="province-map-info-meta">Error loading ideas: ${err.message}</div>
+                    `;
+                }
+            };
+
+            // Hover to show top 10 ideas under the place name
+            point.addEventListener('mouseenter', () => {
+                showTopIdeas();
+            });
+
+            // Click also shows the same info (friendly for touch devices)
+            point.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showTopIdeas();
+            });
+
+            inner.appendChild(point);
         });
+
+        // Basic pan + zoom controls
+        const state = {
+            scale: 1,
+            translateX: 0,
+            translateY: 0,
+            panning: false,
+            startX: 0,
+            startY: 0,
+            startTranslateX: 0,
+            startTranslateY: 0
+        };
+
+        const applyTransform = () => {
+            inner.style.transform = `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale})`;
+        };
+
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const cx = e.clientX - rect.left;
+            const cy = e.clientY - rect.top;
+
+            const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+            const newScale = Math.min(8, Math.max(0.25, state.scale * zoomFactor));
+            if (newScale === state.scale) return;
+
+            // Zoom relative to cursor position
+            const scaleRatio = newScale / state.scale;
+            state.translateX = cx - (cx - state.translateX) * scaleRatio;
+            state.translateY = cy - (cy - state.translateY) * scaleRatio;
+            state.scale = newScale;
+            applyTransform();
+        }, { passive: false });
+
+        canvas.addEventListener('mousedown', (e) => {
+            state.panning = true;
+            state.startX = e.clientX;
+            state.startY = e.clientY;
+            state.startTranslateX = state.translateX;
+            state.startTranslateY = state.translateY;
+            canvas.classList.add('panning');
+        });
+
+        const handleMove = (e) => {
+            if (!state.panning) return;
+            const dx = e.clientX - state.startX;
+            const dy = e.clientY - state.startY;
+            state.translateX = state.startTranslateX + dx;
+            state.translateY = state.startTranslateY + dy;
+            applyTransform();
+        };
+
+        const handleUp = () => {
+            if (!state.panning) return;
+            state.panning = false;
+            canvas.classList.remove('panning');
+        };
+
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleUp);
+
+        // Initial transform
+        applyTransform();
     } catch (err) {
         canvas.innerHTML = `<div class="province-map-empty">Error loading map data: ${err.message}</div>`;
     }
