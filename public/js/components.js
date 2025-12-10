@@ -65,6 +65,60 @@ App.createThreePanelLayout = function(config) {
     `;
 };
 
+/**
+ * Enables click-and-drag horizontal scrolling for any three-panel layout.
+ * This makes it feel like you can "grab" the three columns and slide them
+ * left/right instead of using the bottom scrollbar.
+ */
+App.enableBrowseLayoutDragScroll = function() {
+    const layouts = document.querySelectorAll('.browse-layout');
+    if (!layouts.length) return;
+
+    const scrollEl = document.scrollingElement || document.documentElement || document.body;
+
+    layouts.forEach((layout) => {
+        if (layout.dataset.dragScrollInitialized === 'true') return;
+        layout.dataset.dragScrollInitialized = 'true';
+        layout.classList.add('drag-scroll-enabled');
+
+        const state = {
+            isDown: false,
+            startX: 0,
+            startScrollLeft: 0
+        };
+
+        const onMouseMove = (e) => {
+            if (!state.isDown) return;
+            const dx = e.clientX - state.startX;
+            scrollEl.scrollLeft = state.startScrollLeft - dx;
+        };
+
+        const onMouseUp = () => {
+            if (!state.isDown) return;
+            state.isDown = false;
+            layout.classList.remove('dragging');
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+        };
+
+        layout.addEventListener('mousedown', (e) => {
+            // Only respond to primary button
+            if (e.button !== 0) return;
+
+            // Don't hijack drag interactions for the province map itself
+            if (e.target.closest('.province-map-canvas')) return;
+
+            state.isDown = true;
+            state.startX = e.clientX;
+            state.startScrollLeft = scrollEl.scrollLeft;
+            layout.classList.add('dragging');
+
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseup', onMouseUp);
+        });
+    });
+};
+
 // ============================================
 // UNIFIED LOCATION TREE
 // ============================================
@@ -197,12 +251,19 @@ App.renderUnifiedProvinceDetails = async function(provinceId, containerEl, pageI
         containerEl.innerHTML = '<div class="loading" style="padding: 12px;"><div class="spinner" style="width: 16px; height: 16px;"></div></div>';
         
         // Default categories if not specified
-        const defaultCategories = ['federal-ridings', 'provincial-ridings', 'towns', 'first-nations', 'adhoc-groups'];
+        // First Nations first, then federal ridings, etc.
+        const defaultCategories = ['first-nations', 'federal-ridings', 'provincial-ridings', 'towns', 'adhoc-groups'];
         const categoriesToLoad = categories || defaultCategories;
         
         const dataPromises = [];
         const categoryNames = [];
         
+        // Order of these blocks controls the visual order of categories.
+        // First Nations first, then Federal Ridings, etc.
+        if (categoriesToLoad.includes('first-nations')) {
+            dataPromises.push(App.api(`/locations/provinces/${provinceId}/first-nations`));
+            categoryNames.push({ key: 'first-nations', title: 'First Nations', type: 'first-nations' });
+        }
         if (categoriesToLoad.includes('federal-ridings')) {
             dataPromises.push(App.api(`/locations/provinces/${provinceId}/federal-ridings`));
             categoryNames.push({ key: 'federal-ridings', title: 'Federal Ridings', type: 'federal-ridings' });
@@ -214,10 +275,6 @@ App.renderUnifiedProvinceDetails = async function(provinceId, containerEl, pageI
         if (categoriesToLoad.includes('towns')) {
             dataPromises.push(App.api(`/locations/provinces/${provinceId}/towns`));
             categoryNames.push({ key: 'towns', title: 'Towns & Cities', type: 'towns' });
-        }
-        if (categoriesToLoad.includes('first-nations')) {
-            dataPromises.push(App.api(`/locations/provinces/${provinceId}/first-nations`));
-            categoryNames.push({ key: 'first-nations', title: 'First Nations', type: 'first-nations' });
         }
         if (categoriesToLoad.includes('adhoc-groups')) {
             dataPromises.push(App.api(`/locations/provinces/${provinceId}/adhoc-groups`));

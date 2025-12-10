@@ -154,35 +154,47 @@ App.pages.browse = async function() {
         emptyText3: 'Select an idea to view details'
     });
     
+    if (typeof App.enableBrowseLayoutDragScroll === 'function') {
+        App.enableBrowseLayoutDragScroll();
+    }
+    
     await App.initLocationTree(pageId, App.onIdeasLocationSelect);
 };
 
 App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = false) {
     const pageId = 'ideas';
     App.showSelectedBadge(pageId, name);
-    App.showListLoading(pageId);
     App.showDetailEmpty(pageId, '💡', 'Select an idea to view details');
     
     try {
         const ideas = await App.api(`/locations/${type}/${id}/ideas`);
-        
-        if (!ideas.length) {
-            App.showListEmpty(pageId, '💭', 'No ideas from this location yet');
-            return;
-        }
-        
-        App.panelState[pageId].currentItems = ideas;
-        
+
         const list = document.getElementById(`${pageId}-list`);
         const showMapLink = type === 'provinces' || type === 'countries';
-        list.innerHTML = `
-            ${showMapLink ? `
-            <div class="panel-toolbar">
-                <span class="panel-toolbar-title">${name}</span>
-                <button class="map-link-btn" id="ideas-map-link">🗺️ Map</button>
-            </div>
-            ` : ''}
-            ${ideas.map((idea, index) => `
+        
+        // Always render the toolbar (including Map button) for provinces/countries,
+        // even when there are no ideas, so the map is still accessible.
+        let html = '';
+        if (showMapLink) {
+            html += `
+                <div class="panel-toolbar">
+                    <span class="panel-toolbar-title">${name}</span>
+                    <button class="map-link-btn" id="ideas-map-link">🗺️ Map</button>
+                </div>
+            `;
+        }
+
+        if (!ideas.length) {
+            html += `
+                <div class="panel-empty">
+                    <div class="panel-empty-icon">💭</div>
+                    <div class="panel-empty-text">No ideas from this location yet</div>
+                </div>
+            `;
+            list.innerHTML = html;
+        } else {
+            App.panelState[pageId].currentItems = ideas;
+            html += ideas.map((idea, index) => `
                 <div class="list-item" data-index="${index}" data-id="${idea.id}">
                     <div class="list-item-title">${idea.title}</div>
                     <div class="list-item-meta">
@@ -190,17 +202,18 @@ App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = fal
                         <span>${idea.author?.name || 'Anonymous'}</span>
                     </div>
                 </div>
-            `).join('')}
-        `;
-        
-        document.querySelectorAll(`#${pageId}-list .list-item`).forEach(item => {
-            item.addEventListener('click', () => {
-                document.querySelectorAll(`#${pageId}-list .list-item`).forEach(i => i.classList.remove('selected'));
-                item.classList.add('selected');
-                const idx = parseInt(item.dataset.index);
-                App.showIdeaDetailPanel(App.panelState[pageId].currentItems[idx]);
+            `).join('');
+            list.innerHTML = html;
+
+            document.querySelectorAll(`#${pageId}-list .list-item`).forEach(item => {
+                item.addEventListener('click', () => {
+                    document.querySelectorAll(`#${pageId}-list .list-item`).forEach(i => i.classList.remove('selected'));
+                    item.classList.add('selected');
+                    const idx = parseInt(item.dataset.index);
+                    App.showIdeaDetailPanel(App.panelState[pageId].currentItems[idx]);
+                });
             });
-        });
+        }
         
         // Map link
         const mapLink = document.getElementById('ideas-map-link');
@@ -330,6 +343,30 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
         const latRange = maxLat - minLat || 1;
         const lonRange = maxLon - minLon || 1;
 
+        // Adjust the canvas height so the province keeps a more realistic
+        // geographic aspect ratio (so Manitoba doesn't look squished).
+        // We approximate "real" width using longitude distance scaled by cos(latitude).
+        try {
+            const avgLat = (minLat + maxLat) / 2;
+            const cosLat = Math.cos((avgLat * Math.PI) / 180) || 1;
+            const latKmRange = latRange;
+            const lonKmRange = lonRange * cosLat;
+
+            if (latKmRange > 0 && lonKmRange > 0) {
+                // Wait for layout so we know the canvas width, then set height.
+                requestAnimationFrame(() => {
+                    const rect = canvas.getBoundingClientRect();
+                    if (!rect.width) return;
+                    const desiredHeight = rect.width * (latKmRange / lonKmRange);
+                    canvas.style.height = `${desiredHeight}px`;
+                });
+            }
+        } catch (e) {
+            // If anything goes wrong, we just keep the default CSS height.
+            // eslint-disable-next-line no-console
+            console.warn('Province map aspect adjustment failed:', e);
+        }
+
         // Initial render positions (0–100%) inside the inner container
         points.forEach((p) => {
             const x = ((p.lon - minLon) / lonRange) * 100;
@@ -412,7 +449,8 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
 
         // Basic pan + zoom controls
         const state = {
-            scale: 1,
+            // Start slightly zoomed out so the whole province feels less "up close"
+            scale: 0.8,
             translateX: 0,
             translateY: 0,
             panning: false,
@@ -496,6 +534,10 @@ App.pages.candidates = async function() {
         emptyIcon3: '👤',
         emptyText3: 'Select a candidate to view profile'
     });
+    
+    if (typeof App.enableBrowseLayoutDragScroll === 'function') {
+        App.enableBrowseLayoutDragScroll();
+    }
     
     await App.initLocationTree(pageId, App.onCandidatesLocationSelect);
 };
@@ -637,6 +679,10 @@ App.pages.users = async function() {
         emptyText3: 'Select a member to view profile'
     });
     
+    if (typeof App.enableBrowseLayoutDragScroll === 'function') {
+        App.enableBrowseLayoutDragScroll();
+    }
+    
     await App.initLocationTree(pageId, App.onMembersLocationSelect);
 };
 
@@ -777,6 +823,10 @@ App.pages.events = async function() {
         emptyText3: 'Select an event to view details'
     });
     
+    if (typeof App.enableBrowseLayoutDragScroll === 'function') {
+        App.enableBrowseLayoutDragScroll();
+    }
+    
     await App.initLocationTree(pageId, App.onEventsLocationSelect);
 };
 
@@ -894,6 +944,246 @@ App.showEventDetailPanel = function(event) {
             ` : ''}
         </div>
     `;
+};
+
+// ============================================
+// CANADA MAP PAGE
+// ============================================
+
+App.pages.map = async function() {
+    const content = document.getElementById('content');
+    content.innerHTML = `
+        <header class="page-header">
+            <h1 class="page-title">Canada Map</h1>
+            <p class="page-subtitle">Explore First Nations across all provinces and territories</p>
+        </header>
+        <div class="canada-map-layout">
+            <aside class="canada-map-controls">
+                <h3 class="canada-map-controls-title">Layers</h3>
+                <label class="canada-map-layer">
+                    <input type="checkbox" id="map-layer-firstnations" checked>
+                    <span>First Nations</span>
+                </label>
+                <label class="canada-map-layer disabled">
+                    <input type="checkbox" id="map-layer-towns" disabled>
+                    <span>Towns &amp; cities (coming soon)</span>
+                </label>
+                <label class="canada-map-layer disabled">
+                    <input type="checkbox" id="map-layer-federal" disabled>
+                    <span>Federal ridings (coming soon)</span>
+                </label>
+                <label class="canada-map-layer disabled">
+                    <input type="checkbox" id="map-layer-provincial" disabled>
+                    <span>Provincial ridings (coming soon)</span>
+                </label>
+                <label class="canada-map-layer disabled">
+                    <input type="checkbox" id="map-layer-ideas" disabled>
+                    <span>Idea authors (coming soon)</span>
+                </label>
+            </aside>
+            <section class="canada-map-main">
+                <div class="province-map-canvas" id="canada-map-canvas">
+                    <div class="province-map-inner" id="canada-map-inner"></div>
+                </div>
+                <div class="province-map-info" id="canada-map-info">
+                    Hover or click a dot to see First Nation details.
+                </div>
+            </section>
+        </div>
+    `;
+
+    const canvas = document.getElementById('canada-map-canvas');
+    const inner = document.getElementById('canada-map-inner');
+    const info = document.getElementById('canada-map-info');
+
+    const layers = {
+        FirstNation: []
+    };
+
+    const getLatLon = (n) => {
+        const latRaw = n.lat ?? n.latitude ?? n.Latitude ?? n.LAT;
+        const lonRaw = n.lon ?? n.lng ?? n.longitude ?? n.Longitude ?? n.LON;
+        const lat = typeof latRaw === 'number' ? latRaw : parseFloat(latRaw);
+        const lon = typeof lonRaw === 'number' ? lonRaw : parseFloat(lonRaw);
+        if (!isFinite(lat) || !isFinite(lon)) return null;
+        return {
+            id: n.id,
+            lat,
+            lon,
+            name: n.name || n.id || 'Community'
+        };
+    };
+
+    try {
+        const provinces = await App.api('/locations/provinces');
+        const allPoints = [];
+
+        // Load First Nations for each province/territory
+        for (const prov of provinces) {
+            const fns = await App.api(`/locations/provinces/${encodeURIComponent(prov.id)}/first-nations`);
+            for (const n of fns) {
+                const p = getLatLon(n);
+                if (!p) continue;
+                allPoints.push({
+                    ...p,
+                    provinceName: prov.name,
+                    provinceId: prov.id
+                });
+            }
+        }
+
+        if (!allPoints.length) {
+            canvas.innerHTML = `
+                <div class="province-map-empty">
+                    No coordinate data found yet for First Nations in Canada. Once coordinates are available, this map will render a national view.
+                </div>
+            `;
+            return;
+        }
+
+        const lats = allPoints.map((p) => p.lat);
+        const lons = allPoints.map((p) => p.lon);
+        const minLat = Math.min(...lats);
+        const maxLat = Math.max(...lats);
+        const minLon = Math.min(...lons);
+        const maxLon = Math.max(...lons);
+        const latRange = maxLat - minLat || 1;
+        const lonRange = maxLon - minLon || 1;
+
+        // Adjust canvas height to keep a roughly correct Canada aspect ratio
+        try {
+            const avgLat = (minLat + maxLat) / 2;
+            const cosLat = Math.cos((avgLat * Math.PI) / 180) || 1;
+            const latKmRange = latRange;
+            const lonKmRange = lonRange * cosLat;
+
+            if (latKmRange > 0 && lonKmRange > 0) {
+                requestAnimationFrame(() => {
+                    const rect = canvas.getBoundingClientRect();
+                    if (!rect.width) return;
+                    const desiredHeight = rect.width * (latKmRange / lonKmRange);
+                    canvas.style.height = `${desiredHeight}px`;
+                });
+            }
+        } catch (e) {
+            // eslint-disable-next-line no-console
+            console.warn('Canada map aspect adjustment failed:', e);
+        }
+
+        // Create points
+        allPoints.forEach((p) => {
+            const x = ((p.lon - minLon) / lonRange) * 100;
+            const y = (1 - (p.lat - minLat) / latRange) * 100;
+
+            const point = document.createElement('div');
+            point.className = 'province-map-point canada-map-point layer-firstnation';
+            point.style.left = `${x}%`;
+            point.style.top = `${y}%`;
+
+            const dot = document.createElement('div');
+            dot.className = 'province-map-dot';
+
+            const label = document.createElement('div');
+            label.className = 'province-map-dot-label';
+            label.textContent = `${p.name} (${p.provinceName})`;
+
+            point.appendChild(dot);
+            point.appendChild(label);
+
+            const showInfo = () => {
+                info.innerHTML = `
+                    <div class="province-map-info-name">${p.name}</div>
+                    <div class="province-map-info-meta">Province/Territory: ${p.provinceName}</div>
+                    <div class="province-map-info-meta">Coordinates: ${p.lat.toFixed(3)}, ${p.lon.toFixed(3)}</div>
+                    <div class="province-map-info-meta" style="margin-top:4px;">Ideas overlay by location coming soon.</div>
+                `;
+            };
+
+            point.addEventListener('mouseenter', showInfo);
+            point.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showInfo();
+            });
+
+            inner.appendChild(point);
+            layers.FirstNation.push(point);
+        });
+
+        // Pan + zoom (same behavior as province map)
+        const state = {
+            scale: 0.8,
+            translateX: 0,
+            translateY: 0,
+            panning: false,
+            startX: 0,
+            startY: 0,
+            startTranslateX: 0,
+            startTranslateY: 0
+        };
+
+        const applyTransform = () => {
+            inner.style.transform = `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale})`;
+        };
+
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const cx = e.clientX - rect.left;
+            const cy = e.clientY - rect.top;
+
+            const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+            const newScale = Math.min(8, Math.max(0.25, state.scale * zoomFactor));
+            if (newScale === state.scale) return;
+
+            const scaleRatio = newScale / state.scale;
+            state.translateX = cx - (cx - state.translateX) * scaleRatio;
+            state.translateY = cy - (cy - state.translateY) * scaleRatio;
+            state.scale = newScale;
+            applyTransform();
+        }, { passive: false });
+
+        canvas.addEventListener('mousedown', (e) => {
+            state.panning = true;
+            state.startX = e.clientX;
+            state.startY = e.clientY;
+            state.startTranslateX = state.translateX;
+            state.startTranslateY = state.translateY;
+            canvas.classList.add('panning');
+        });
+
+        const handleMove = (e) => {
+            if (!state.panning) return;
+            const dx = e.clientX - state.startX;
+            const dy = e.clientY - state.startY;
+            state.translateX = state.startTranslateX + dx;
+            state.translateY = state.startTranslateY + dy;
+            applyTransform();
+        };
+
+        const handleUp = () => {
+            if (!state.panning) return;
+            state.panning = false;
+            canvas.classList.remove('panning');
+        };
+
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleUp);
+
+        applyTransform();
+
+        // Layer toggle for First Nations
+        const fnCheckbox = document.getElementById('map-layer-firstnations');
+        if (fnCheckbox) {
+            fnCheckbox.addEventListener('change', () => {
+                const visible = fnCheckbox.checked;
+                layers.FirstNation.forEach((el) => {
+                    el.style.display = visible ? '' : 'none';
+                });
+            });
+        }
+    } catch (err) {
+        canvas.innerHTML = `<div class="province-map-empty">Error loading Canada map data: ${err.message}</div>`;
+    }
 };
 
 // ============================================

@@ -18,6 +18,46 @@ module.exports = {
     
     provincialRidings: [],
     towns: [],
-    firstNations: []
+
+    // A starter set of First Nations in Alberta.
+    // Lat/lon will be auto-filled from Documents/canadaFNs by the seed script.
+    firstNations: [
+        'Siksika Nation',
+        'Piikani Nation',
+        'Kainai Nation',
+        'Tsuut\'ina Nation',
+        'Samson',
+        'Ermineskin Tribe',
+        'Louis Bull Tribe',
+        'Montana',
+        'Alexis Nakota Sioux Nation',
+        'Paul',
+        'Driftpile Cree Nation',
+        'Swan River First Nation',
+        'Bigstone Cree Nation',
+        'Peerless Trout First Nation',
+        'Little Red River Cree Nation',
+        'Tallcree Tribal Government',
+        'Dene Tha\'',
+        'Sawridge First Nation',
+        'Whitefish Lake',
+        'Kapawe\'no First Nation',
+        'Woodland Cree First Nation',
+        'Fort McKay First Nation',
+        'Fort McMurray #468 First Nation',
+        'Mikisew Cree First Nation',
+        'Chipewyan Prairie First Nation',
+        'Beaver First Nation',
+        'Horse Lake First Nation',
+        'Blueberry River First Nations',
+        'Doig River First Nation',
+        'Lubicon Lake Band No. 453',
+        'Loon River Cree',
+        'Sunchild First Nation',
+        'O\'Chiese',
+        'Stoney',
+        'Goodstoney',
+        'Bearspaw'
+    ]
 };
 

@@ -65,15 +65,17 @@ async function createNotification({ userId, type, title, body, payload }) {
 async function listNotifications(userId, { unreadOnly = false, limit = 50 } = {}) {
     const session = getSession();
     try {
+        const safeLimit = Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : 50;
+
         const result = await session.run(
             `
             MATCH (u:User {id: $userId})-[:HAS_NOTIFICATION]->(n:Notification)
             WHERE $unreadOnly = false OR n.read = false
             RETURN n
             ORDER BY n.createdAt DESC
-            LIMIT $limit
+            LIMIT toInteger($limit)
         `,
-            { userId, unreadOnly: !!unreadOnly, limit: Number.isFinite(limit) ? Number(limit) : 50 }
+            { userId, unreadOnly: !!unreadOnly, limit: safeLimit }
         );
 
         return result.records.map((r) => r.get('n').properties);

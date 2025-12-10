@@ -4,6 +4,8 @@
  */
 
 require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 const neo4j = require('neo4j-driver');
 const bcrypt = require('bcryptjs');
 const canadaData = require('./seed');
@@ -866,9 +868,134 @@ function generateId(prefix, name) {
         .substring(0, 50);
 }
 
+// ============================================
+// FIRST NATION COORDINATES (canadaFNs GeoJSON)
+// ============================================
+
+let firstNationCoordsIndex = null;
+let firstNationCoordsFeatures = null; // flat list with lat/lon for bbox queries
+
+function canonicalFirstNationName(name) {
+    if (!name) return '';
+    let n = String(name).toLowerCase();
+    // Remove common suffixes like "First Nation", "First Nations", "Nation"
+    n = n.replace(/\bfirst nations?\b/g, '');
+    n = n.replace(/\bnations?\b/g, '');
+    // Collapse whitespace and trim
+    n = n.replace(/\s+/g, ' ').trim();
+    return n;
+}
+
+function loadFirstNationCoordsIndex() {
+    if (firstNationCoordsIndex !== null) return firstNationCoordsIndex;
+
+    const filePath = path.join(__dirname, 'Documents', 'canadaFNs');
+    const index = {};
+    const featuresForBbox = [];
+
+    try {
+        const raw = fs.readFileSync(filePath, 'utf8');
+        const geo = JSON.parse(raw);
+        const features = Array.isArray(geo.features) ? geo.features : [];
+
+        for (const feature of features) {
+            if (!feature || !feature.properties || !feature.geometry) continue;
+            const bandName = feature.properties.BAND_NAME;
+            if (!bandName) continue;
+            const coords = feature.geometry.coordinates;
+            if (!Array.isArray(coords) || coords.length < 2) continue;
+            const [lon, lat] = coords;
+            if (typeof lat !== 'number' || typeof lon !== 'number') continue;
+
+            const key = canonicalFirstNationName(bandName);
+            if (!key) continue;
+
+            // For name lookup, only keep the first occurrence for a given canonical name
+            if (!index[key]) {
+                index[key] = { lat, lon, bandName };
+            }
+
+            // For bbox queries, keep every feature as-is
+            featuresForBbox.push({ name: bandName, lat, lon });
+        }
+
+        console.log(`[seed] Loaded First Nation coordinates from canadaFNs (unique names: ${Object.keys(index).length})`);
+    } catch (err) {
+        console.log(`[seed] Could not load Documents/canadaFNs: ${err.message}`);
+    }
+
+    firstNationCoordsFeatures = featuresForBbox;
+    firstNationCoordsIndex = index;
+    return firstNationCoordsIndex;
+}
+
+function getAllFirstNationFeatures() {
+    if (!firstNationCoordsFeatures) {
+        loadFirstNationCoordsIndex();
+    }
+    return firstNationCoordsFeatures || [];
+}
+
+// Rough geographic bounding boxes for provinces/territories that
+// do NOT yet have explicit firstNation seed lists.
+// These are approximate but good enough for visual maps.
+const PROVINCE_BBOXES = {
+    ON: { // Ontario
+        minLat: 41.5, maxLat: 57.5,
+        minLon: -95.5, maxLon: -74.0
+    },
+    QC: { // Quebec
+        minLat: 44.5, maxLat: 62.5,
+        minLon: -79.5, maxLon: -57.0
+    },
+    NB: { // New Brunswick
+        minLat: 44.0, maxLat: 48.5,
+        minLon: -69.5, maxLon: -63.0
+    },
+    NS: { // Nova Scotia
+        minLat: 43.0, maxLat: 47.5,
+        minLon: -66.5, maxLon: -59.0
+    },
+    PE: { // Prince Edward Island
+        minLat: 45.8, maxLat: 47.2,
+        minLon: -64.8, maxLon: -61.0
+    },
+    NL: { // Newfoundland & Labrador
+        minLat: 46.0, maxLat: 61.0,
+        minLon: -67.5, maxLon: -52.0
+    },
+    NT: { // Northwest Territories
+        minLat: 60.0, maxLat: 70.5,
+        minLon: -136.0, maxLon: -102.0
+    },
+    NU: { // Nunavut (very large)
+        minLat: 60.0, maxLat: 84.0,
+        minLon: -112.0, maxLon: -60.0
+    },
+    YT: { // Yukon
+        minLat: 59.0, maxLat: 70.5,
+        minLon: -141.5, maxLon: -123.0
+    }
+};
+
+function getFirstNationsForProvinceByBbox(provinceCode) {
+    const code = String(provinceCode || '').toUpperCase();
+    const box = PROVINCE_BBOXES[code];
+    if (!box) return [];
+
+    const all = getAllFirstNationFeatures();
+    const { minLat, maxLat, minLon, maxLon } = box;
+
+    return all.filter(f =>
+        f.lat >= minLat && f.lat <= maxLat &&
+        f.lon >= minLon && f.lon <= maxLon
+    );
+}
+
 async function seedLocations(driver) {
     console.log('\n[10] Seeding Locations (using MERGE - only creates if not exists)...');
     const session = driver.session({ database: DATABASE });
+    const coordsIndex = loadFirstNationCoordsIndex();
     
     // Get all provinces from seed files
     const allProvinces = canadaData.getAllProvinces();
@@ -974,12 +1101,23 @@ async function seedLocations(driver) {
                 console.log(`    ✓ ${provData.towns.length} towns`);
             }
             
-            // First Nations
+            // First Nations - primary source is per-province seed lists
             if (provData.firstNations && provData.firstNations.length > 0) {
                 for (const entry of provData.firstNations) {
                     const name = typeof entry === 'string' ? entry : entry.name;
-                    const lat = (entry && typeof entry === 'object' && entry.lat != null) ? Number(entry.lat) : null;
-                    const lon = (entry && typeof entry === 'object' && entry.lon != null) ? Number(entry.lon) : null;
+
+                    let lat = (entry && typeof entry === 'object' && entry.lat != null) ? Number(entry.lat) : null;
+                    let lon = (entry && typeof entry === 'object' && entry.lon != null) ? Number(entry.lon) : null;
+
+                    // If no explicit lat/lon in the seed data, try to look it up from the canadaFNs GeoJSON
+                    if ((lat == null || Number.isNaN(lat) || lon == null || Number.isNaN(lon)) && coordsIndex) {
+                        const key = canonicalFirstNationName(name);
+                        const match = coordsIndex[key];
+                        if (match) {
+                            lat = match.lat;
+                            lon = match.lon;
+                        }
+                    }
 
                     const id = generateId('fn-' + prov.code.toLowerCase(), name);
                     await session.run(`
@@ -993,7 +1131,33 @@ async function seedLocations(driver) {
                     `, { provinceId: prov.id, fnId: id });
                     stats.firstNations++;
                 }
-                console.log(`    ✓ ${provData.firstNations.length} First Nations`);
+                console.log(`    ✓ ${provData.firstNations.length} First Nations (seed lists)`);
+            } else {
+                // If the province/territory doesn't yet have a manual list,
+                // fall back to canadaFNs + rough bounding box so every region gets a map.
+                const autoFNs = getFirstNationsForProvinceByBbox(prov.code);
+                if (autoFNs.length > 0) {
+                    for (const fn of autoFNs) {
+                        const name = fn.name;
+                        const lat = fn.lat;
+                        const lon = fn.lon;
+                        const id = generateId('fn-' + prov.code.toLowerCase(), name);
+
+                        await session.run(`
+                            MERGE (fn:FirstNation {id: $id})
+                            ON CREATE SET fn.name = $name, fn.createdAt = datetime()
+                            SET fn.lat = $lat, fn.lon = $lon
+                        `, { id, name, lat, lon });
+                        await session.run(`
+                            MATCH (p:Province {id: $provinceId}), (fn:FirstNation {id: $fnId})
+                            MERGE (p)-[:HAS_FIRST_NATION]->(fn)
+                        `, { provinceId: prov.id, fnId: id });
+                        stats.firstNations++;
+                    }
+                    console.log(`    ✓ ${autoFNs.length} First Nations (from canadaFNs bbox)`);
+                } else {
+                    console.log('    • No First Nations seed data or bbox matches for this province/territory yet');
+                }
             }
             
             // Adhoc Groups

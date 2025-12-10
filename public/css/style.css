@@ -835,6 +835,19 @@ a:hover {
   min-width: 1600px;
 }
 
+.browse-layout.drag-scroll-enabled {
+  cursor: grab;
+}
+
+.browse-layout.drag-scroll-enabled.dragging {
+  cursor: grabbing;
+}
+
+.browse-layout.drag-scroll-enabled.dragging,
+.browse-layout.drag-scroll-enabled.dragging * {
+  user-select: none;
+}
+
 .browse-panel {
   background: var(--bg-primary);
   overflow-y: auto;
@@ -984,6 +997,50 @@ a:hover {
 .province-map-idea-support {
   margin-left: 4px;
   color: var(--text-muted);
+}
+
+/* Canada Map page */
+.canada-map-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.canada-map-controls {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  font-size: 13px;
+}
+
+.canada-map-controls-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.canada-map-layer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  color: var(--text-secondary);
+}
+
+.canada-map-layer input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+}
+
+.canada-map-layer.disabled {
+  opacity: 0.5;
+}
+
+.canada-map-main {
+  min-height: 400px;
 }
 
 /* Auth modal link-style buttons */
