@@ -247,6 +247,12 @@ App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = fal
                 App.showIdeaDetailPanel(ideas[0]);
             }
         }
+
+        // Automatically show the province map when a province is selected,
+        // so users immediately see the map without needing to click the Map button.
+        if (type === 'provinces') {
+            App.showProvinceMap(pageId, id, name);
+        }
     } catch (err) {
         App.showListEmpty(pageId, '⚠️', `Error: ${err.message}`);
     }
@@ -284,7 +290,10 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
     wrapper.className = 'province-map-wrapper';
     const title = document.createElement('div');
     title.className = 'panel-toolbar-title';
-    title.textContent = `Map of ${provinceName} (First Nations positions)`;
+    const isCandidatesPage = pageId === 'candidates';
+    title.textContent = isCandidatesPage
+        ? `Map of ${provinceName} (First Nations candidates)`
+        : `Map of ${provinceName} (First Nations positions)`;
     const canvas = document.createElement('div');
     canvas.className = 'province-map-canvas';
 
@@ -294,7 +303,9 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
 
     const info = document.createElement('div');
     info.className = 'province-map-info';
-    info.textContent = 'Hover or click a dot to see First Nation details.';
+    info.textContent = isCandidatesPage
+        ? 'Hover or click a dot to see First Nation candidates running there.'
+        : 'Hover or click a dot to see First Nation details.';
 
     wrapper.appendChild(title);
     wrapper.appendChild(canvas);
@@ -302,9 +313,35 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
     detail.appendChild(wrapper);
 
     try {
-        const fns = await App.api(`/locations/provinces/${provinceId}/first-nations`);
+        // For Ideas page: show all First Nations with ideas overlay.
+        // For Candidates page: only show First Nations that have one or more
+        // candidates located there, and overlay candidate info instead.
+        let fns;
+        let provinceCandidates = [];
         const points = [];
         const ideasCache = {};
+        const candidatesByLocationId = {};
+
+        if (isCandidatesPage) {
+            [fns, provinceCandidates] = await Promise.all([
+                App.api(`/locations/provinces/${provinceId}/first-nations`),
+                App.api(`/locations/provinces/${provinceId}/candidates`)
+            ]);
+
+            if (Array.isArray(provinceCandidates)) {
+                provinceCandidates.forEach((cand) => {
+                    const locId = cand.location && cand.location.id;
+                    if (!locId) return;
+                    if (!candidatesByLocationId[locId]) {
+                        candidatesByLocationId[locId] = [];
+                    }
+                    candidatesByLocationId[locId].push(cand);
+                });
+            }
+        } else {
+            // Default (Ideas and any other pages using this map) – just load First Nations.
+            fns = await App.api(`/locations/provinces/${provinceId}/first-nations`);
+        }
 
         const getLatLon = (n) => {
             const latRaw = n.lat ?? n.latitude ?? n.Latitude ?? n.LAT;
@@ -322,7 +359,18 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
 
         for (const n of fns) {
             const p = getLatLon(n);
-            if (p) points.push(p);
+            if (!p) continue;
+
+            if (isCandidatesPage) {
+                const locCandidates = candidatesByLocationId[n.id] || [];
+                if (!locCandidates.length) continue; // only show dots where someone is running
+                points.push({
+                    ...p,
+                    candidates: locCandidates
+                });
+            } else {
+                points.push(p);
+            }
         }
 
         if (!points.length) {
@@ -367,10 +415,35 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
             console.warn('Province map aspect adjustment failed:', e);
         }
 
+        // Basic pan + zoom controls state and transform helper
+        const state = {
+            // Shared initial zoom for all provinces so they feel consistent
+            scale: 0.3,
+            translateX: 0,
+            translateY: 0,
+            panning: false,
+            startX: 0,
+            startY: 0,
+            startTranslateX: 0,
+            startTranslateY: 0
+        };
+
+        const applyTransform = () => {
+            inner.style.transform = `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale})`;
+        };
+
         // Initial render positions (0–100%) inside the inner container
+        let sumXPercent = 0;
+        let sumYPercent = 0;
+        let pointCount = 0;
+
         points.forEach((p) => {
             const x = ((p.lon - minLon) / lonRange) * 100;
             const y = (1 - (p.lat - minLat) / latRange) * 100;
+
+            sumXPercent += x;
+            sumYPercent += y;
+            pointCount += 1;
 
             // Wrapper so we can show label on hover without stacking everything
             const point = document.createElement('div');
@@ -388,81 +461,132 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
             point.appendChild(dot);
             point.appendChild(label);
 
-            const showTopIdeas = async () => {
-                try {
-                    info.innerHTML = `
-                        <div class="province-map-info-name">${p.name}</div>
-                        <div class="province-map-info-meta">Loading top ideas...</div>
-                    `;
+            if (isCandidatesPage) {
+                const showCandidates = () => {
+                    const cands = p.candidates || [];
 
-                    if (!ideasCache[p.id]) {
-                        const ideas = await App.api(`/locations/first-nations/${encodeURIComponent(p.id)}/ideas?limit=10`);
-                        ideasCache[p.id] = ideas;
-                    }
-
-                    const ideas = ideasCache[p.id] || [];
-
-                    if (!ideas.length) {
+                    if (!cands.length) {
                         info.innerHTML = `
                             <div class="province-map-info-name">${p.name}</div>
-                            <div class="province-map-info-meta">No ideas posted from this First Nation yet.</div>
+                            <div class="province-map-info-meta">No candidates are running here yet.</div>
                         `;
                         return;
                     }
 
-                    const listHtml = ideas.map((idea, idx) => `
+                    const listHtml = cands.map((cand, idx) => `
                         <li>
                             <span class="province-map-idea-rank">${idx + 1}.</span>
-                            <span class="province-map-idea-title">${idea.title}</span>
-                            <span class="province-map-idea-support">(${idea.supportCount || 0} supporters)</span>
+                            <span class="province-map-idea-title">${cand.name}</span>
+                            <span class="province-map-idea-support">(⭐ ${cand.points || 0} pts, 👍 ${cand.endorsementCount || 0} endorsements)</span>
                         </li>
                     `).join('');
 
                     info.innerHTML = `
                         <div class="province-map-info-name">${p.name}</div>
-                        <div class="province-map-info-meta">Top ideas from this First Nation:</div>
+                        <div class="province-map-info-meta">Candidates running in this First Nation:</div>
                         <ol class="province-map-ideas-list">
                             ${listHtml}
                         </ol>
                     `;
-                } catch (err) {
-                    info.innerHTML = `
-                        <div class="province-map-info-name">${p.name}</div>
-                        <div class="province-map-info-meta">Error loading ideas: ${err.message}</div>
-                    `;
-                }
-            };
+                };
 
-            // Hover to show top 10 ideas under the place name
-            point.addEventListener('mouseenter', () => {
-                showTopIdeas();
-            });
+                // Hover to show candidates under the place name
+                point.addEventListener('mouseenter', () => {
+                    showCandidates();
+                });
 
-            // Click also shows the same info (friendly for touch devices)
-            point.addEventListener('click', (e) => {
-                e.stopPropagation();
-                showTopIdeas();
-            });
+                // Click also shows the same info (friendly for touch devices)
+                point.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showCandidates();
+                });
+            } else {
+                const showTopIdeas = async () => {
+                    try {
+                        info.innerHTML = `
+                            <div class="province-map-info-name">${p.name}</div>
+                            <div class="province-map-info-meta">Loading top ideas...</div>
+                        `;
+
+                        if (!ideasCache[p.id]) {
+                            const ideas = await App.api(`/locations/first-nations/${encodeURIComponent(p.id)}/ideas?limit=10`);
+                            ideasCache[p.id] = ideas;
+                        }
+
+                        const ideas = ideasCache[p.id] || [];
+
+                        if (!ideas.length) {
+                            info.innerHTML = `
+                                <div class="province-map-info-name">${p.name}</div>
+                                <div class="province-map-info-meta">No ideas posted from this First Nation yet.</div>
+                            `;
+                            return;
+                        }
+
+                        const listHtml = ideas.map((idea, idx) => `
+                            <li>
+                                <span class="province-map-idea-rank">${idx + 1}.</span>
+                                <span class="province-map-idea-title">${idea.title}</span>
+                                <span class="province-map-idea-support">(${idea.supportCount || 0} supporters)</span>
+                            </li>
+                        `).join('');
+
+                        info.innerHTML = `
+                            <div class="province-map-info-name">${p.name}</div>
+                            <div class="province-map-info-meta">Top ideas from this First Nation:</div>
+                            <ol class="province-map-ideas-list">
+                                ${listHtml}
+                            </ol>
+                        `;
+                    } catch (err) {
+                        info.innerHTML = `
+                            <div class="province-map-info-name">${p.name}</div>
+                            <div class="province-map-info-meta">Error loading ideas: ${err.message}</div>
+                        `;
+                    }
+                };
+
+                // Hover to show top 10 ideas under the place name
+                point.addEventListener('mouseenter', () => {
+                    showTopIdeas();
+                });
+
+                // Click also shows the same info (friendly for touch devices)
+                point.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showTopIdeas();
+                });
+            }
 
             inner.appendChild(point);
         });
 
-        // Basic pan + zoom controls
-        const state = {
-            // Start slightly zoomed out so the whole province feels less "up close"
-            scale: 0.8,
-            translateX: 0,
-            translateY: 0,
-            panning: false,
-            startX: 0,
-            startY: 0,
-            startTranslateX: 0,
-            startTranslateY: 0
-        };
+        // Center the map so the province's middle is in view instead of the northwest corner.
+        // We start from a data-driven center, then apply a gentle nudge so provinces like
+        // Manitoba land in a more visually pleasing spot. The same formula is used for all
+        // provinces so behavior is still consistent.
+        if (pointCount > 0) {
+            const avgXPercent = sumXPercent / pointCount;
+            const avgYPercent = sumYPercent / pointCount;
 
-        const applyTransform = () => {
-            inner.style.transform = `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale})`;
-        };
+            requestAnimationFrame(() => {
+                const rect = canvas.getBoundingClientRect();
+                if (!rect.width || !rect.height) return;
+
+                // Base translation to bring the average point near the canvas center (50%, 50%)
+                let translateX = ((50 - avgXPercent) / 100) * rect.width;
+                let translateY = ((50 - avgYPercent) / 100) * rect.height;
+
+                // Gentle nudge: shift a bit left and up so the main body of the province
+                // tends to land in a nicer spot (this worked well for Manitoba).
+                translateX -= rect.width * 0.3;    // 30% extra to the left
+                translateY -= rect.height * 0.175; // 17.5% extra upward
+
+                state.translateX = translateX;
+                state.translateY = translateY;
+                applyTransform();
+            });
+        }
 
         canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
@@ -471,7 +595,8 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
             const cy = e.clientY - rect.top;
 
             const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
-            const newScale = Math.min(8, Math.max(0.25, state.scale * zoomFactor));
+            // Allow a little more zooming out than before
+            const newScale = Math.min(8, Math.max(0.2, state.scale * zoomFactor));
             if (newScale === state.scale) return;
 
             // Zoom relative to cursor position
@@ -550,6 +675,12 @@ App.onCandidatesLocationSelect = async function(type, id, name, autoSelectFirst 
     
     try {
         const candidates = await App.api(`/locations/${type}/${id}/candidates`);
+
+        // Always show the province map when a province is selected,
+        // even if there are no candidates yet for that province.
+        if (type === 'provinces') {
+            App.showProvinceMap(pageId, id, name);
+        }
         
         if (!candidates.length) {
             App.showListEmpty(pageId, '🗳️', 'No candidates in this location yet');
@@ -694,6 +825,12 @@ App.onMembersLocationSelect = async function(type, id, name, autoSelectFirst = f
     
     try {
         const members = await App.api(`/locations/${type}/${id}/users`);
+
+        // Always show the province map when a province is selected,
+        // even if there are no members yet for that province.
+        if (type === 'provinces') {
+            App.showProvinceMap(pageId, id, name);
+        }
         
         if (!members.length) {
             App.showListEmpty(pageId, '👥', 'No members in this location yet');
@@ -838,6 +975,12 @@ App.onEventsLocationSelect = async function(type, id, name, autoSelectFirst = fa
     
     try {
         const events = await App.api(`/locations/${type}/${id}/events`);
+
+        // Always show the province map when a province is selected,
+        // even if there are no events yet for that province.
+        if (type === 'provinces') {
+            App.showProvinceMap(pageId, id, name);
+        }
         
         if (!events.length) {
             App.showListEmpty(pageId, '📅', 'No events in this location yet');
@@ -1152,7 +1295,8 @@ App.pages.map = async function() {
         // Pan + zoom (same behavior as province map) with a fixed rotation
         // so the southern border line appears horizontal.
         const state = {
-            scale: 0.8,
+            // Start more zoomed out so the full country is visible
+            scale: 0.6,
             translateX: 0,
             translateY: 0,
             rotation: initialRotationDeg,
@@ -1174,7 +1318,7 @@ App.pages.map = async function() {
             const cy = e.clientY - rect.top;
 
             const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
-            const newScale = Math.min(8, Math.max(0.25, state.scale * zoomFactor));
+            const newScale = Math.min(8, Math.max(0.2, state.scale * zoomFactor));
             if (newScale === state.scale) return;
 
             const scaleRatio = newScale / state.scale;
