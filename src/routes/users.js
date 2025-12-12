@@ -10,6 +10,7 @@ const userService = require('../services/userService');
 const { getSession } = require('../config/db');
 const { authenticate, requireVerifiedUser, requireAdmin } = require('../middleware/auth');
 const notificationService = require('../services/notificationService');
+const { getDriver, getDatabase } = require('../config/db');
 const badgeService = require('../services/badgeService');
 
 // GET /api/users - Get all users
@@ -139,6 +140,43 @@ router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
         res.json({ message: 'User deleted' });
     } catch (error) {
         res.status(500).json({ error: error.message });
+    } finally {
+        await session.close();
+    }
+});
+
+// POST /api/users/admin/cleanup-duplicates - Delete obvious duplicate test users (same email)
+router.post('/admin/cleanup-duplicates', authenticate, requireAdmin, async (req, res) => {
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+
+    try {
+        const result = await session.run(
+            `
+            // Find emails with more than one user
+            MATCH (u:User)
+            WITH toLower(u.email) as email, collect(u) as users
+            WHERE email IS NOT NULL AND email <> '' AND size(users) > 1
+            // Keep the first user in the collection, delete the rest
+            WITH email, head(users) as primary, tail(users) as duplicates
+            UNWIND duplicates as dupe
+            WITH email, collect(dupe) as dupesToDelete
+            UNWIND dupesToDelete as d
+            WITH email, collect(d) as allDupes
+            FOREACH (x IN allDupes | DETACH DELETE x)
+            RETURN email, size(allDupes) as removedCount
+            `
+        );
+
+        const summary = result.records.map((r) => ({
+            email: r.get('email'),
+            removedCount: r.get('removedCount').toNumber()
+        }));
+
+        res.json({ success: true, cleaned: summary });
+    } catch (error) {
+        console.error('Error cleaning up duplicate users:', error);
+        res.status(500).json({ error: 'Failed to clean up duplicate users' });
     } finally {
         await session.close();
     }

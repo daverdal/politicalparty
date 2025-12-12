@@ -117,10 +117,12 @@ async function sendPasswordResetEmail({ to, token }) {
 
     const tx = getTransporter();
 
+    // Always log the reset URL so it can be used even if email delivery is misconfigured
+    // eslint-disable-next-line no-console
+    console.log(`[email] Password reset email for ${to}: ${resetUrl}`);
+
     if (!tx) {
-        // Fallback for development: log the URL so it can be clicked manually
-        // eslint-disable-next-line no-console
-        console.log(`[email] Password reset email for ${to}: ${resetUrl}`);
+        // Fallback for development: only log the URL
         return;
     }
 

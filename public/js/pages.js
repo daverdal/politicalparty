@@ -153,6 +153,27 @@ App.pages.browse = async function() {
         emptyIcon3: '💡',
         emptyText3: 'Select an idea to view details'
     });
+
+    // Inject "Post Idea" button into the Locations panel header
+    const locHeader = document.querySelector('#ideas-location-panel .browse-panel-header');
+    if (locHeader) {
+        locHeader.innerHTML = `
+            <span>🌍 Locations</span>
+            <button class="btn btn-secondary btn-sm" id="ideas-post-idea-btn" style="margin-left: 8px;">
+                Post Idea
+            </button>
+        `;
+        const postBtn = document.getElementById('ideas-post-idea-btn');
+        if (postBtn) {
+            postBtn.addEventListener('click', () => {
+                if (typeof App.showPostIdeaModal === 'function') {
+                    App.showPostIdeaModal();
+                } else {
+                    alert('Posting ideas is not available right now.');
+                }
+            });
+        }
+    }
     
     if (typeof App.enableBrowseLayoutDragScroll === 'function') {
         App.enableBrowseLayoutDragScroll();
@@ -163,6 +184,15 @@ App.pages.browse = async function() {
 
 App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = false) {
     const pageId = 'ideas';
+
+    // Track selected location for posting new ideas
+    if (!App.browseState) {
+        App.browseState = {};
+    }
+    App.browseState.selectedLocation = id;
+    App.browseState.selectedLocationType = type;
+    App.browseState.selectedLocationName = name;
+
     App.showSelectedBadge(pageId, name);
     App.showDetailEmpty(pageId, '💡', 'Select an idea to view details');
     
@@ -268,14 +298,64 @@ App.showIdeaDetailPanel = function(idea) {
             </div>
             <div class="detail-stats">
                 <div class="detail-stat">
-                    <div class="detail-stat-value">${idea.supportCount || 0}</div>
+                    <div class="detail-stat-value" id="idea-support-count">${idea.supportCount || 0}</div>
                     <div class="detail-stat-label">Supporters</div>
+                </div>
+                <div class="detail-actions">
+                    <button class="btn btn-secondary btn-sm" id="idea-like-btn">👍 Like this idea</button>
                 </div>
             </div>
             <div class="detail-body">${idea.description || 'No description provided.'}</div>
             ${idea.tags?.length ? `<div class="detail-tags">${idea.tags.map(tag => `<span class="tag accent">${tag}</span>`).join('')}</div>` : ''}
         </div>
     `;
+
+    // Wire up Like button (support idea)
+    const likeBtn = detail.querySelector('#idea-like-btn');
+    const countEl = detail.querySelector('#idea-support-count');
+
+    if (likeBtn) {
+        likeBtn.addEventListener('click', async () => {
+            if (!App.currentUser) {
+                alert('Please select a user in the "Playing as" dropdown first.');
+                return;
+            }
+
+            likeBtn.disabled = true;
+            likeBtn.textContent = 'Liking...';
+
+            try {
+                const { response, data } = await App.apiPost(`/ideas/${encodeURIComponent(idea.id)}/support`, {
+                    userId: App.currentUser.id
+                });
+
+                if (!response.ok) {
+                    alert(data.error || 'Unable to support idea.');
+                    likeBtn.disabled = false;
+                    likeBtn.textContent = '👍 Like this idea';
+                    return;
+                }
+
+                // Fetch updated idea to get fresh supporter count
+                const updated = await App.api(`/ideas/${encodeURIComponent(idea.id)}`);
+                const newCount =
+                    (Array.isArray(updated.supporters) && updated.supporters.length) ||
+                    updated.supportCount ||
+                    0;
+
+                if (countEl) {
+                    countEl.textContent = newCount;
+                }
+
+                likeBtn.textContent = '👍 Supported';
+                likeBtn.disabled = true;
+            } catch (err) {
+                alert(err.message || 'Unexpected error while supporting idea.');
+                likeBtn.disabled = false;
+                likeBtn.textContent = '👍 Like this idea';
+            }
+        });
+    }
 };
 
 // Province map (using First Nations lat/lon when available)

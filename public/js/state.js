@@ -89,7 +89,10 @@ App.initUserSelector = async function() {
         selector.innerHTML = `
             <option value="">-- Select a user --</option>
             ${App.allUsers.map(u => `
-                <option value="${u.id}">${u.name}${u.candidate ? ' ⭐' : ''}</option>
+                <option value="${u.id}">
+                    ${u.name || '(no name)'}${u.candidate ? ' ⭐' : ''}
+                    ${u.email ? ' – ' + u.email : ''}
+                </option>
             `).join('')}
         `;
         
@@ -98,6 +101,16 @@ App.initUserSelector = async function() {
         if (savedUserId) {
             selector.value = savedUserId;
             App.currentUser = App.allUsers.find(u => u.id === savedUserId);
+        } else if (App.authUser) {
+            // If no saved "playing as" user, default to the signed-in account (by email)
+            const matching = App.allUsers.find(
+                (u) => u.email && App.authUser.email && u.email.toLowerCase() === App.authUser.email.toLowerCase()
+            );
+            if (matching) {
+                App.currentUser = matching;
+                selector.value = matching.id;
+                localStorage.setItem('currentUserId', matching.id);
+            }
         }
         
         // Handle selection change
@@ -130,6 +143,7 @@ App.getCurrentUser = function() {
 App.browseState = {
     selectedLocation: null,
     selectedLocationType: null,
+    selectedLocationName: null,
     selectedIdea: null,
     expandedNodes: new Set(),
     currentIdeas: [],

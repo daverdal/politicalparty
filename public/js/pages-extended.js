@@ -365,6 +365,145 @@ App.showAuthModal = function(initialTab = 'login') {
 };
 
 // ============================================
+// IDEAS: POST NEW IDEA MODAL
+// ============================================
+
+App.showPostIdeaModal = function() {
+    // Require a selected location first
+    if (!App.browseState || !App.browseState.selectedLocation || !App.browseState.selectedLocationType) {
+        alert('Please select a location in the Locations panel first.');
+        return;
+    }
+
+    // Require a "playing as" user so the idea has an author
+    if (!App.currentUser) {
+        alert('Please select a user in the "Playing as" dropdown first, then try again.');
+        return;
+    }
+
+    const locName = App.browseState.selectedLocationName || 'this location';
+
+    const existing = document.querySelector('.modal-overlay.post-idea-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay post-idea-modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Post a new idea</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="auth-help" style="margin-bottom: 12px;">
+                    Posting as <strong>${App.currentUser.name}</strong> in <strong>${locName}</strong>.
+                </p>
+                <form id="post-idea-form" class="auth-form">
+                    <label>
+                        <span>Title</span>
+                        <input type="text" name="title" required maxlength="140" placeholder="Short, clear idea title">
+                    </label>
+                    <label>
+                        <span>Description</span>
+                        <textarea name="description" rows="4" required placeholder="Describe your idea and why it matters"></textarea>
+                    </label>
+                    <label>
+                        <span>Tags (optional, comma-separated)</span>
+                        <input type="text" name="tags" placeholder="e.g. healthcare, transit, environment">
+                    </label>
+                    <button type="submit" class="btn btn-primary auth-submit-btn">Post Idea</button>
+                    <div class="auth-feedback" id="post-idea-feedback"></div>
+                </form>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const close = () => modal.remove();
+    modal.querySelector('.modal-close').addEventListener('click', close);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+    });
+
+    const form = modal.querySelector('#post-idea-form');
+    const feedback = modal.querySelector('#post-idea-feedback');
+    const submitBtn = form.querySelector('.auth-submit-btn');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        feedback.textContent = '';
+        feedback.classList.remove('error', 'success');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Posting...';
+
+        const formData = new FormData(form);
+        const title = (formData.get('title') || '').toString().trim();
+        const description = (formData.get('description') || '').toString().trim();
+        const tagsRaw = (formData.get('tags') || '').toString().trim();
+
+        if (!title || !description) {
+            feedback.textContent = 'Please provide both a title and description.';
+            feedback.classList.add('error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Post Idea';
+            return;
+        }
+
+        const tags = tagsRaw
+            ? tagsRaw
+                  .split(',')
+                  .map((t) => t.trim())
+                  .filter((t) => t.length > 0)
+            : [];
+
+        // Generate a simple unique ID for the idea
+        const id = `idea-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`;
+
+        const payload = {
+            id,
+            title,
+            description,
+            tags,
+            region: locName,
+            authorId: App.currentUser.id
+        };
+
+        try {
+            const { response, data } = await App.apiPost('/ideas', payload);
+            if (!response.ok) {
+                feedback.textContent = data.error || 'Unable to post idea.';
+                feedback.classList.add('error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Post Idea';
+                return;
+            }
+
+            feedback.textContent = 'Idea posted!';
+            feedback.classList.remove('error');
+            feedback.classList.add('success');
+
+            // Refresh the ideas list for the current location
+            const type = App.browseState.selectedLocationType;
+            const idLoc = App.browseState.selectedLocation;
+            const nameLoc = App.browseState.selectedLocationName || locName;
+            if (typeof App.onIdeasLocationSelect === 'function' && type && idLoc) {
+                await App.onIdeasLocationSelect(type, idLoc, nameLoc, true);
+            }
+
+            setTimeout(() => {
+                close();
+            }, 800);
+        } catch (err) {
+            feedback.textContent = err.message || 'Unexpected error while posting idea.';
+            feedback.classList.add('error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Post Idea';
+        }
+    });
+};
+
+// ============================================
 // PROFILE PAGE
 // ============================================
 
@@ -555,6 +694,7 @@ App.pages.profile = async function() {
                         <p class="nominations-info" style="margin: 12px 0;">
                             You have <strong>${nominations[0]?.nominationCount || 0}</strong> lifetime nomination(s) supporting you.
                         </p>
+                        <div id="candidacy-location-container" style="margin: 12px 0;"></div>
                         <button class="btn btn-primary" onclick="App.declareCandidacy('${activeConv.id}')">🏃 Declare Candidacy</button>
                     </div>
                 </div>
@@ -719,6 +859,52 @@ App.pages.profile = async function() {
                 saveBtn.textContent = 'Save Location';
             }
         });
+
+        // Populate "Run for Office" location selector (federal/provincial/town/First Nation)
+        const candidacyLocContainer = document.getElementById('candidacy-location-container');
+        if (candidacyLocContainer) {
+            const allLocations = userDetails.locations || [];
+            const allowedTypes = ['FederalRiding', 'ProvincialRiding', 'Town', 'FirstNation'];
+            const typeLabels = {
+                FederalRiding: 'Federal Riding',
+                ProvincialRiding: 'Provincial Riding',
+                Town: 'Town',
+                FirstNation: 'First Nation'
+            };
+            const candidateLocations = allLocations.filter((loc) => allowedTypes.includes(loc.type));
+
+            if (!candidateLocations.length) {
+                candidacyLocContainer.innerHTML =
+                    '<p class="empty-text">Set a federal riding, provincial riding, town or First Nation above to choose where to run.</p>';
+            } else {
+                const optionsHtml = candidateLocations
+                    .map(
+                        (loc) =>
+                            `<option value="${loc.id}" data-type="${loc.type}">${typeLabels[loc.type] || loc.type}: ${
+                                loc.name
+                            }</option>`
+                    )
+                    .join('');
+
+                candidacyLocContainer.innerHTML = `
+                    <label class="form-label">
+                        <span>Where do you want to run?</span>
+                        <select id="candidacy-location-select" class="form-control">
+                            <option value="">-- Choose riding / community --</option>
+                            ${optionsHtml}
+                        </select>
+                    </label>
+                `;
+
+                // If there is exactly one option, pre-select it
+                if (candidateLocations.length === 1) {
+                    const sel = candidacyLocContainer.querySelector('#candidacy-location-select');
+                    if (sel) {
+                        sel.value = candidateLocations[0].id;
+                    }
+                }
+            }
+        }
         
     } catch (err) {
         content.innerHTML = `<div class="card"><div class="card-body">Error: ${err.message}</div></div>`;
@@ -1412,6 +1598,26 @@ App.pages.admin = async function() {
                         </form>
                     </div>
                 </div>
+
+                <!-- Dev Utilities Card -->
+                <div class="card">
+                    <div class="card-header"><h3 class="card-title">🧹 Dev Utilities</h3></div>
+                    <div class="card-body">
+                        <p class="card-subtitle" style="margin-bottom: 8px;">
+                            Tools to keep the development database tidy. These do <strong>not</strong> run automatically.
+                        </p>
+                        <button class="admin-btn" onclick="App.cleanupDuplicateUsers()">🧹 Clean up duplicate users (same email)</button>
+                        <div id="cleanup-duplicates-result" class="form-feedback" style="margin-top: 8px;"></div>
+                        <hr style="margin: 12px 0; border-color: var(--border-color);">
+                        <button class="admin-btn danger" onclick="App.resetDatabase()">💣 Reset Neo4j database and re-seed</button>
+                        <div id="reset-db-result" class="form-feedback" style="margin-top: 8px;"></div>
+                        <p class="form-help" style="margin-top: 8px; color: var(--text-muted); font-size: 0.85rem;">
+                            User cleanup keeps one user per email address and deletes extra test users.
+                            The reset button will wipe <strong>all</strong> Neo4j data and re-run the full seed script.
+                            Use only on your local development database.
+                        </p>
+                    </div>
+                </div>
                 
                 ${activeConv ? `
                 <!-- Active Convention Controls -->
@@ -1651,6 +1857,100 @@ App.advanceConvention = async function(convId) {
         App.pages.admin();
     } catch (err) {
         App.showAdminResult('Error: ' + err.message);
+    }
+};
+
+/**
+ * Dev utility: clean up duplicate users that share the same email.
+ * Called directly by the Admin page "Clean up duplicate users" button.
+ */
+App.cleanupDuplicateUsers = async function() {
+    const resultEl = document.getElementById('cleanup-duplicates-result');
+
+    if (!confirm('This will delete duplicate users with the same email in the dev database. Continue?')) {
+        if (resultEl) {
+            resultEl.textContent = 'Cancelled.';
+            resultEl.classList.remove('error');
+            resultEl.classList.add('success');
+        }
+        return;
+    }
+
+    if (resultEl) {
+        resultEl.textContent = 'Running cleanup...';
+        resultEl.classList.remove('error', 'success');
+    }
+
+    try {
+        const { response, data } = await App.apiPost('/users/admin/cleanup-duplicates', {});
+        if (!response.ok) {
+            if (resultEl) {
+                resultEl.textContent = data.error || 'Failed to clean up duplicates.';
+                resultEl.classList.add('error');
+            }
+        } else {
+            const summary = (data.cleaned || [])
+                .map((item) => `${item.email}: removed ${item.removedCount} duplicate(s)`)
+                .join('; ') || 'No duplicates found.';
+            if (resultEl) {
+                resultEl.textContent = `Done. ${summary}`;
+                resultEl.classList.add('success');
+            }
+            alert(`Duplicate cleanup complete.\n\n${summary}`);
+        }
+    } catch (err) {
+        if (resultEl) {
+            resultEl.textContent = `Error: ${err.message}`;
+            resultEl.classList.add('error');
+        }
+    }
+};
+
+/**
+ * Dev utility: reset and re-seed the Neo4j database.
+ * Called directly by the Admin page "Reset database" button.
+ */
+App.resetDatabase = async function() {
+    const resultEl = document.getElementById('reset-db-result');
+
+    if (
+        !confirm(
+            'This will DELETE all data in Neo4j and re-seed it using the development script.\n\nAre you absolutely sure?'
+        )
+    ) {
+        if (resultEl) {
+            resultEl.textContent = 'Cancelled.';
+            resultEl.classList.remove('error');
+            resultEl.classList.add('success');
+        }
+        return;
+    }
+
+    if (resultEl) {
+        resultEl.textContent = 'Resetting and re-seeding database... this may take a minute.';
+        resultEl.classList.remove('error', 'success');
+    }
+
+    try {
+        const { response, data } = await App.apiPost('/admin/reset-db', {});
+        if (!response.ok) {
+            if (resultEl) {
+                resultEl.textContent = data.error || 'Failed to reset database.';
+                resultEl.classList.add('error');
+            }
+        } else {
+            const msg = data.message || 'Database reset and reseeded successfully.';
+            if (resultEl) {
+                resultEl.textContent = `${msg} You may need to refresh the page.`;
+                resultEl.classList.add('success');
+            }
+            alert(`${msg}\n\nYou may need to reload this page so the UI matches the new data.`);
+        }
+    } catch (err) {
+        if (resultEl) {
+            resultEl.textContent = `Error: ${err.message}`;
+            resultEl.classList.add('error');
+        }
     }
 };
 
@@ -1897,14 +2197,26 @@ App.declareCandidacy = async function(convId) {
     if (!App.requireVerifiedAuth()) {
         return;
     }
+
+    // Require the user to choose a specific location (federal/provincial/town/First Nation)
+    let locationId = null;
+    const locSelect = document.getElementById('candidacy-location-select');
+    if (locSelect) {
+        locationId = locSelect.value || null;
+        if (!locationId) {
+            alert('Please choose where you want to run (federal riding, provincial riding, town, or First Nation).');
+            locSelect.focus();
+            return;
+        }
+    }
     
-    if (!confirm('Are you sure you want to run for office? You will be added as a candidate in your riding.')) {
+    if (!confirm('Are you sure you want to run for office? You will be added as a candidate in the location you selected.')) {
         return;
     }
     
     try {
         const { response, data } = await App.apiPost(`/conventions/${convId}/declare-candidacy`, { 
-            userId: App.currentUser.id 
+            locationId
         });
         
         if (data.success) {

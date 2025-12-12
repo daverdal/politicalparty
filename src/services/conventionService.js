@@ -310,10 +310,14 @@ async function createNomination({ nominatorId, nomineeId, message }) {
 }
 
 /**
- * Declare candidacy (user decides to run in their riding)
+ * Declare candidacy (user decides to run in a specific riding/location)
  * No nominations required - anyone can run!
+ *
+ * If locationId is provided, the user will run in that exact location,
+ * as long as they have LOCATED_IN to it. Otherwise, we fall back to the
+ * first LOCATED_IN location (backward compatibility).
  */
-async function declareCandidacy({ userId, convId }) {
+async function declareCandidacy({ userId, convId, locationId }) {
     const driver = getDriver();
     const session = driver.session({ database: getDatabase() });
     
@@ -330,18 +334,50 @@ async function declareCandidacy({ userId, convId }) {
         }
         
         // Get user's location
-        const userLocation = await session.run(`
-            MATCH (u:User {id: $userId})-[:LOCATED_IN]->(loc)
-            RETURN u.name as userName, loc.id as locationId, loc.name as locationName, labels(loc)[0] as locationType
-        `, { userId });
-        
-        if (userLocation.records.length === 0) {
-            throw new Error('You must set your riding in your Profile before you can run.');
+        let userLocation;
+        if (locationId) {
+            // Use the specific location the user chose (must already be LOCATED_IN)
+            userLocation = await session.run(
+                `
+                MATCH (u:User {id: $userId})-[:LOCATED_IN]->(loc {id: $locationId})
+                RETURN u.name as userName,
+                       loc.id as locationId,
+                       loc.name as locationName,
+                       labels(loc)[0] as locationType
+                `,
+                { userId, locationId }
+            );
+        } else {
+            // Backward compat: use the first LOCATED_IN location
+            userLocation = await session.run(
+                `
+                MATCH (u:User {id: $userId})-[:LOCATED_IN]->(loc)
+                RETURN u.name as userName,
+                       loc.id as locationId,
+                       loc.name as locationName,
+                       labels(loc)[0] as locationType
+                `,
+                { userId }
+            );
         }
         
+        if (userLocation.records.length === 0) {
+            if (locationId) {
+                throw new Error('You must set this riding in your Profile before you can run.');
+            }
+            throw new Error('You must set your riding in your Profile before you can run.');
+        }
+
         const userName = userLocation.records[0].get('userName');
         const ridingId = userLocation.records[0].get('locationId');
         const ridingName = userLocation.records[0].get('locationName');
+        const locationType = userLocation.records[0].get('locationType');
+
+        // Ensure the chosen location is a valid type for running
+        const allowedTypes = ['FederalRiding', 'ProvincialRiding', 'Town', 'FirstNation'];
+        if (!allowedTypes.includes(locationType)) {
+            throw new Error('You can only run in a federal riding, provincial riding, town, or First Nation.');
+        }
         
         // Check if already running in this convention
         const existingRace = await session.run(`

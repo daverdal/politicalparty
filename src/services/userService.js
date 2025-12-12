@@ -18,19 +18,40 @@ async function getAllUsers() {
             MATCH (u:User)
             OPTIONAL MATCH (u)-[:LOCATED_IN]->(loc)
             OPTIONAL MATCH (u)-[:POSTED]->(idea:Idea)<-[:SUPPORTED]-(supporter:User)
-            WITH u, loc, count(DISTINCT supporter) as points
-            RETURN u, loc, points
-            ORDER BY u.name
+            WITH u,
+                 collect(DISTINCT {node: loc, labels: labels(loc)}) as locations,
+                 count(DISTINCT supporter) as points
+            RETURN u, locations, points
+            ORDER BY coalesce(u.name, u.email) ASC
         `);
-        
+
         return result.records.map(record => {
-            const user = record.get('u').properties;
-            const location = record.get('loc')?.properties;
+            const userNode = record.get('u');
+            const rawLocations = record.get('locations') || [];
             const points = toNumber(record.get('points'));
-            
+
+            const user = userNode.properties;
+
+            // Process locations with their types (same logic as getUserById)
+            const locations = rawLocations
+                .filter(loc => loc.node)
+                .map(loc => {
+                    const labels = loc.labels || [];
+                    const type = labels.find(l =>
+                        ['FederalRiding', 'ProvincialRiding', 'Town', 'FirstNation', 'AdhocGroup'].includes(l)
+                    ) || 'Unknown';
+                    return {
+                        ...loc.node.properties,
+                        type
+                    };
+                });
+
+            const primaryLocation = locations[0] || null;
+
             return {
                 ...user,
-                location,
+                location: primaryLocation,
+                locations,
                 points
             };
         });

@@ -8,6 +8,8 @@ const express = require('express');
 const router = express.Router();
 const adminService = require('../services/adminService');
 const { authenticate, requireAdmin } = require('../middleware/auth');
+const path = require('path');
+const { exec } = require('child_process');
 
 // All admin routes require an authenticated admin user
 router.use(authenticate, requireAdmin);
@@ -176,6 +178,34 @@ router.delete('/convention/:id', async (req, res) => {
         console.error('Error deleting convention:', error);
         res.status(500).json({ error: 'Failed to delete convention' });
     }
+});
+
+// POST /api/admin/reset-db - Nuke Neo4j data and re-seed using test_neo4j.js (development only)
+router.post('/reset-db', (req, res) => {
+    if (process.env.NODE_ENV === 'production') {
+        return res.status(403).json({ error: 'Database reset is disabled in production.' });
+    }
+
+    const projectRoot = path.join(__dirname, '..', '..');
+    const scriptPath = path.join(projectRoot, 'test_neo4j.js');
+
+    // Run the seed script as a child process so it can manage its own Neo4j connection
+    exec(`node "${scriptPath}"`, { cwd: projectRoot }, (error, stdout, stderr) => {
+        if (error) {
+            console.error('[admin] reset-db error:', error, stderr);
+            return res.status(500).json({ error: 'Failed to reset and reseed database.' });
+        }
+
+        // Log output for debugging
+        if (stdout) {
+            console.log('[admin] reset-db output:\n', stdout);
+        }
+        if (stderr) {
+            console.warn('[admin] reset-db warnings:\n', stderr);
+        }
+
+        return res.json({ success: true, message: 'Database reset and reseeded successfully.' });
+    });
 });
 
 module.exports = router;

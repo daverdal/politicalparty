@@ -158,9 +158,10 @@ router.post('/:convId/nominate', authenticate, requireVerifiedUser, async (req, 
 router.post('/:convId/declare-candidacy', authenticate, requireVerifiedUser, async (req, res) => {
     const convId = req.params.convId;
     const userId = req.user.id;
-    
+    const { locationId } = req.body || {};
+
     try {
-        const result = await conventionService.declareCandidacy({ userId, convId });
+        const result = await conventionService.declareCandidacy({ userId, convId, locationId });
         res.json(result);
     } catch (error) {
         console.error('Error declaring candidacy:', error);
