@@ -19,6 +19,7 @@ const votingRouter = require('./voting');
 const notificationsRouter = require('./notifications');
 const pointsRouter = require('./points');
 const referendumsRouter = require('./referendums');
+const strategicRouter = require('./strategic');
 
 // Register all routes
 router.use('/auth', authRouter);
@@ -34,6 +35,7 @@ router.use('/voting', votingRouter);
 router.use('/notifications', notificationsRouter);
 router.use('/points', pointsRouter);
 router.use('/referendums', referendumsRouter);
+router.use('/strategic-sessions', strategicRouter);
 
 // Health check endpoint
 router.get('/health', (req, res) => {

@@ -650,7 +650,20 @@ App.pages.profile = async function() {
                             <div class="current-locations">
                                 <strong>Current Locations:</strong>
                                 <ul class="locations-list">
-                                    ${userDetails.locations.map(loc => `<li>${loc.name} <span class="location-type">(${loc.type})</span></li>`).join('')}
+                                    ${userDetails.locations.map(loc => `
+                                        <li>
+                                            ${loc.name} <span class="location-type">(${loc.type})</span>
+                                            <button 
+                                                class="btn btn-secondary btn-xs open-planning-btn"
+                                                data-loc-id="${loc.id}"
+                                                data-loc-type="${loc.type}"
+                                                data-loc-name="${loc.name}"
+                                                title="Open strategic planning for this location"
+                                            >
+                                                📋 Plan
+                                            </button>
+                                        </li>
+                                    `).join('')}
                                 </ul>
                             </div>
                         ` : ''}
@@ -767,6 +780,22 @@ App.pages.profile = async function() {
                 sel && sel.value
             );
         };
+
+        // Wire "Plan" buttons to open the Planning page for a specific location
+        document.querySelectorAll('.open-planning-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-loc-id');
+                const type = btn.getAttribute('data-loc-type');
+                const name = btn.getAttribute('data-loc-name');
+                if (!id || !type) return;
+
+                window.App = window.App || {};
+                App.planningState = App.planningState || {};
+                App.planningState.pendingLocation = { id, type, name };
+
+                App.navigate('planning');
+            });
+        });
         
         // Province change - load all location types
         provinceSelect?.addEventListener('change', async (e) => {
@@ -1073,6 +1102,867 @@ App.pages.convention = async function() {
         }
     } catch (err) {
         content.innerHTML = `<div class="card"><div class="card-body">Error: ${err.message}</div></div>`;
+    }
+};
+
+// ============================================
+// STRATEGIC PLANNING PAGE
+// ============================================
+
+App.pages.planning = async function() {
+    const content = document.getElementById('content');
+
+    // Require a "playing as" user similar to Profile page
+    if (!App.currentUser) {
+        content.innerHTML = `
+            <header class="page-header">
+                <h1 class="page-title">📋 Strategic Planning</h1>
+            </header>
+            <div class="card">
+                <div class="card-body">
+                    <p class="empty-text">
+                        Please select a user from the "Playing as" dropdown above to manage planning sessions.
+                    </p>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    // Require signed-in + verified user to actually start/archive plans
+    if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) {
+        content.innerHTML = `
+            <header class="page-header">
+                <h1 class="page-title">📋 Strategic Planning</h1>
+            </header>
+            <div class="card">
+                <div class="card-body">
+                    <p class="empty-text">
+                        Sign in with a verified account to start or edit Strategic Plans.
+                    </p>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+    // Map backend location types -> REST path segments
+    const typeToPath = {
+        Country: 'countries',
+        Province: 'provinces',
+        FederalRiding: 'federal-ridings',
+        ProvincialRiding: 'provincial-ridings',
+        Town: 'towns',
+        FirstNation: 'first-nations',
+        AdhocGroup: 'adhoc-groups'
+    };
+
+    const typeToLabel = {
+        Country: 'Country',
+        Province: 'Province',
+        FederalRiding: 'Federal Riding',
+        ProvincialRiding: 'Provincial Riding',
+        Town: 'Town',
+        FirstNation: 'First Nation',
+        AdhocGroup: 'Ad-hoc Group'
+    };
+
+    try {
+        const userDetails = await App.api(`/users/${App.currentUser.id}`);
+        const locations = userDetails.locations || [];
+
+        if (!locations.length) {
+            content.innerHTML = `
+                <header class="page-header">
+                    <h1 class="page-title">📋 Strategic Planning</h1>
+                </header>
+                <div class="card">
+                    <div class="card-body">
+                        <p class="empty-text">
+                            You do not have any locations set yet. Go to <strong>My Profile</strong> and add your
+                            First Nation, Federal Riding, Provincial Riding, Town, or Ad-hoc Group to begin planning.
+                        </p>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        // Determine initial selected location (from profile "Plan" button or first location)
+        App.planningState = App.planningState || {};
+        const pending = App.planningState.pendingLocation;
+        if (pending) {
+            // Prefer a pending location that matches the user's known locations
+            const match = locations.find(
+                (loc) => loc.id === pending.id && loc.type === pending.type
+            );
+            App.planningState.selectedLocation = match || pending;
+            delete App.planningState.pendingLocation;
+        } else if (!App.planningState.selectedLocation) {
+            const first = locations[0];
+            App.planningState.selectedLocation = {
+                id: first.id,
+                type: first.type,
+                name: first.name
+            };
+        }
+
+        const selected = App.planningState.selectedLocation;
+
+        const buildLocationOptions = () =>
+            locations
+                .map((loc) => {
+                    const label = typeToLabel[loc.type] || loc.type || 'Location';
+                    const isSelected = selected && selected.id === loc.id && selected.type === loc.type;
+                    return `
+                        <option 
+                            value="${loc.id}" 
+                            data-type="${loc.type}"
+                            ${isSelected ? 'selected' : ''}
+                        >
+                            ${loc.name} (${label})
+                        </option>
+                    `;
+                })
+                .join('');
+
+        content.innerHTML = `
+            <header class="page-header">
+                <h1 class="page-title">📋 Strategic Planning</h1>
+                <p class="page-subtitle">
+                    One active Strategic Plan per riding/location. Start a plan for any of your locations
+                    (First Nation, Federal, Provincial, Town, or Ad-hoc group).
+                </p>
+            </header>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Select Location</h3>
+                </div>
+                <div class="card-body">
+                    <div class="location-selector-row">
+                        <label for="planning-location-select">My locations</label>
+                        <select id="planning-location-select" class="form-select">
+                            ${buildLocationOptions()}
+                        </select>
+                    </div>
+                    <p class="location-help" id="planning-location-help"></p>
+                </div>
+            </div>
+
+            <div id="planning-session-container">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const selectEl = document.getElementById('planning-location-select');
+        const helpEl = document.getElementById('planning-location-help');
+        const sessionContainer = document.getElementById('planning-session-container');
+
+        const loadForCurrentSelection = async () => {
+            const selectedOption = selectEl.options[selectEl.selectedIndex];
+            if (!selectedOption) return;
+
+            const locId = selectedOption.value;
+            const locType = selectedOption.getAttribute('data-type');
+            const locName = selectedOption.textContent.trim();
+
+            App.planningState.selectedLocation = { id: locId, type: locType, name: locName };
+
+            const pathSegment = typeToPath[locType];
+            if (!pathSegment) {
+                sessionContainer.innerHTML = `
+                    <div class="card">
+                        <div class="card-body">
+                            <p class="empty-text">Planning is not yet supported for this location type (${locType}).</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            if (helpEl) {
+                const label = typeToLabel[locType] || locType;
+                helpEl.textContent = `Planning for: ${locName} – ${label}. Only one active Strategic Plan can exist for this location at a time.`;
+            }
+
+            sessionContainer.innerHTML = `
+                <div class="card">
+                    <div class="card-body">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                </div>
+            `;
+
+            try {
+                const [activeSession, history] = await Promise.all([
+                    App.api(
+                        `/strategic-sessions/location/${pathSegment}/${encodeURIComponent(
+                            locId
+                        )}/active`
+                    ),
+                    App.api(
+                        `/strategic-sessions/location/${pathSegment}/${encodeURIComponent(
+                            locId
+                        )}/history?limit=10`
+                    )
+                ]);
+
+                const historyItems = (history || [])
+                    .map(
+                        (s) => `
+                        <li>
+                            <strong>${s.title || 'Strategic Plan'}</strong>
+                            <span class="location-type">(${s.status || 'archived'})</span>
+                            ${s.createdAt ? ` – started ${App.formatDate(s.createdAt)}` : ''}
+                        </li>
+                    `
+                    )
+                    .join('');
+
+                if (activeSession) {
+                    const isAdmin = App.authUser && App.authUser.role === 'admin';
+
+                    const rawStatus = activeSession.status || 'draft';
+                    const stageLabels = {
+                        draft: 'Draft',
+                        discussion: 'Discussion',
+                        decision: 'Decision',
+                        review: 'Review',
+                        completed: 'Completed',
+                        archived: 'Archived'
+                    };
+                    const stageDescriptions = {
+                        draft: 'Gather ideas, issues, and rough goals.',
+                        discussion: 'Discuss, refine, and prioritize issues and options.',
+                        decision: 'Turn priorities into specific decisions and actions.',
+                        review: 'Look back at what worked and what needs adjustment.',
+                        completed: 'This plan has been fully worked through (ready to archive when no longer current).'
+                    };
+                    const orderedStages = ['draft', 'discussion', 'decision', 'review', 'completed'];
+                    const currentIndex = orderedStages.indexOf(rawStatus);
+                    const stageLabel = stageLabels[rawStatus] || 'Draft';
+                    const stageDescription = stageDescriptions[rawStatus] || '';
+
+                    sessionContainer.innerHTML = `
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Active Strategic Plan</h3>
+                                <span class="badge success">${stageLabel}</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label>Stage</label>
+                                    <div class="plan-stage-indicator">
+                                        <div class="plan-stage-steps">
+                                            ${orderedStages
+                                                .map((stage, idx) => {
+                                                    const reached =
+                                                        currentIndex === -1 ? idx === 0 : idx <= currentIndex;
+                                                    return `
+                                                <div class="plan-stage-step ${reached ? 'reached' : ''}">
+                                                    <div class="plan-stage-dot"></div>
+                                                    <div class="plan-stage-label">${stageLabels[stage]}</div>
+                                                </div>
+                                            `;
+                                                })
+                                                .join('')}
+                                        </div>
+                                        <p class="location-help" style="margin-top: 8px;">
+                                            ${stageDescription || ''}
+                                        </p>
+                                        <p class="location-help" id="planning-stage-countdown" style="margin-top: 4px;"></p>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Title</label>
+                                    <input 
+                                        type="text" 
+                                        id="planning-title-input" 
+                                        class="form-input" 
+                                        value="${activeSession.title || 'Strategic Plan'}"
+                                        ${!isAdmin ? 'readonly' : ''}
+                                    >
+                                </div>
+                                <div class="form-group">
+                                    <label>Vision / Purpose</label>
+                                    <textarea 
+                                        id="planning-vision-input" 
+                                        class="form-input" 
+                                        rows="5"
+                                        placeholder="Why does this riding/location exist? What are you trying to achieve together?"
+                                        ${!isAdmin ? 'readonly' : ''}
+                                    >${activeSession.vision || ''}</textarea>
+                                </div>
+                                ${
+                                    isAdmin
+                                        ? `
+                                <div class="form-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
+                                    <button class="btn btn-primary" id="planning-save-btn">Save</button>
+                                    <button class="btn btn-secondary" id="planning-refresh-btn">Refresh</button>
+                                    <button class="btn btn-secondary" id="planning-advance-stage-btn"${
+                                        rawStatus === 'completed' ? ' disabled' : ''
+                                    }>Advance Stage</button>
+                                    <button class="btn btn-danger" id="planning-archive-btn">Archive Plan</button>
+                                </div>
+                                <p class="location-help" style="margin-top: 8px;">
+                                    You are an admin, so you can edit the title or vision and archive this plan. Other members
+                                    from this riding can still participate in the planning process.
+                                </p>
+                                `
+                                        : `
+                                <p class="location-help" style="margin-top: 8px;">
+                                    This Strategic Plan is managed by admins. You can view it here; only admins can edit or
+                                    archive the plan itself.
+                                </p>
+                                `
+                                }
+                                <div id="planning-feedback" class="form-feedback" style="margin-top:8px;"></div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Issues / Priorities</h3>
+                            </div>
+                            <div class="card-body">
+                                <form id="planning-issue-form" class="stacked-form">
+                                    <div class="form-group">
+                                        <label>New Issue or Priority</label>
+                                        <input type="text" id="planning-issue-title" class="form-input" placeholder="e.g., Housing affordability, clean water access">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Details (optional)</label>
+                                        <textarea id="planning-issue-description" class="form-input" rows="2" placeholder="Add context so others understand this priority."></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-secondary">Add Issue</button>
+                                </form>
+                                <div id="planning-issues-list" class="simple-list" style="margin-top: 12px;">
+                                    ${
+                                        activeSession.issues && activeSession.issues.length
+                                            ? activeSession.issues
+                                                  .map(
+                                                      (issue) => `
+                                        <div class="simple-list-item" data-issue-id="${issue.id}">
+                                            <div class="simple-list-main">
+                                                <div class="simple-list-name">${issue.title}</div>
+                                                ${
+                                                    issue.description
+                                                        ? `<div class="simple-list-meta">${issue.description}</div>`
+                                                        : ''
+                                                }
+                                            </div>
+                                            <div class="simple-list-meta">
+                                                <button class="btn btn-ghost btn-xs planning-issue-vote-btn" data-issue-id="${issue.id}">👍 Support</button>
+                                                <span class="badge">${issue.votes || 0} supports</span>
+                                            </div>
+                                        </div>
+                                    `
+                                                  )
+                                                  .join('')
+                                            : '<p class="empty-text">No issues added yet. Start by adding your first priority.</p>'
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Discussion</h3>
+                            </div>
+                            <div class="card-body">
+                                <form id="planning-comment-form" class="stacked-form">
+                                    <div class="form-group">
+                                        <label>Share a thought (anonymous)</label>
+                                        <textarea id="planning-comment-text" class="form-input" rows="2" placeholder="What should this riding keep in mind?"></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-secondary">Post Comment</button>
+                                </form>
+                                <div id="planning-comments-list" class="simple-list" style="margin-top: 12px;">
+                                    ${
+                                        activeSession.comments && activeSession.comments.length
+                                            ? activeSession.comments
+                                                  .slice()
+                                                  .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                                                  .map(
+                                                      (comment) => `
+                                        <div class="simple-list-item">
+                                            <div class="simple-list-name">Member</div>
+                                            <div class="simple-list-meta">
+                                                ${comment.text}
+                                                ${
+                                                    comment.createdAt
+                                                        ? `<span class="location-type" style="margin-left: 6px;">(${App.formatDate(
+                                                              comment.createdAt
+                                                          )})</span>`
+                                                        : ''
+                                                }
+                                            </div>
+                                        </div>
+                                    `
+                                                  )
+                                                  .join('')
+                                            : '<p class="empty-text">No comments yet. Be the first to share a thought.</p>'
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Decisions / Actions</h3>
+                            </div>
+                            <div class="card-body">
+                                <form id="planning-action-form" class="stacked-form">
+                                    <div class="form-group">
+                                        <label>Proposed Action</label>
+                                        <input type="text" id="planning-action-description" class="form-input" placeholder="e.g., Host a town hall on clean water in March">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Target Date (optional)</label>
+                                        <input type="date" id="planning-action-date" class="form-input">
+                                    </div>
+                                    <button type="submit" class="btn btn-secondary">Add Action</button>
+                                </form>
+                                <div id="planning-actions-list" class="simple-list" style="margin-top: 12px;">
+                                    ${
+                                        activeSession.actions && activeSession.actions.length
+                                            ? activeSession.actions
+                                                  .map(
+                                                      (action) => `
+                                        <div class="simple-list-item">
+                                            <div class="simple-list-main">
+                                                <div class="simple-list-name">${action.description}</div>
+                                                <div class="simple-list-meta">
+                                                    Status: ${action.status || 'proposed'}
+                                                    ${
+                                                        action.dueDate
+                                                            ? ` • Target: ${App.formatDate(action.dueDate)}`
+                                                            : ''
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `
+                                                  )
+                                                  .join('')
+                                            : '<p class="empty-text">No actions defined yet. Turn decisions into concrete next steps here.</p>'
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Past Plans</h3>
+                            </div>
+                            <div class="card-body">
+                                ${
+                                    history && history.length
+                                        ? `<ul class="locations-list">${historyItems}</ul>`
+                                        : '<p class="empty-text">No archived plans yet for this location.</p>'
+                                }
+                            </div>
+                        </div>
+                    `;
+
+                    const saveBtn = document.getElementById('planning-save-btn');
+                    const refreshBtn = document.getElementById('planning-refresh-btn');
+                    const archiveBtn = document.getElementById('planning-archive-btn');
+                    const titleInput = document.getElementById('planning-title-input');
+                    const visionInput = document.getElementById('planning-vision-input');
+                    const feedbackEl = document.getElementById('planning-feedback');
+                    const advanceStageBtn = document.getElementById('planning-advance-stage-btn');
+                    const issueForm = document.getElementById('planning-issue-form');
+                    const issueTitleInput = document.getElementById('planning-issue-title');
+                    const issueDescInput = document.getElementById('planning-issue-description');
+                    const issuesList = document.getElementById('planning-issues-list');
+                    const commentForm = document.getElementById('planning-comment-form');
+                    const commentTextInput = document.getElementById('planning-comment-text');
+                    const commentsList = document.getElementById('planning-comments-list');
+                    const actionForm = document.getElementById('planning-action-form');
+                    const actionDescInput = document.getElementById('planning-action-description');
+                    const actionDateInput = document.getElementById('planning-action-date');
+                    const actionsList = document.getElementById('planning-actions-list');
+
+                    if (saveBtn && isAdmin) {
+                        saveBtn.addEventListener('click', async () => {
+                            if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) return;
+                            feedbackEl.textContent = '';
+                            saveBtn.disabled = true;
+                            saveBtn.textContent = 'Saving...';
+                            try {
+                                const { response, data } = await App.apiPut(
+                                    `/strategic-sessions/${encodeURIComponent(activeSession.id)}`,
+                                    {
+                                        title: titleInput.value.trim(),
+                                        vision: visionInput.value.trim()
+                                    }
+                                );
+                                if (!response.ok) {
+                                    feedbackEl.textContent = data.error || 'Could not save session.';
+                                    feedbackEl.classList.add('error');
+                                } else {
+                                    feedbackEl.textContent = 'Saved.';
+                                    feedbackEl.classList.remove('error');
+                                    feedbackEl.classList.add('success');
+                                }
+                            } catch (err) {
+                                feedbackEl.textContent = err.message;
+                                feedbackEl.classList.add('error');
+                            } finally {
+                                saveBtn.disabled = false;
+                                saveBtn.textContent = 'Save';
+                            }
+                        });
+                    }
+
+                    if (refreshBtn) {
+                        refreshBtn.addEventListener('click', () => {
+                            loadForCurrentSelection();
+                        });
+                    }
+
+                    if (archiveBtn && isAdmin) {
+                        archiveBtn.addEventListener('click', async () => {
+                            if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) return;
+                            if (
+                                !confirm(
+                                    'Archive this Strategic Plan? You will still be able to view it in history, and you can start a new plan later.'
+                                )
+                            ) {
+                                return;
+                            }
+                            const feedback = document.getElementById('planning-feedback');
+                            if (feedback) {
+                                feedback.textContent = 'Archiving...';
+                                feedback.classList.remove('error', 'success');
+                            }
+                            try {
+                                const { response, data } = await App.apiPostNoBody(
+                                    `/strategic-sessions/${encodeURIComponent(
+                                        activeSession.id
+                                    )}/archive`
+                                );
+                                if (!response.ok) {
+                                    if (feedback) {
+                                        feedback.textContent = data.error || 'Could not archive session.';
+                                        feedback.classList.add('error');
+                                    }
+                                } else {
+                                    if (feedback) {
+                                        feedback.textContent = 'Archived. Reloading...';
+                                        feedback.classList.remove('error');
+                                        feedback.classList.add('success');
+                                    }
+                                    setTimeout(() => loadForCurrentSelection(), 800);
+                                }
+                            } catch (err) {
+                                if (feedback) {
+                                    feedback.textContent = err.message;
+                                    feedback.classList.add('error');
+                                }
+                            }
+                        });
+                    }
+
+                    // Show countdown to automatic 2-week stage advance
+                    (function updateCountdown() {
+                        const countdownEl = document.getElementById('planning-stage-countdown');
+                        if (!countdownEl) return;
+
+                        if (!activeSession.stageStartedAt || rawStatus === 'completed') {
+                            countdownEl.textContent = '';
+                            return;
+                        }
+
+                        const startedAt = new Date(activeSession.stageStartedAt || activeSession.createdAt);
+                        const msPerDay = 1000 * 60 * 60 * 24;
+                        const now = new Date();
+                        const elapsedMs = now.getTime() - startedAt.getTime();
+                        const elapsedDays = elapsedMs / msPerDay;
+                        const totalStageDays = 14;
+                        const remainingDays = Math.max(0, totalStageDays - elapsedDays);
+
+                        if (remainingDays <= 0) {
+                            countdownEl.textContent =
+                                'This stage is due to advance. It will update automatically when members view this plan.';
+                        } else {
+                            const wholeDays = Math.floor(remainingDays);
+                            const hours = Math.floor((remainingDays - wholeDays) * 24);
+                            const nextLabel =
+                                currentIndex >= 0 && currentIndex < orderedStages.length - 1
+                                    ? stageLabels[orderedStages[currentIndex + 1]]
+                                    : 'next stage';
+                            countdownEl.textContent = `Approximately ${wholeDays} day(s) and ${hours} hour(s) until this plan moves to “${nextLabel}”.`;
+                        }
+                    })();
+
+                    if (advanceStageBtn && isAdmin) {
+                        advanceStageBtn.addEventListener('click', async () => {
+                            if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) return;
+                            const stages = ['draft', 'discussion', 'decision', 'review', 'completed'];
+                            const idx = stages.indexOf(rawStatus);
+                            if (idx === -1 || idx === stages.length - 1) {
+                                alert('This plan is already at the final stage.');
+                                return;
+                            }
+                            const nextStatus = stages[idx + 1];
+                            advanceStageBtn.disabled = true;
+                            try {
+                                const { response, data } = await App.apiPut(
+                                    `/strategic-sessions/${encodeURIComponent(activeSession.id)}`,
+                                    { status: nextStatus }
+                                );
+                                if (!response.ok) {
+                                    alert(data.error || 'Could not advance stage.');
+                                } else {
+                                    await loadForCurrentSelection();
+                                }
+                            } catch (err) {
+                                alert(err.message);
+                            } finally {
+                                advanceStageBtn.disabled = false;
+                            }
+                        });
+                    }
+
+                    // Anonymous issue creation
+                    if (issueForm && issuesList) {
+                        issueForm.addEventListener('submit', async (e) => {
+                            e.preventDefault();
+                            if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) return;
+                            const title = (issueTitleInput.value || '').trim();
+                            const description = (issueDescInput.value || '').trim();
+                            if (!title) {
+                                alert('Please enter an issue or priority title.');
+                                return;
+                            }
+                            try {
+                                const { response, data } = await App.apiPost(
+                                    `/strategic-sessions/${encodeURIComponent(activeSession.id)}/issues`,
+                                    { title, description }
+                                );
+                                if (!response.ok) {
+                                    alert(data.error || 'Could not add issue.');
+                                    return;
+                                }
+                                issueTitleInput.value = '';
+                                issueDescInput.value = '';
+                                // Reload issues via full refresh for simplicity
+                                await loadForCurrentSelection();
+                            } catch (err) {
+                                alert(err.message);
+                            }
+                        });
+
+                        // Delegate vote buttons
+                        issuesList.addEventListener('click', async (e) => {
+                            const btn = e.target.closest('.planning-issue-vote-btn');
+                            if (!btn) return;
+                            if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) return;
+                            const issueId = btn.getAttribute('data-issue-id');
+                            if (!issueId) return;
+                            try {
+                                const { response, data } = await App.apiPost(
+                                    `/strategic-sessions/${encodeURIComponent(
+                                        activeSession.id
+                                    )}/issues/${encodeURIComponent(issueId)}/vote`,
+                                    {}
+                                );
+                                if (!response.ok) {
+                                    alert(data.error || 'Could not support issue.');
+                                    return;
+                                }
+                                await loadForCurrentSelection();
+                            } catch (err) {
+                                alert(err.message);
+                            }
+                        });
+                    }
+
+                    // Anonymous comments
+                    if (commentForm && commentsList) {
+                        commentForm.addEventListener('submit', async (e) => {
+                            e.preventDefault();
+                            if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) return;
+                            const text = (commentTextInput.value || '').trim();
+                            if (!text) {
+                                alert('Please enter a comment.');
+                                return;
+                            }
+                            try {
+                                const { response, data } = await App.apiPost(
+                                    `/strategic-sessions/${encodeURIComponent(activeSession.id)}/comments`,
+                                    { text }
+                                );
+                                if (!response.ok) {
+                                    alert(data.error || 'Could not add comment.');
+                                    return;
+                                }
+                                commentTextInput.value = '';
+                                await loadForCurrentSelection();
+                            } catch (err) {
+                                alert(err.message);
+                            }
+                        });
+                    }
+
+                    // Anonymous action proposals
+                    if (actionForm && actionsList) {
+                        actionForm.addEventListener('submit', async (e) => {
+                            e.preventDefault();
+                            if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) return;
+                            const description = (actionDescInput.value || '').trim();
+                            const dueDate = actionDateInput.value || null;
+                            if (!description) {
+                                alert('Please describe the action.');
+                                return;
+                            }
+                            try {
+                                const { response, data } = await App.apiPost(
+                                    `/strategic-sessions/${encodeURIComponent(activeSession.id)}/actions`,
+                                    { description, dueDate }
+                                );
+                                if (!response.ok) {
+                                    alert(data.error || 'Could not add action.');
+                                    return;
+                                }
+                                actionDescInput.value = '';
+                                actionDateInput.value = '';
+                                await loadForCurrentSelection();
+                            } catch (err) {
+                                alert(err.message);
+                            }
+                        });
+                    }
+                } else {
+                    // No active session - show create form
+                    sessionContainer.innerHTML = `
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Start a Strategic Plan</h3>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-subtitle" style="margin-bottom: 8px;">
+                                    Each riding/location can have one active Strategic Plan at a time. Any member located here can start one.
+                                </p>
+                                <div class="form-group">
+                                    <label>Title</label>
+                                    <input 
+                                        type="text" 
+                                        id="planning-new-title" 
+                                        class="form-input" 
+                                        placeholder="e.g., 2025 Strategic Plan for ${locName}"
+                                        value="Strategic Plan for ${locName}"
+                                    >
+                                </div>
+                                <div class="form-group">
+                                    <label>Vision / Purpose</label>
+                                    <textarea 
+                                        id="planning-new-vision" 
+                                        class="form-input" 
+                                        rows="5"
+                                        placeholder="What is this riding/location trying to achieve together?"
+                                    ></textarea>
+                                </div>
+                                <button class="btn btn-primary" id="planning-create-btn">Start Strategic Plan</button>
+                                <div id="planning-feedback" class="form-feedback" style="margin-top:8px;"></div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Past Plans</h3>
+                            </div>
+                            <div class="card-body">
+                                ${
+                                    history && history.length
+                                        ? `<ul class="locations-list">${historyItems}</ul>`
+                                        : '<p class="empty-text">No archived plans yet for this location.</p>'
+                                }
+                            </div>
+                        </div>
+                    `;
+
+                    const createBtn = document.getElementById('planning-create-btn');
+                    const titleInput = document.getElementById('planning-new-title');
+                    const visionInput = document.getElementById('planning-new-vision');
+                    const feedbackEl = document.getElementById('planning-feedback');
+
+                    if (createBtn) {
+                        createBtn.addEventListener('click', async () => {
+                            if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) return;
+                            const title = titleInput.value.trim();
+                            const vision = visionInput.value.trim();
+                            if (!title) {
+                                feedbackEl.textContent = 'Please provide a title for this plan.';
+                                feedbackEl.classList.add('error');
+                                return;
+                            }
+                            createBtn.disabled = true;
+                            createBtn.textContent = 'Starting...';
+                            feedbackEl.textContent = '';
+                            feedbackEl.classList.remove('error', 'success');
+                            try {
+                                const { response, data } = await App.apiPost(
+                                    `/strategic-sessions/location/${pathSegment}/${encodeURIComponent(
+                                        locId
+                                    )}`,
+                                    { title, vision }
+                                );
+                                if (!response.ok) {
+                                    feedbackEl.textContent =
+                                        data.error ||
+                                        'Could not start Strategic Plan. Make sure there is no active plan already.';
+                                    feedbackEl.classList.add('error');
+                                } else {
+                                    feedbackEl.textContent = 'Strategic Plan started.';
+                                    feedbackEl.classList.remove('error');
+                                    feedbackEl.classList.add('success');
+                                    setTimeout(() => loadForCurrentSelection(), 800);
+                                }
+                            } catch (err) {
+                                feedbackEl.textContent = err.message;
+                                feedbackEl.classList.add('error');
+                            } finally {
+                                createBtn.disabled = false;
+                                createBtn.textContent = 'Start Strategic Plan';
+                            }
+                        });
+                    }
+                }
+            } catch (err) {
+                sessionContainer.innerHTML = `
+                    <div class="card">
+                        <div class="card-body">
+                            <p class="empty-text">Error loading planning data: ${err.message}</p>
+                        </div>
+                    </div>
+                `;
+            }
+        };
+
+        selectEl.addEventListener('change', () => {
+            loadForCurrentSelection();
+        });
+
+        // Initial load
+        await loadForCurrentSelection();
+    } catch (err) {
+        content.innerHTML = `
+            <div class="card">
+                <div class="card-body">
+                    <p class="empty-text">Error: ${err.message}</p>
+                </div>
+            </div>
+        `;
     }
 };
 
