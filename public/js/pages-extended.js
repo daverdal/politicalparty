@@ -1409,6 +1409,7 @@ App.pages.planning = async function() {
                                     <button class="btn btn-secondary" id="planning-advance-stage-btn"${
                                         rawStatus === 'completed' ? ' disabled' : ''
                                     }>Advance Stage</button>
+                                    <button class="btn btn-secondary" id="planning-export-btn">Export / Print</button>
                                     <button class="btn btn-danger" id="planning-archive-btn">Archive Plan</button>
                                 </div>
                                 <p class="location-help" style="margin-top: 8px;">
@@ -1575,6 +1576,7 @@ App.pages.planning = async function() {
                     const saveBtn = document.getElementById('planning-save-btn');
                     const refreshBtn = document.getElementById('planning-refresh-btn');
                     const archiveBtn = document.getElementById('planning-archive-btn');
+                    const exportBtn = document.getElementById('planning-export-btn');
                     const titleInput = document.getElementById('planning-title-input');
                     const visionInput = document.getElementById('planning-vision-input');
                     const feedbackEl = document.getElementById('planning-feedback');
@@ -1668,6 +1670,19 @@ App.pages.planning = async function() {
                                     feedback.textContent = err.message;
                                     feedback.classList.add('error');
                                 }
+                            }
+                        });
+                    }
+
+                    if (exportBtn) {
+                        exportBtn.addEventListener('click', () => {
+                            if (typeof App.exportStrategicPlan === 'function') {
+                                App.exportStrategicPlan(activeSession, {
+                                    locationName: locName,
+                                    stageLabel
+                                });
+                            } else {
+                                window.print();
                             }
                         });
                     }
@@ -1963,6 +1978,169 @@ App.pages.planning = async function() {
                 </div>
             </div>
         `;
+    }
+};
+
+// ============================================
+// STRATEGIC PLANNING EXPORT (PRINT-FRIENDLY)
+// ============================================
+
+App.exportStrategicPlan = function(session, { locationName, stageLabel } = {}) {
+    if (!session) return;
+
+    const safe = (value) => (value == null ? '' : String(value));
+    const title = safe(session.title || 'Strategic Plan');
+    const vision = safe(session.vision || '');
+    const stage = safe(stageLabel || session.status || 'Draft');
+    const locName = safe(locationName || '');
+
+    const issues = Array.isArray(session.issues) ? session.issues : [];
+    const comments = Array.isArray(session.comments) ? session.comments : [];
+    const actions = Array.isArray(session.actions) ? session.actions : [];
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>${title} – Strategic Plan Export</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+            margin: 32px;
+            color: #111827;
+        }
+        h1, h2, h3 {
+            margin-bottom: 8px;
+            color: #111827;
+        }
+        h1 {
+            font-size: 24px;
+        }
+        h2 {
+            font-size: 20px;
+            margin-top: 24px;
+        }
+        h3 {
+            font-size: 16px;
+            margin-top: 16px;
+        }
+        p {
+            margin: 4px 0 8px 0;
+        }
+        .meta {
+            color: #6b7280;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+        .section {
+            margin-top: 16px;
+            padding-top: 8px;
+            border-top: 1px solid #e5e7eb;
+        }
+        ul {
+            margin: 4px 0 8px 18px;
+        }
+        li {
+            margin-bottom: 4px;
+        }
+        .small {
+            font-size: 12px;
+            color: #6b7280;
+        }
+        @media print {
+            body {
+                margin: 16mm;
+            }
+            button {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>${title}</h1>
+    <div class="meta">
+        ${locName ? `Location: ${locName} • ` : ''}Stage: ${stage}
+        ${session.createdAt ? ` • Started: ${safe(App.formatDate(session.createdAt))}` : ''}
+    </div>
+
+    <div class="section">
+        <h2>Vision / Purpose</h2>
+        <p>${vision || '<span class="small">(No vision text provided.)</span>'}</p>
+    </div>
+
+    <div class="section">
+        <h2>Issues / Priorities</h2>
+        ${
+            issues.length
+                ? `<ul>${issues
+                      .map(
+                          (iss) =>
+                              `<li><strong>${safe(iss.title)}</strong>${
+                                  iss.description ? ` – ${safe(iss.description)}` : ''
+                              } <span class="small">(Supports: ${iss.votes || 0})</span></li>`
+                      )
+                      .join('')}</ul>`
+                : '<p class="small">(No issues recorded.)</p>'
+        }
+    </div>
+
+    <div class="section">
+        <h2>Decisions / Actions</h2>
+        ${
+            actions.length
+                ? `<ul>${actions
+                      .map((act) => {
+                          const parts = [safe(act.description)];
+                          if (act.dueDate) {
+                              parts.push(`Target: ${safe(App.formatDate(act.dueDate))}`);
+                          }
+                          if (act.status) {
+                              parts.push(`Status: ${safe(act.status)}`);
+                          }
+                          return `<li>${parts.join(' • ')}</li>`;
+                      })
+                      .join('')}</ul>`
+                : '<p class="small">(No actions defined.)</p>'
+        }
+    </div>
+
+    <div class="section">
+        <h2>Discussion Highlights</h2>
+        ${
+            comments.length
+                ? `<ul>${comments
+                      .slice()
+                      .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
+                      .map(
+                          (c) =>
+                              `<li>${safe(c.text)}${
+                                  c.createdAt
+                                      ? ` <span class="small">(${safe(App.formatDate(c.createdAt))})</span>`
+                                      : ''
+                              }</li>`
+                      )
+                      .join('')}</ul>`
+                : '<p class="small">(No comments recorded.)</p>'
+        }
+    </div>
+
+    <button onclick="window.print()">Print</button>
+</body>
+</html>
+    `;
+
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    try {
+        w.focus();
+        setTimeout(() => w.print(), 500);
+    } catch (e) {
+        // Ignore print errors
     }
 };
 

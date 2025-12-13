@@ -5,6 +5,8 @@
 
 const { getDriver, getDatabase } = require('../config/db');
 const { toISODate } = require('../utils/neo4jHelpers');
+const locationService = require('./locationService');
+const notificationService = require('./notificationService');
 
 const ALLOWED_LOCATION_TYPES = [
     'Country',
@@ -364,6 +366,11 @@ async function createSessionForLocation({
  * Update basic fields on a strategic session (e.g. vision, title, status).
  */
 async function updateSession(sessionId, { title, vision, status }) {
+    const existing = await getSessionById(sessionId);
+    if (!existing) {
+        return null;
+    }
+
     const driver = getDriver();
     const session = driver.session({ database: getDatabase() });
 
@@ -402,10 +409,97 @@ async function updateSession(sessionId, { title, vision, status }) {
             return null;
         }
 
-        return serializeSession(result.records[0].get('s').properties);
+        const updated = serializeSession(result.records[0].get('s').properties);
+
+        // If status changed (and is a real stage), notify riding members
+        if (existing.status !== updated.status && PLAN_STAGES.includes(updated.status)) {
+            try {
+                await notifyStageChange(existing, updated);
+            } catch (e) {
+                // Notification failures should not break core plan update
+            }
+        }
+
+        return updated;
     } finally {
         await session.close();
     }
+}
+
+/**
+ * Notify all members of a location that a plan has entered a new stage.
+ */
+async function notifyStageChange(previous, current) {
+    const locationId = current.locationId;
+    const locationType = current.locationType;
+
+    if (!locationId || !locationType) return;
+
+    const stageLabelMap = {
+        draft: 'Draft',
+        discussion: 'Discussion',
+        decision: 'Decision',
+        review: 'Review',
+        completed: 'Completed'
+    };
+
+    const stageLabel = stageLabelMap[current.status] || current.status || 'Plan';
+
+    // Look up a friendly location name
+    let locationName = locationType;
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+    try {
+        const result = await session.run(
+            `
+            MATCH (loc:${locationType} {id: $locationId})
+            RETURN loc.name as name
+            LIMIT 1
+        `,
+            { locationId }
+        );
+        const record = result.records[0];
+        if (record) {
+            locationName = record.get('name') || locationName;
+        }
+    } catch (e) {
+        // Ignore lookup errors; fall back to type/id
+    } finally {
+        await session.close();
+    }
+
+    // Find all members in this location (using existing helper)
+    let members = [];
+    try {
+        members = await locationService.getUsersForLocation({ locationId, locationType });
+    } catch (e) {
+        members = [];
+    }
+
+    if (!members || !members.length) return;
+
+    const title =
+        `Strategic Plan: ${stageLabel} stage for ${locationName}`;
+    const body =
+        `The Strategic Plan for ${locationName} has moved from “${previous.status || 'unknown'}” to “${stageLabel}” stage.`;
+
+    // Fire-and-forget notifications for each member
+    await Promise.all(
+        members.map((m) =>
+            notificationService.createNotification({
+                userId: m.id,
+                type: 'STRATEGIC_PLAN_STAGE',
+                title,
+                body,
+                payload: {
+                    sessionId: current.id,
+                    stage: current.status,
+                    locationId,
+                    locationType
+                }
+            }).catch(() => null)
+        )
+    );
 }
 
 /**
