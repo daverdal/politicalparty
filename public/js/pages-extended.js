@@ -1314,6 +1314,19 @@ App.pages.planning = async function() {
                     )
                 ]);
 
+                let participation = null;
+                if (activeSession && App.authUser) {
+                    try {
+                        participation = await App.api(
+                            `/strategic-sessions/${encodeURIComponent(
+                                activeSession.id
+                            )}/participation`
+                        );
+                    } catch (e) {
+                        participation = null;
+                    }
+                }
+
                 const historyItems = (history || [])
                     .map(
                         (s) => `
@@ -1380,6 +1393,44 @@ App.pages.planning = async function() {
                                         <p class="location-help" id="planning-stage-countdown" style="margin-top: 4px;"></p>
                                     </div>
                                 </div>
+                                <div class="plan-participants-block">
+                                    <p class="location-help">
+                                        <strong>${activeSession.participantCount || 0}</strong> participant(s) have contributed to this plan so far.
+                                        ${
+                                            rawStatus === 'completed'
+                                                ? activeSession.revealedParticipants &&
+                                                  activeSession.revealedParticipants.length
+                                                    ? `<br>These members chose to show their names on the completed plan: ${activeSession.revealedParticipants
+                                                          .map((p) => p.name)
+                                                          .join(', ')}.`
+                                                    : '<br>No one has chosen to reveal their name yet. All participation remains anonymous.'
+                                                : '<br>All participation is anonymous while the plan is in progress.'
+                                        }
+                                    </p>
+                                    ${
+                                        rawStatus === 'completed' &&
+                                        participation &&
+                                        participation.participated
+                                            ? participation.revealed
+                                                ? `
+                                        <p class="location-help" style="margin-top: 4px;">
+                                            You are currently shown by name on this completed plan.
+                                        </p>
+                                        <button class="btn btn-secondary btn-sm" id="planning-hide-identity-btn">
+                                            Hide my name on this plan
+                                        </button>
+                                    `
+                                                : `
+                                        <p class="location-help" style="margin-top: 4px;">
+                                            You currently appear as anonymous on this completed plan. You can choose to reveal your name.
+                                        </p>
+                                        <button class="btn btn-primary btn-sm" id="planning-reveal-identity-btn">
+                                            Reveal my name on this plan
+                                        </button>
+                                    `
+                                            : ''
+                                    }
+                                </div>
                                 <div class="form-group">
                                     <label>Title</label>
                                     <input 
@@ -1420,7 +1471,8 @@ App.pages.planning = async function() {
                                         : `
                                 <p class="location-help" style="margin-top: 8px;">
                                     This Strategic Plan is managed by admins. You can view it here; only admins can edit or
-                                    archive the plan itself.
+                                    archive the plan itself. All contributions remain anonymous unless a member chooses to
+                                    reveal their name after the plan is completed.
                                 </p>
                                 `
                                 }
@@ -1804,6 +1856,40 @@ App.pages.planning = async function() {
                     const pestSocialInput = document.getElementById('planning-pest-social');
                     const pestTechnologicalInput = document.getElementById('planning-pest-technological');
                     const pestSaveBtn = document.getElementById('planning-pest-save-btn');
+                    const revealBtn = document.getElementById('planning-reveal-identity-btn');
+                    const hideBtn = document.getElementById('planning-hide-identity-btn');
+
+                    if (revealBtn) {
+                        revealBtn.addEventListener('click', async () => {
+                            try {
+                                await App.apiPost(
+                                    `/strategic-sessions/${encodeURIComponent(
+                                        activeSession.id
+                                    )}/reveal`,
+                                    { reveal: true }
+                                );
+                                await loadForCurrentSelection();
+                            } catch (err) {
+                                alert(err.message || 'Unable to update visibility.');
+                            }
+                        });
+                    }
+
+                    if (hideBtn) {
+                        hideBtn.addEventListener('click', async () => {
+                            try {
+                                await App.apiPost(
+                                    `/strategic-sessions/${encodeURIComponent(
+                                        activeSession.id
+                                    )}/reveal`,
+                                    { reveal: false }
+                                );
+                                await loadForCurrentSelection();
+                            } catch (err) {
+                                alert(err.message || 'Unable to update visibility.');
+                            }
+                        });
+                    }
                     const advanceStageBtn = document.getElementById('planning-advance-stage-btn');
                     const issueForm = document.getElementById('planning-issue-form');
                     const issueTitleInput = document.getElementById('planning-issue-title');

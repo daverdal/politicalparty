@@ -40,7 +40,7 @@ App.navigate = function(page) {
 document.addEventListener('DOMContentLoaded', async () => {
     // Initialize theme
     App.initTheme();
-
+    
     // Initialize user selector
     await App.initUserSelector();
 
@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof App.loadAuthUser === 'function') {
         await App.loadAuthUser();
     }
-
+    
     // Set up navigation
     document.querySelectorAll('.nav-link').forEach(link => {
         link.addEventListener('click', (e) => {

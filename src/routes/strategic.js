@@ -290,6 +290,34 @@ router.put('/:id/review', authenticate, async (req, res) => {
     }
 });
 
+// GET /api/strategic-sessions/:id/participation - check current user's participation & reveal status
+router.get('/:id/participation', authenticate, async (req, res) => {
+    try {
+        const result = await strategicService.getParticipationForUser(
+            req.params.id,
+            req.user.id
+        );
+        res.json(result);
+    } catch (error) {
+        res.status(error.statusCode || 500).json({ error: error.message });
+    }
+});
+
+// POST /api/strategic-sessions/:id/reveal - opt in/out of being named on a completed plan
+router.post('/:id/reveal', authenticate, async (req, res) => {
+    try {
+        const { reveal } = req.body || {};
+        const result = await strategicService.setRevealPreference({
+            sessionId: req.params.id,
+            userId: req.user.id,
+            reveal: !!reveal
+        });
+        res.json(result);
+    } catch (error) {
+        res.status(error.statusCode || 500).json({ error: error.message });
+    }
+});
+
 module.exports = router;
 
 

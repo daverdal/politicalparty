@@ -115,7 +115,7 @@ router.get('/races/:raceId', async (req, res) => {
 router.post('/:convId/nominate', authenticate, requireVerifiedUser, async (req, res) => {
     const { nomineeId, message } = req.body;
     const nominatorId = req.user.id;
-
+    
     if (!nomineeId) {
         return res.status(400).json({ error: 'nomineeId is required' });
     }
@@ -159,7 +159,7 @@ router.post('/:convId/declare-candidacy', authenticate, requireVerifiedUser, asy
     const convId = req.params.convId;
     const userId = req.user.id;
     const { locationId } = req.body || {};
-
+    
     try {
         const result = await conventionService.declareCandidacy({ userId, convId, locationId });
         res.json(result);

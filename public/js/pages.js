@@ -21,7 +21,7 @@ App.pages.dashboard = async function() {
             App.api('/events'),
             App.api('/votes')
         ]);
-
+        
         let pointsSummary = null;
         let localLeaderboard = null;
 
@@ -198,7 +198,7 @@ App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = fal
     
     try {
         const ideas = await App.api(`/locations/${type}/${id}/ideas`);
-
+        
         const list = document.getElementById(`${pageId}-list`);
         const showMapLink = type === 'provinces' || type === 'countries';
         
@@ -223,26 +223,26 @@ App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = fal
             `;
             list.innerHTML = html;
         } else {
-            App.panelState[pageId].currentItems = ideas;
+        App.panelState[pageId].currentItems = ideas;
             html += ideas.map((idea, index) => `
-                <div class="list-item" data-index="${index}" data-id="${idea.id}">
-                    <div class="list-item-title">${idea.title}</div>
-                    <div class="list-item-meta">
-                        <span class="list-item-stat">👍 ${idea.supportCount || 0}</span>
-                        <span>${idea.author?.name || 'Anonymous'}</span>
-                    </div>
+            <div class="list-item" data-index="${index}" data-id="${idea.id}">
+                <div class="list-item-title">${idea.title}</div>
+                <div class="list-item-meta">
+                    <span class="list-item-stat">👍 ${idea.supportCount || 0}</span>
+                    <span>${idea.author?.name || 'Anonymous'}</span>
                 </div>
-            `).join('');
+            </div>
+        `).join('');
             list.innerHTML = html;
-
-            document.querySelectorAll(`#${pageId}-list .list-item`).forEach(item => {
-                item.addEventListener('click', () => {
-                    document.querySelectorAll(`#${pageId}-list .list-item`).forEach(i => i.classList.remove('selected'));
-                    item.classList.add('selected');
-                    const idx = parseInt(item.dataset.index);
-                    App.showIdeaDetailPanel(App.panelState[pageId].currentItems[idx]);
-                });
+        
+        document.querySelectorAll(`#${pageId}-list .list-item`).forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll(`#${pageId}-list .list-item`).forEach(i => i.classList.remove('selected'));
+                item.classList.add('selected');
+                const idx = parseInt(item.dataset.index);
+                App.showIdeaDetailPanel(App.panelState[pageId].currentItems[idx]);
             });
+        });
         }
         
         // Map link

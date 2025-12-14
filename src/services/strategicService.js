@@ -390,7 +390,9 @@ async function getActiveSessionForLocation({ locationId, locationType }) {
             // Failing auto-advance should not break the page; log on server if desired.
         }
 
-        return serialized;
+        // Attach anonymous participation metadata (counts and revealed names)
+        const withMeta = await attachVisibilityMetadata(serialized);
+        return withMeta;
     } finally {
         await session.close();
     }
@@ -419,7 +421,16 @@ async function getSessionHistoryForLocation({ locationId, locationType, limit = 
             { locationId, locationType }
         );
 
-        return result.records.map((record) => serializeSession(record.get('s').properties));
+        const sessions = result.records.map((record) =>
+            serializeSession(record.get('s').properties)
+        );
+
+        const withMeta = [];
+        for (const s of sessions) {
+            withMeta.push(await attachVisibilityMetadata(s));
+        }
+
+        return withMeta;
     } finally {
         await session.close();
     }
@@ -624,6 +635,81 @@ async function getSessionParticipantIds(sessionId) {
 }
 
 /**
+ * Read the reveal preferences for a session and resolve opted-in participant names.
+ */
+async function getRevealInfo(sessionId) {
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+
+    try {
+        const result = await session.run(
+            `
+            MATCH (s:StrategicSession {id: $id})
+            RETURN s.revealUserIdsJson as revealUserIdsJson
+        `,
+            { id: sessionId }
+        );
+
+        if (!result.records.length) {
+            return { ids: new Set(), participants: [] };
+        }
+
+        const jsonVal = result.records[0].get('revealUserIdsJson');
+        const raw = safeParseJson(jsonVal, []);
+        const idArray = Array.isArray(raw) ? raw.filter((id) => !!id) : [];
+        const ids = new Set(idArray);
+
+        if (!idArray.length) {
+            return { ids, participants: [] };
+        }
+
+        const usersResult = await session.run(
+            `
+            MATCH (u:User)
+            WHERE u.id IN $ids
+            RETURN u
+        `,
+            { ids: idArray }
+        );
+
+        const participants = usersResult.records.map((r) => {
+            const u = r.get('u').properties;
+            return {
+                id: u.id,
+                name: u.name || u.email || 'Member'
+            };
+        });
+
+        return { ids, participants };
+    } finally {
+        await session.close();
+    }
+}
+
+/**
+ * Attach anonymous participation metadata to a serialized session:
+ * - participantCount: how many people contributed in any way
+ * - revealedParticipants: list of users who opted to show their name (only when completed)
+ */
+async function attachVisibilityMetadata(session) {
+    if (!session) return null;
+
+    const participantIds = await getSessionParticipantIds(session.id);
+    let revealedParticipants = [];
+
+    if (session.status === 'completed') {
+        const revealInfo = await getRevealInfo(session.id);
+        revealedParticipants = revealInfo.participants;
+    }
+
+    return {
+        ...session,
+        participantCount: participantIds.size,
+        revealedParticipants
+    };
+}
+
+/**
  * Milestone reward: when a plan enters the Decision stage.
  * Each participant gets +2.0 Strategic points once per session.
  */
@@ -692,6 +778,82 @@ async function awardCompletionMilestonePoints(session) {
     await Promise.all(
         Array.from(participantIds).map((userId) => awardStrategicPoints(userId, 2.0))
     );
+}
+
+/**
+ * Check whether a given user participated in a session and whether they have chosen to reveal.
+ */
+async function getParticipationForUser(sessionId, userId) {
+    const participantIds = await getSessionParticipantIds(sessionId);
+    const participated = participantIds.has(userId);
+
+    if (!participated) {
+        return { participated: false, revealed: false };
+    }
+
+    const revealInfo = await getRevealInfo(sessionId);
+    const revealed = revealInfo.ids.has(userId);
+
+    return { participated: true, revealed };
+}
+
+/**
+ * Set a user's reveal preference for a session (opt in/out of being named on the plan).
+ * - Only allowed if the user actually participated in the session.
+ * - Staying anonymous is the default; reveal is always opt-in.
+ */
+async function setRevealPreference({ sessionId, userId, reveal }) {
+    const participantIds = await getSessionParticipantIds(sessionId);
+    if (!participantIds.has(userId)) {
+        const err = new Error('Only participants in this plan can change visibility.');
+        err.statusCode = 403;
+        throw err;
+    }
+
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+
+    try {
+        const result = await session.run(
+            `
+            MATCH (s:StrategicSession {id: $id})
+            RETURN s.revealUserIdsJson as revealUserIdsJson
+        `,
+            { id: sessionId }
+        );
+
+        if (!result.records.length) {
+            const err = new Error('Session not found');
+            err.statusCode = 404;
+            throw err;
+        }
+
+        const jsonVal = result.records[0].get('revealUserIdsJson');
+        const raw = safeParseJson(jsonVal, []);
+        let ids = Array.isArray(raw) ? raw.filter((id) => !!id) : [];
+
+        if (reveal) {
+            if (!ids.includes(userId)) {
+                ids.push(userId);
+            }
+        } else {
+            ids = ids.filter((id) => id !== userId);
+        }
+
+        const newJson = JSON.stringify(ids);
+
+        await session.run(
+            `
+            MATCH (s:StrategicSession {id: $id})
+            SET s.revealUserIdsJson = $json
+        `,
+            { id: sessionId, json: newJson }
+        );
+
+        return { success: true, reveal: !!reveal };
+    } finally {
+        await session.close();
+    }
 }
 
 /**
@@ -1177,12 +1339,11 @@ async function updateGoalProgress({ sessionId, goalId, status, currentValue }) {
         const updated = serializeSession(result.records[0].get('s').properties);
 
         // Participation reward: +0.2 points for updating Goal progress
-        const goal = updated.goals.find((g) => g.id === goalId);
         if (goal && goal.createdByUserId) {
             await awardStrategicPoints(goal.createdByUserId, 0.2);
         }
 
-        return goal;
+        return updated.goals.find((g) => g.id === goalId);
     } finally {
         await session.close();
     }
@@ -1305,6 +1466,8 @@ module.exports = {
     updateGoalProgress,
     updateSwot,
     updatePest,
+    getParticipationForUser,
+    setRevealPreference,
     ALLOWED_LOCATION_TYPES
 };
 
