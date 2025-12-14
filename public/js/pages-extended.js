@@ -1430,6 +1430,84 @@ App.pages.planning = async function() {
 
                         <div class="card">
                             <div class="card-header">
+                                <h3 class="card-title">Preparation: SWOT Analysis</h3>
+                            </div>
+                            <div class="card-body">
+                                <p class="location-help" style="margin-bottom: 8px;">
+                                    SWOT stands for <strong>Strengths</strong>, <strong>Weaknesses</strong>, <strong>Opportunities</strong>, and <strong>Threats</strong>.
+                                    Use this section to scan what is going well, what is hard, and what external trends might help or hurt your riding.
+                                </p>
+                                <div class="swot-grid">
+                                    <div class="form-group">
+                                        <label>Strengths</label>
+                                        <textarea id="planning-swot-strengths" class="form-input" rows="3" placeholder="What are this riding’s strengths? One per line.">${
+                                            (activeSession.swot?.strengths || []).join('\n')
+                                        }</textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Weaknesses</label>
+                                        <textarea id="planning-swot-weaknesses" class="form-input" rows="3" placeholder="Where is this riding struggling? One per line.">${
+                                            (activeSession.swot?.weaknesses || []).join('\n')
+                                        }</textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Opportunities</label>
+                                        <textarea id="planning-swot-opportunities" class="form-input" rows="3" placeholder="What external opportunities could help? One per line.">${
+                                            (activeSession.swot?.opportunities || []).join('\n')
+                                        }</textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Threats</label>
+                                        <textarea id="planning-swot-threats" class="form-input" rows="3" placeholder="What external risks could hurt? One per line.">${
+                                            (activeSession.swot?.threats || []).join('\n')
+                                        }</textarea>
+                                    </div>
+                                </div>
+                                <button class="btn btn-secondary" id="planning-swot-save-btn" style="margin-top: 8px;">Save SWOT</button>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Preparation: PEST Scan</h3>
+                            </div>
+                            <div class="card-body">
+                                <p class="location-help" style="margin-bottom: 8px;">
+                                    PEST stands for <strong>Political</strong>, <strong>Economic</strong>, <strong>Social</strong>, and <strong>Technological</strong> factors.
+                                    Capture key trends or changes in each area that could affect this riding’s future.
+                                </p>
+                                <div class="swot-grid">
+                                    <div class="form-group">
+                                        <label>Political</label>
+                                        <textarea id="planning-pest-political" class="form-input" rows="3" placeholder="Laws, policies, elections, government changes… One per line.">${
+                                            (activeSession.pest?.political || []).join('\n')
+                                        }</textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Economic</label>
+                                        <textarea id="planning-pest-economic" class="form-input" rows="3" placeholder="Jobs, income, businesses, prices… One per line.">${
+                                            (activeSession.pest?.economic || []).join('\n')
+                                        }</textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Social</label>
+                                        <textarea id="planning-pest-social" class="form-input" rows="3" placeholder="Demographics, culture, community issues… One per line.">${
+                                            (activeSession.pest?.social || []).join('\n')
+                                        }</textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Technological</label>
+                                        <textarea id="planning-pest-technological" class="form-input" rows="3" placeholder="Internet, tools, infrastructure, innovation… One per line.">${
+                                            (activeSession.pest?.technological || []).join('\n')
+                                        }</textarea>
+                                    </div>
+                                </div>
+                                <button class="btn btn-secondary" id="planning-pest-save-btn" style="margin-top: 8px;">Save PEST</button>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
                                 <h3 class="card-title">Issues / Priorities</h3>
                             </div>
                             <div class="card-body">
@@ -1517,6 +1595,111 @@ App.pages.planning = async function() {
 
                         <div class="card">
                             <div class="card-header">
+                                <h3 class="card-title">Goals & Objectives</h3>
+                            </div>
+                            <div class="card-body">
+                                <p class="location-help" style="margin-bottom: 8px;">
+                                    Goals turn your priorities into specific outcomes. Try to make them SMART:
+                                    <strong>Specific</strong>, <strong>Measurable</strong>, <strong>Achievable</strong>,
+                                    <strong>Relevant</strong>, and <strong>Time-bound</strong>.
+                                </p>
+                                <form id="planning-goal-form" class="stacked-form">
+                                    <div class="form-group">
+                                        <label>Goal title</label>
+                                        <input type="text" id="planning-goal-title" class="form-input" placeholder="e.g., Increase voter turnout in this riding">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Details (optional)</label>
+                                        <textarea id="planning-goal-description" class="form-input" rows="2" placeholder="How will you achieve this goal? Who is involved?"></textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>How will you measure success? (optional)</label>
+                                        <input type="text" id="planning-goal-metric" class="form-input" placeholder="e.g., % turnout, number of attendees, etc.">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Target date (optional)</label>
+                                        <input type="date" id="planning-goal-date" class="form-input">
+                                    </div>
+                                    <button type="submit" class="btn btn-secondary">Add Goal</button>
+                                </form>
+                                <div id="planning-goals-list" class="simple-list" style="margin-top: 12px;">
+                                    ${
+                                        activeSession.goals && activeSession.goals.length
+                                            ? activeSession.goals
+                                                  .map(
+                                                      (goal) => `
+                                        <div class="simple-list-item">
+                                            <div class="simple-list-main">
+                                                <div class="simple-list-name">${goal.title}</div>
+                                                ${
+                                                    goal.description
+                                                        ? `<div class="simple-list-meta">${goal.description}</div>`
+                                                        : ''
+                                                }
+                                                <div class="simple-list-meta">
+                                                    ${
+                                                        goal.metric
+                                                            ? `Measure: ${goal.metric}`
+                                                            : ''
+                                                    }
+                                                    ${
+                                                        goal.dueDate
+                                                            ? ` ${
+                                                                  goal.metric ? '• ' : ''
+                                                              }Target: ${App.formatDate(goal.dueDate)}`
+                                                            : ''
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `
+                                                  )
+                                                  .join('')
+                                            : '<p class="empty-text">No goals yet. Turn your top priorities into 2–5 clear goals for this plan.</p>'
+                                    }
+                                </div>
+                                ${
+                                    activeSession.goals && activeSession.goals.length
+                                        ? `
+                                <div class="form-group" style="margin-top: 16px;">
+                                    <label>Update goal progress</label>
+                                    <p class="location-help" style="margin-bottom: 4px;">
+                                        Choose a goal and record its current status and any measurement so your riding can see how things are going.
+                                    </p>
+                                    <div class="goal-progress-row">
+                                        <select id="planning-goal-progress-select" class="form-select">
+                                            ${activeSession.goals
+                                                .map(
+                                                    (g) => `
+                                                <option value="${g.id}">
+                                                    ${g.title}
+                                                </option>
+                                            `
+                                                )
+                                                .join('')}
+                                        </select>
+                                        <select id="planning-goal-status" class="form-select">
+                                            <option value="not_started">Not started</option>
+                                            <option value="on_track">On track</option>
+                                            <option value="at_risk">At risk</option>
+                                            <option value="off_track">Off track</option>
+                                            <option value="completed">Completed</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin-top: 8px;">
+                                        <label>Current value or note (optional)</label>
+                                        <input type="text" id="planning-goal-current" class="form-input" placeholder="e.g., 45% turnout so far, 120 people reached, etc.">
+                                    </div>
+                                    <button class="btn btn-secondary" id="planning-goal-progress-save-btn" style="margin-top: 4px;">Save progress</button>
+                                </div>
+                                `
+                                        : ''
+                                }
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
                                 <h3 class="card-title">Decisions / Actions</h3>
                             </div>
                             <div class="card-body">
@@ -1561,6 +1744,37 @@ App.pages.planning = async function() {
 
                         <div class="card">
                             <div class="card-header">
+                                <h3 class="card-title">Review & Lessons Learned</h3>
+                            </div>
+                            <div class="card-body">
+                                <p class="location-help" style="margin-bottom: 8px;">
+                                    In this final phase, reflect on what happened during this planning cycle. This helps future plans
+                                    get smarter over time.
+                                </p>
+                                <div class="form-group">
+                                    <label>What worked well?</label>
+                                    <textarea id="planning-review-worked" class="form-input" rows="3" placeholder="Strategies, actions, or habits that helped this riding.">${
+                                        activeSession.review?.worked || ''
+                                    }</textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>What didn’t work or was hard?</label>
+                                    <textarea id="planning-review-didnt" class="form-input" rows="3" placeholder="Challenges, blockers, or things you’d avoid next time.">${
+                                        activeSession.review?.didnt || ''
+                                    }</textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>What should we change for the next plan?</label>
+                                    <textarea id="planning-review-changes" class="form-input" rows="3" placeholder="Improvements for the next Strategic Plan cycle.">${
+                                        activeSession.review?.changes || ''
+                                    }</textarea>
+                                </div>
+                                <button class="btn btn-secondary" id="planning-review-save-btn">Save Review</button>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
                                 <h3 class="card-title">Past Plans</h3>
                             </div>
                             <div class="card-body">
@@ -1580,6 +1794,16 @@ App.pages.planning = async function() {
                     const titleInput = document.getElementById('planning-title-input');
                     const visionInput = document.getElementById('planning-vision-input');
                     const feedbackEl = document.getElementById('planning-feedback');
+                    const swotStrengthsInput = document.getElementById('planning-swot-strengths');
+                    const swotWeaknessesInput = document.getElementById('planning-swot-weaknesses');
+                    const swotOpportunitiesInput = document.getElementById('planning-swot-opportunities');
+                    const swotThreatsInput = document.getElementById('planning-swot-threats');
+                    const swotSaveBtn = document.getElementById('planning-swot-save-btn');
+                    const pestPoliticalInput = document.getElementById('planning-pest-political');
+                    const pestEconomicInput = document.getElementById('planning-pest-economic');
+                    const pestSocialInput = document.getElementById('planning-pest-social');
+                    const pestTechnologicalInput = document.getElementById('planning-pest-technological');
+                    const pestSaveBtn = document.getElementById('planning-pest-save-btn');
                     const advanceStageBtn = document.getElementById('planning-advance-stage-btn');
                     const issueForm = document.getElementById('planning-issue-form');
                     const issueTitleInput = document.getElementById('planning-issue-title');
@@ -1592,6 +1816,20 @@ App.pages.planning = async function() {
                     const actionDescInput = document.getElementById('planning-action-description');
                     const actionDateInput = document.getElementById('planning-action-date');
                     const actionsList = document.getElementById('planning-actions-list');
+                    const goalForm = document.getElementById('planning-goal-form');
+                    const goalTitleInput = document.getElementById('planning-goal-title');
+                    const goalDescInput = document.getElementById('planning-goal-description');
+                    const goalMetricInput = document.getElementById('planning-goal-metric');
+                    const goalDateInput = document.getElementById('planning-goal-date');
+                    const goalsList = document.getElementById('planning-goals-list');
+                    const goalProgressSelect = document.getElementById('planning-goal-progress-select');
+                    const goalStatusSelect = document.getElementById('planning-goal-status');
+                    const goalCurrentInput = document.getElementById('planning-goal-current');
+                    const goalProgressSaveBtn = document.getElementById('planning-goal-progress-save-btn');
+                    const reviewWorkedInput = document.getElementById('planning-review-worked');
+                    const reviewDidntInput = document.getElementById('planning-review-didnt');
+                    const reviewChangesInput = document.getElementById('planning-review-changes');
+                    const reviewSaveBtn = document.getElementById('planning-review-save-btn');
 
                     if (saveBtn && isAdmin) {
                         saveBtn.addEventListener('click', async () => {
@@ -1854,6 +2092,177 @@ App.pages.planning = async function() {
                                 await loadForCurrentSelection();
                             } catch (err) {
                                 alert(err.message);
+                            }
+                        });
+                    }
+
+                    // Goals (SMART-style objectives)
+                    if (goalForm && goalsList) {
+                        goalForm.addEventListener('submit', async (e) => {
+                            e.preventDefault();
+                            if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) return;
+                            const title = (goalTitleInput.value || '').trim();
+                            const description = (goalDescInput.value || '').trim();
+                            const metric = (goalMetricInput.value || '').trim();
+                            const dueDate = goalDateInput.value || null;
+                            if (!title) {
+                                alert('Please enter a goal title.');
+                                return;
+                            }
+                            try {
+                                const { response, data } = await App.apiPost(
+                                    `/strategic-sessions/${encodeURIComponent(activeSession.id)}/goals`,
+                                    { title, description, metric, dueDate }
+                                );
+                                if (!response.ok) {
+                                    alert(data.error || 'Could not add goal.');
+                                    return;
+                                }
+                                goalTitleInput.value = '';
+                                goalDescInput.value = '';
+                                goalMetricInput.value = '';
+                                goalDateInput.value = '';
+                                await loadForCurrentSelection();
+                            } catch (err) {
+                                alert(err.message);
+                            }
+                        });
+                    }
+
+                    // Review & lessons learned (any verified user)
+                    if (reviewSaveBtn && reviewWorkedInput && reviewDidntInput && reviewChangesInput) {
+                        reviewSaveBtn.addEventListener('click', async () => {
+                            if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) return;
+                            const review = {
+                                worked: reviewWorkedInput.value || '',
+                                didnt: reviewDidntInput.value || '',
+                                changes: reviewChangesInput.value || ''
+                            };
+                            reviewSaveBtn.disabled = true;
+                            reviewSaveBtn.textContent = 'Saving...';
+                            try {
+                                const { response, data } = await App.apiPut(
+                                    `/strategic-sessions/${encodeURIComponent(activeSession.id)}/review`,
+                                    { review }
+                                );
+                                if (!response.ok) {
+                                    alert(data.error || 'Could not save review.');
+                                } else {
+                                    alert('Review saved.');
+                                }
+                            } catch (err) {
+                                alert(err.message);
+                            } finally {
+                                reviewSaveBtn.disabled = false;
+                                reviewSaveBtn.textContent = 'Save Review';
+                            }
+                        });
+                    }
+
+                    // Goal progress updates (status + current value)
+                    if (goalProgressSaveBtn && goalProgressSelect && goalStatusSelect && goalCurrentInput) {
+                        goalProgressSaveBtn.addEventListener('click', async () => {
+                            if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) return;
+                            const goalId = goalProgressSelect.value;
+                            if (!goalId) {
+                                alert('Please select a goal.');
+                                return;
+                            }
+                            const status = goalStatusSelect.value;
+                            const currentValue = goalCurrentInput.value || '';
+                            goalProgressSaveBtn.disabled = true;
+                            goalProgressSaveBtn.textContent = 'Saving...';
+                            try {
+                                const { response, data } = await App.apiPost(
+                                    `/strategic-sessions/${encodeURIComponent(activeSession.id)}/goals/${encodeURIComponent(
+                                        goalId
+                                    )}/progress`,
+                                    { status, currentValue }
+                                );
+                                if (!response.ok) {
+                                    alert(data.error || 'Could not update goal progress.');
+                                } else {
+                                    alert('Goal progress saved.');
+                                    await loadForCurrentSelection();
+                                }
+                            } catch (err) {
+                                alert(err.message);
+                            } finally {
+                                goalProgressSaveBtn.disabled = false;
+                                goalProgressSaveBtn.textContent = 'Save progress';
+                            }
+                        });
+                    }
+
+                    // SWOT save handler (any verified user)
+                    if (swotSaveBtn) {
+                        swotSaveBtn.addEventListener('click', async () => {
+                            if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) return;
+                            const splitLines = (value) =>
+                                (value || '')
+                                    .split('\n')
+                                    .map((s) => s.trim())
+                                    .filter((s) => s.length > 0);
+                            const swot = {
+                                strengths: splitLines(swotStrengthsInput.value),
+                                weaknesses: splitLines(swotWeaknessesInput.value),
+                                opportunities: splitLines(swotOpportunitiesInput.value),
+                                threats: splitLines(swotThreatsInput.value)
+                            };
+                            swotSaveBtn.disabled = true;
+                            swotSaveBtn.textContent = 'Saving...';
+                            try {
+                                const { response, data } = await App.apiPut(
+                                    `/strategic-sessions/${encodeURIComponent(activeSession.id)}/swot`,
+                                    { swot }
+                                );
+                                if (!response.ok) {
+                                    alert(data.error || 'Could not save SWOT.');
+                                } else {
+                                    // No need to reload entire view; we already show current values
+                                    alert('SWOT saved.');
+                                }
+                            } catch (err) {
+                                alert(err.message);
+                            } finally {
+                                swotSaveBtn.disabled = false;
+                                swotSaveBtn.textContent = 'Save SWOT';
+                            }
+                        });
+                    }
+
+                    // PEST save handler (any verified user)
+                    if (pestSaveBtn) {
+                        pestSaveBtn.addEventListener('click', async () => {
+                            if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) return;
+                            const splitLines = (value) =>
+                                (value || '')
+                                    .split('\n')
+                                    .map((s) => s.trim())
+                                    .filter((s) => s.length > 0);
+                            const pest = {
+                                political: splitLines(pestPoliticalInput.value),
+                                economic: splitLines(pestEconomicInput.value),
+                                social: splitLines(pestSocialInput.value),
+                                technological: splitLines(pestTechnologicalInput.value)
+                            };
+                            pestSaveBtn.disabled = true;
+                            pestSaveBtn.textContent = 'Saving...';
+                            try {
+                                const { response, data } = await App.apiPut(
+                                    `/strategic-sessions/${encodeURIComponent(activeSession.id)}/pest`,
+                                    { pest }
+                                );
+                                if (!response.ok) {
+                                    alert(data.error || 'Could not save PEST.');
+                                } else {
+                                    alert('PEST saved.');
+                                }
+                            } catch (err) {
+                                alert(err.message);
+                            } finally {
+                                pestSaveBtn.disabled = false;
+                                pestSaveBtn.textContent = 'Save PEST';
                             }
                         });
                     }

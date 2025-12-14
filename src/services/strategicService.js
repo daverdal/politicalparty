@@ -115,6 +115,12 @@ function serializeSession(props) {
     if (serialized.stageStartedAt) {
         serialized.stageStartedAt = toISODate(serialized.stageStartedAt);
     }
+    if (serialized.cycleStart) {
+        serialized.cycleStart = toISODate(serialized.cycleStart);
+    }
+    if (serialized.cycleEnd) {
+        serialized.cycleEnd = toISODate(serialized.cycleEnd);
+    }
 
     // Parse collaborative structures (stored as JSON strings) and strip identities for anonymity
     const rawIssues = safeParseJson(serialized.issuesJson, []);
@@ -158,9 +164,59 @@ function serializeSession(props) {
         serialized.actions = [];
     }
 
+    const rawGoals = safeParseJson(serialized.goalsJson, []);
+    if (Array.isArray(rawGoals) && rawGoals.length) {
+        serialized.goals = rawGoals.map((goal) => ({
+            id: goal.id,
+            title: goal.title,
+            description: goal.description,
+            metric: goal.metric || '',
+            dueDate: goal.dueDate || null,
+            status: goal.status || 'not_started',
+            currentValue: goal.currentValue || '',
+            createdAt: goal.createdAt
+        }));
+    } else {
+        serialized.goals = [];
+    }
+
+    // SWOT: strengths, weaknesses, opportunities, threats
+    const defaultSwot = {
+        strengths: [],
+        weaknesses: [],
+        opportunities: [],
+        threats: []
+    };
+    const rawSwot = safeParseJson(serialized.swotJson, defaultSwot) || defaultSwot;
+    serialized.swot = {
+        strengths: Array.isArray(rawSwot.strengths) ? rawSwot.strengths : [],
+        weaknesses: Array.isArray(rawSwot.weaknesses) ? rawSwot.weaknesses : [],
+        opportunities: Array.isArray(rawSwot.opportunities) ? rawSwot.opportunities : [],
+        threats: Array.isArray(rawSwot.threats) ? rawSwot.threats : []
+    };
+
+    // PEST: political, economic, social, technological
+    const defaultPest = {
+        political: [],
+        economic: [],
+        social: [],
+        technological: []
+    };
+    const rawPest = safeParseJson(serialized.pestJson, defaultPest) || defaultPest;
+    serialized.pest = {
+        political: Array.isArray(rawPest.political) ? rawPest.political : [],
+        economic: Array.isArray(rawPest.economic) ? rawPest.economic : [],
+        social: Array.isArray(rawPest.social) ? rawPest.social : [],
+        technological: Array.isArray(rawPest.technological) ? rawPest.technological : []
+    };
+
     delete serialized.issuesJson;
     delete serialized.commentsJson;
     delete serialized.actionsJson;
+    delete serialized.goalsJson;
+    delete serialized.swotJson;
+    delete serialized.pestJson;
+    delete serialized.reviewJson;
 
     return serialized;
 }
@@ -202,20 +258,80 @@ async function getActiveSessionForLocation({ locationId, locationType }) {
     const session = driver.session({ database: getDatabase() });
 
     try {
-        const result = await session.run(
-            `
-            MATCH (s:StrategicSession {locationId: $locationId, locationType: $locationType})
-            WHERE s.status <> 'archived'
-            RETURN s
-            ORDER BY s.createdAt DESC
-            LIMIT 1
-        `,
-            { locationId, locationType }
-        );
+        const isAdhoc = locationType === 'AdhocGroup';
+        const now = new Date();
+        const currentYear = now.getFullYear();
 
-        if (!result.records.length) return null;
+        let record = null;
 
-        let sessionProps = result.records[0].get('s').properties;
+        if (isAdhoc) {
+            // For Adhoc groups, keep original behavior: any non-archived plan
+            const result = await session.run(
+                `
+                MATCH (s:StrategicSession {locationId: $locationId, locationType: $locationType})
+                WHERE s.status <> 'archived'
+                RETURN s
+                ORDER BY s.createdAt DESC
+                LIMIT 1
+            `,
+                { locationId, locationType }
+            );
+            if (!result.records.length) return null;
+            record = result.records[0];
+        } else {
+            // For non-Adhoc locations, auto-cycle plans per year
+            // 1) Try to find an active plan for this year
+            let result = await session.run(
+                `
+                MATCH (s:StrategicSession {locationId: $locationId, locationType: $locationType})
+                WHERE s.status <> 'archived' AND s.year = $year
+                RETURN s
+                ORDER BY s.createdAt DESC
+                LIMIT 1
+            `,
+                { locationId, locationType, year: currentYear }
+            );
+
+            if (!result.records.length) {
+                // 2) Archive any non-archived sessions from previous years
+                await session.run(
+                    `
+                    MATCH (s:StrategicSession {locationId: $locationId, locationType: $locationType})
+                    WHERE s.status <> 'archived' AND s.year < $year
+                    SET s.status = 'archived',
+                        s.archivedAt = datetime(),
+                        s.cycleEnd = datetime(),
+                        s.updatedAt = datetime()
+                `,
+                    { locationId, locationType, year: currentYear }
+                );
+
+                // 3) Lazily create a new plan for the current year
+                const created = await createSessionForLocation({
+                    locationId,
+                    locationType,
+                    title: null,
+                    vision: '',
+                    createdByUserId: null
+                });
+
+                // Re-load the freshly created node so we can reuse serialization logic below
+                result = await session.run(
+                    `
+                    MATCH (s:StrategicSession {id: $id})
+                    RETURN s
+                    LIMIT 1
+                `,
+                    { id: created.id }
+                );
+                if (!result.records.length) return null;
+                record = result.records[0];
+            } else {
+                record = result.records[0];
+            }
+        }
+
+        let sessionProps = record.get('s').properties;
         let serialized = serializeSession(sessionProps);
 
         // Lazy auto-advance based on stage duration (14 days per stage)
@@ -318,7 +434,7 @@ async function createSessionForLocation({
             ? existingResult.records[0].get('cnt').toNumber()
             : existingResult.records[0].get('cnt');
 
-        if (cnt > 0) {
+        if (cnt > 0 && locationType === 'AdhocGroup') {
             const error = new Error(
                 'This riding/location already has an active Strategic Plan. Archive it before starting a new one.'
             );
@@ -327,7 +443,14 @@ async function createSessionForLocation({
         }
 
         const id = `sp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-        const now = new Date().toISOString();
+        const now = new Date();
+        const nowIso = now.toISOString();
+        const currentYear = now.getFullYear();
+
+        // For non-Adhoc locations, treat plans as annual cycles
+        const year = currentYear;
+        const cycleStartDate = new Date(Date.UTC(currentYear, 0, 1, 0, 0, 0));
+        const cycleStartIso = cycleStartDate.toISOString();
 
         const result = await session.run(
             `
@@ -335,12 +458,14 @@ async function createSessionForLocation({
                 id: $id,
                 locationId: $locationId,
                 locationType: $locationType,
-                title: $title,
+                title: coalesce($title, 'Strategic Plan'),
                 vision: $vision,
                 status: 'draft',
                 createdAt: datetime($now),
                 updatedAt: datetime($now),
                 stageStartedAt: datetime($now),
+                year: $year,
+                cycleStart: datetime($cycleStart),
                 createdByUserId: $createdByUserId
             })
             RETURN s
@@ -349,10 +474,12 @@ async function createSessionForLocation({
                 id,
                 locationId,
                 locationType,
-                title: title || 'Strategic Plan',
+                title: title || null,
                 vision: vision || '',
                 createdByUserId: createdByUserId || null,
-                now
+                now: nowIso,
+                year,
+                cycleStart: cycleStartIso
             }
         );
 
@@ -769,6 +896,224 @@ async function addAction({ sessionId, description, dueDate, userId }) {
     }
 }
 
+/**
+ * Add a goal/objective to a session.
+ * Goals are higher-level outcomes (often SMART) linked to the plan.
+ */
+async function addGoal({ sessionId, title, description, metric, dueDate, userId }) {
+    const existing = await getSessionById(sessionId);
+    if (!existing) {
+        throw new Error('Session not found');
+    }
+
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+
+    try {
+        const now = new Date().toISOString();
+        const goalId = `goal_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+        const rawGoals = safeParseJson(existing.goalsJson, []);
+        const goalsArr = Array.isArray(rawGoals) ? rawGoals : [];
+
+        goalsArr.push({
+            id: goalId,
+            title,
+            description,
+            metric: metric || '',
+            dueDate: dueDate || null,
+            status: 'not_started',
+            currentValue: '',
+            createdAt: now,
+            createdByUserId: userId || null
+        });
+
+        const goalsJson = JSON.stringify(goalsArr);
+
+        const result = await session.run(
+            `
+            MATCH (s:StrategicSession {id: $sessionId})
+            SET s.goalsJson = $goalsJson,
+                s.updatedAt = datetime($now)
+            RETURN s
+        `,
+            { sessionId, goalsJson, now }
+        );
+
+        if (!result.records.length) {
+            throw new Error('Session not found');
+        }
+
+        const updated = serializeSession(result.records[0].get('s').properties);
+        return updated.goals.find((g) => g.id === goalId);
+    } finally {
+        await session.close();
+    }
+}
+
+/**
+ * Update progress/status for a single goal.
+ */
+async function updateGoalProgress({ sessionId, goalId, status, currentValue }) {
+    const existing = await getSessionById(sessionId);
+    if (!existing) {
+        throw new Error('Session not found');
+    }
+
+    const allowedStatuses = ['not_started', 'on_track', 'at_risk', 'off_track', 'completed'];
+    if (status && !allowedStatuses.includes(status)) {
+        const err = new Error('Invalid goal status');
+        err.statusCode = 400;
+        throw err;
+    }
+
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+
+    try {
+        const rawGoals = safeParseJson(existing.goalsJson, []);
+        const goalsArr = Array.isArray(rawGoals) ? rawGoals : [];
+        const idx = goalsArr.findIndex((g) => g.id === goalId);
+        if (idx === -1) {
+            const err = new Error('Goal not found');
+            err.statusCode = 404;
+            throw err;
+        }
+
+        const goal = goalsArr[idx];
+        if (status) {
+            goal.status = status;
+        }
+        if (currentValue !== undefined) {
+            goal.currentValue = String(currentValue || '');
+        }
+
+        const goalsJson = JSON.stringify(goalsArr);
+        const now = new Date().toISOString();
+
+        const result = await session.run(
+            `
+            MATCH (s:StrategicSession {id: $sessionId})
+            SET s.goalsJson = $goalsJson,
+                s.updatedAt = datetime($now)
+            RETURN s
+        `,
+            { sessionId, goalsJson, now }
+        );
+
+        if (!result.records.length) {
+            throw new Error('Session not found');
+        }
+
+        const updated = serializeSession(result.records[0].get('s').properties);
+        return updated.goals.find((g) => g.id === goalId);
+    } finally {
+        await session.close();
+    }
+}
+
+/**
+ * Replace SWOT content for a session.
+ * swot: { strengths: string[], weaknesses: string[], opportunities: string[], threats: string[] }
+ */
+async function updateSwot({ sessionId, swot }) {
+    const existing = await getSessionById(sessionId);
+    if (!existing) {
+        throw new Error('Session not found');
+    }
+
+    const normalizeList = (arr) =>
+        Array.isArray(arr)
+            ? arr
+                  .map((s) => String(s || '').trim())
+                  .filter((s) => s.length > 0)
+            : [];
+
+    const cleaned = {
+        strengths: normalizeList(swot.strengths),
+        weaknesses: normalizeList(swot.weaknesses),
+        opportunities: normalizeList(swot.opportunities),
+        threats: normalizeList(swot.threats)
+    };
+
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+
+    try {
+        const now = new Date().toISOString();
+        const swotJson = JSON.stringify(cleaned);
+
+        const result = await session.run(
+            `
+            MATCH (s:StrategicSession {id: $sessionId})
+            SET s.swotJson = $swotJson,
+                s.updatedAt = datetime($now)
+            RETURN s
+        `,
+            { sessionId, swotJson, now }
+        );
+
+        if (!result.records.length) {
+            throw new Error('Session not found');
+        }
+
+        return serializeSession(result.records[0].get('s').properties).swot;
+    } finally {
+        await session.close();
+    }
+}
+
+/**
+ * Replace PEST content for a session.
+ * pest: { political: string[], economic: string[], social: string[], technological: string[] }
+ */
+async function updatePest({ sessionId, pest }) {
+    const existing = await getSessionById(sessionId);
+    if (!existing) {
+        throw new Error('Session not found');
+    }
+
+    const normalizeList = (arr) =>
+        Array.isArray(arr)
+            ? arr
+                  .map((s) => String(s || '').trim())
+                  .filter((s) => s.length > 0)
+            : [];
+
+    const cleaned = {
+        political: normalizeList(pest.political),
+        economic: normalizeList(pest.economic),
+        social: normalizeList(pest.social),
+        technological: normalizeList(pest.technological)
+    };
+
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+
+    try {
+        const now = new Date().toISOString();
+        const pestJson = JSON.stringify(cleaned);
+
+        const result = await session.run(
+            `
+            MATCH (s:StrategicSession {id: $sessionId})
+            SET s.pestJson = $pestJson,
+                s.updatedAt = datetime($now)
+            RETURN s
+        `,
+            { sessionId, pestJson, now }
+        );
+
+        if (!result.records.length) {
+            throw new Error('Session not found');
+        }
+
+        return serializeSession(result.records[0].get('s').properties).pest;
+    } finally {
+        await session.close();
+    }
+}
+
 module.exports = {
     getSessionById,
     getActiveSessionForLocation,
@@ -780,6 +1125,10 @@ module.exports = {
     voteOnIssue,
     addComment,
     addAction,
+    addGoal,
+    updateGoalProgress,
+    updateSwot,
+    updatePest,
     ALLOWED_LOCATION_TYPES
 };
 
