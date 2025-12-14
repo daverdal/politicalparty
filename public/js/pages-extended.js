@@ -2847,6 +2847,238 @@ App.pages.referendums = async function() {
 };
 
 // ============================================
+// NEWS PAGE
+// ============================================
+
+App.pages.news = async function() {
+    const content = document.getElementById('content');
+
+    if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) {
+        content.innerHTML = `
+            <header class="page-header">
+                <h1 class="page-title">📰 News & Activity</h1>
+            </header>
+            <div class="card">
+                <div class="card-body">
+                    <p class="empty-text">
+                        Sign in with a verified account to see your personalized news feed and follow other players.
+                    </p>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    content.innerHTML = `
+        <header class="page-header">
+            <h1 class="page-title">📰 News & Activity</h1>
+            <p class="page-subtitle">
+                See updates from people you follow, new ideas they post, and new Strategic Plans in your locations.
+            </p>
+        </header>
+
+        <div class="cards-grid">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Write a Post</h3>
+                </div>
+                <div class="card-body">
+                    <p class="card-subtitle" style="margin-bottom:8px;">
+                        Share a short update with your followers. Posts can link to ideas or plans if you include their titles.
+                    </p>
+                    <div class="form-group">
+                        <label for="news-post-body">Your update</label>
+                        <textarea id="news-post-body" class="form-input" rows="3" placeholder="What are you working on or thinking about?"></textarea>
+                    </div>
+                    <button class="btn btn-primary" id="news-post-submit">Post</button>
+                    <div id="news-post-feedback" class="form-feedback"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Feed Settings</h3>
+                </div>
+                <div class="card-body">
+                    <p class="card-subtitle" style="margin-bottom:8px;">
+                        Choose what appears in your feed. Changes apply immediately.
+                    </p>
+                    <div class="form-group">
+                        <label><input type="checkbox" id="news-filter-posts" checked> Posts from people I follow</label>
+                    </div>
+                    <div class="form-group">
+                        <label><input type="checkbox" id="news-filter-ideas" checked> New ideas from people I follow</label>
+                    </div>
+                    <div class="form-group">
+                        <label><input type="checkbox" id="news-filter-plans" checked> New Strategic Plans in my locations</label>
+                    </div>
+                    <div class="form-group">
+                        <label>People you follow</label>
+                        <ul id="news-following-list" class="locations-list" style="max-height:160px; overflow-y:auto;"></ul>
+                        <p class="location-help" style="margin-top:8px;">
+                            To follow someone, open their profile or a candidate card and click “Follow”.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top:24px;">
+            <div class="card-header">
+                <h3 class="card-title">Your News Feed</h3>
+            </div>
+            <div class="card-body">
+                <div id="news-feed" class="simple-list">
+                    <p class="empty-text">Loading your feed…</p>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const postBodyEl = document.getElementById('news-post-body');
+    const postSubmitEl = document.getElementById('news-post-submit');
+    const postFeedbackEl = document.getElementById('news-post-feedback');
+    const filterPostsEl = document.getElementById('news-filter-posts');
+    const filterIdeasEl = document.getElementById('news-filter-ideas');
+    const filterPlansEl = document.getElementById('news-filter-plans');
+    const feedEl = document.getElementById('news-feed');
+    const followingListEl = document.getElementById('news-following-list');
+
+    async function loadFollowing() {
+        try {
+            const following = await App.api('/news/following');
+            if (!following.length) {
+                followingListEl.innerHTML = '<li>No follows yet.</li>';
+                return;
+            }
+            followingListEl.innerHTML = following
+                .map(
+                    (u) => `
+                <li>
+                    ${u.name}
+                    ${u.email ? `<span class="location-type">(${u.email})</span>` : ''}
+                </li>
+            `
+                )
+                .join('');
+        } catch (err) {
+            followingListEl.innerHTML = `<li class="location-type">Error loading following list.</li>`;
+        }
+    }
+
+    async function loadFeed() {
+        feedEl.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+        try {
+            const params = new URLSearchParams();
+            if (!filterPostsEl.checked) params.set('includePosts', 'false');
+            if (!filterIdeasEl.checked) params.set('includeIdeas', 'false');
+            if (!filterPlansEl.checked) params.set('includePlans', 'false');
+
+            const feed = await App.api(`/news/feed?${params.toString()}`);
+            if (!feed.length) {
+                feedEl.innerHTML = '<p class="empty-text">No news yet. Follow some members and start posting!</p>';
+                return;
+            }
+
+            feedEl.innerHTML = feed
+                .map((item) => {
+                    if (item.kind === 'post') {
+                        return `
+                            <div class="simple-list-item">
+                                <div class="simple-list-main">
+                                    <div class="simple-list-name">📝 ${item.author?.name || 'Member'}</div>
+                                    <div class="simple-list-meta">${item.body}</div>
+                                </div>
+                                <div class="simple-list-meta">
+                                    <span>${App.formatDate(item.createdAt)} ${App.formatTime(
+                                        item.createdAt
+                                    )}</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    if (item.kind === 'idea') {
+                        return `
+                            <div class="simple-list-item">
+                                <div class="simple-list-main">
+                                    <div class="simple-list-name">💡 ${item.title}</div>
+                                    <div class="simple-list-meta">
+                                        by ${item.author?.name || 'Member'} • ${App.formatDate(
+                                            item.createdAt
+                                        )}
+                                    </div>
+                                    ${
+                                        item.description
+                                            ? `<div class="simple-list-meta">${item.description}</div>`
+                                            : ''
+                                    }
+                                </div>
+                            </div>
+                        `;
+                    }
+                    // plan
+                    const loc = item.location;
+                    return `
+                        <div class="simple-list-item">
+                            <div class="simple-list-main">
+                                <div class="simple-list-name">📋 New Strategic Plan${
+                                    loc ? ` – ${loc.name}` : ''
+                                }</div>
+                                <div class="simple-list-meta">
+                                    Status: ${item.status || 'draft'} • ${
+                                        loc ? `${loc.type} • ` : ''
+                                    }${App.formatDate(item.createdAt)}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                })
+                .join('');
+        } catch (err) {
+            feedEl.innerHTML = `<p class="empty-text">Error loading feed: ${err.message}</p>`;
+        }
+    }
+
+    postSubmitEl.addEventListener('click', async () => {
+        const body = (postBodyEl.value || '').trim();
+        postFeedbackEl.textContent = '';
+        postFeedbackEl.classList.remove('error', 'success');
+
+        if (!body) {
+            postFeedbackEl.textContent = 'Please write something before posting.';
+            postFeedbackEl.classList.add('error');
+            return;
+        }
+
+        try {
+            postSubmitEl.disabled = true;
+            const { response, data } = await App.apiPost('/news/posts', { body });
+            if (!response.ok) {
+                postFeedbackEl.textContent = data.error || 'Failed to post.';
+                postFeedbackEl.classList.add('error');
+            } else {
+                postFeedbackEl.textContent = 'Posted!';
+                postFeedbackEl.classList.add('success');
+                postBodyEl.value = '';
+                await loadFeed();
+            }
+        } catch (err) {
+            postFeedbackEl.textContent = err.message || 'Failed to post.';
+            postFeedbackEl.classList.add('error');
+        } finally {
+            postSubmitEl.disabled = false;
+        }
+    });
+
+    [filterPostsEl, filterIdeasEl, filterPlansEl].forEach((el) => {
+        el.addEventListener('change', loadFeed);
+    });
+
+    await loadFollowing();
+    await loadFeed();
+};
+
+// ============================================
 // DOCUMENTATION PAGE
 // ============================================
 
