@@ -156,10 +156,8 @@ async function getFeedForUser({
 
             // Posts from followed users
             CALL {
-                WITH followedUsers, $includePosts AS inc
-                WITH followedUsers, inc
-                WHERE inc = true
-                UNWIND followedUsers AS author
+                WITH followedUsers
+                UNWIND (CASE WHEN $includePosts = true THEN followedUsers ELSE [] END) AS author
                 MATCH (author)-[:POSTED_NEWS]->(p:NewsPost)
                 RETURN collect({
                     kind: 'post',
@@ -172,10 +170,8 @@ async function getFeedForUser({
 
             // Ideas authored by followed users
             CALL {
-                WITH followedUsers, $includeIdeas AS inc
-                WITH followedUsers, inc
-                WHERE inc = true
-                UNWIND followedUsers AS author
+                WITH followedUsers
+                UNWIND (CASE WHEN $includeIdeas = true THEN followedUsers ELSE [] END) AS author
                 MATCH (author)-[:POSTED]->(idea:Idea)
                 RETURN collect({
                     kind: 'idea',
@@ -188,9 +184,8 @@ async function getFeedForUser({
 
             // Strategic plans for my locations
             CALL {
-                WITH me, $includePlans AS inc
-                WITH me, inc
-                WHERE inc = true
+                WITH me
+                UNWIND (CASE WHEN $includePlans = true THEN [1] ELSE [] END) AS _
                 OPTIONAL MATCH (me)-[:LOCATED_IN]->(loc)
                 WITH me, collect(DISTINCT loc) as locs
                 UNWIND locs AS l
@@ -211,11 +206,10 @@ async function getFeedForUser({
             WHERE item.node IS NOT NULL
             RETURN item
             ORDER BY item.createdAt DESC
-            LIMIT $limit
+            LIMIT ${maxLimit}
         `,
             {
                 userId,
-                limit: maxLimit,
                 includePosts: !!includePosts,
                 includeIdeas: !!includeIdeas,
                 includePlans: !!includePlans
