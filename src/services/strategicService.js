@@ -222,6 +222,30 @@ function serializeSession(props) {
 }
 
 /**
+ * Award Strategic Planning points to a user.
+ * - Uses u.strategicPoints (float) to keep planning contributions separate from idea likes.
+ * - Callers should pass amounts in "idea-like units" (1.0 = one like, 0.1 = small participation).
+ */
+async function awardStrategicPoints(userId, amount) {
+    if (!userId || !amount) return;
+
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+
+    try {
+        await session.run(
+            `
+            MATCH (u:User {id: $userId})
+            SET u.strategicPoints = coalesce(u.strategicPoints, 0) + $amount
+        `,
+            { userId, amount }
+        );
+    } finally {
+        await session.close();
+    }
+}
+
+/**
  * Get a single strategic session by ID.
  */
 async function getSessionById(sessionId) {
@@ -545,12 +569,129 @@ async function updateSession(sessionId, { title, vision, status }) {
             } catch (e) {
                 // Notification failures should not break core plan update
             }
+
+            // Milestone rewards: Decision and Completed stages
+            try {
+                if (updated.status === 'decision') {
+                    await awardDecisionMilestonePoints(updated);
+                } else if (updated.status === 'completed') {
+                    await awardCompletionMilestonePoints(updated);
+                }
+            } catch (e) {
+                // Points failures should not break core plan update
+            }
         }
 
         return updated;
     } finally {
         await session.close();
     }
+}
+
+/**
+ * Determine all participants in a session based on authored content and votes.
+ * Returns a Set of userIds.
+ */
+async function getSessionParticipantIds(sessionId) {
+    const session = await getSessionById(sessionId);
+    if (!session) return new Set();
+
+    const ids = new Set();
+
+    const addId = (id) => {
+        if (id) ids.add(id);
+    };
+
+    // Issues authors and voters
+    (session.issues || []).forEach((iss) => {
+        addId(iss.createdByUserId);
+        (iss.voterIds || []).forEach(addId);
+    });
+
+    // Comments authors
+    (session.comments || []).forEach((c) => addId(c.createdByUserId));
+
+    // Actions authors
+    (session.actions || []).forEach((a) => addId(a.createdByUserId));
+
+    // Goals authors
+    (session.goals || []).forEach((g) => addId(g.createdByUserId));
+
+    // Plan creator
+    addId(session.createdByUserId);
+
+    return ids;
+}
+
+/**
+ * Milestone reward: when a plan enters the Decision stage.
+ * Each participant gets +2.0 Strategic points once per session.
+ */
+async function awardDecisionMilestonePoints(session) {
+    const driver = getDriver();
+    const neoSession = driver.session({ database: getDatabase() });
+
+    try {
+        const result = await neoSession.run(
+            `
+            MATCH (s:StrategicSession {id: $id})
+            WITH s, coalesce(s.decisionRewardGiven, false) as alreadyGiven
+            WHERE alreadyGiven = false
+            SET s.decisionRewardGiven = true
+            RETURN s.id as id
+        `,
+            { id: session.id }
+        );
+
+        if (!result.records.length) {
+            // Reward already given or session not found
+            return;
+        }
+    } finally {
+        await neoSession.close();
+    }
+
+    const participantIds = await getSessionParticipantIds(session.id);
+    await Promise.all(
+        Array.from(participantIds).map((userId) => awardStrategicPoints(userId, 2.0))
+    );
+}
+
+/**
+ * Milestone reward: when a plan is marked Completed AND has at least one action.
+ * Each participant gets +2.0 Strategic points once per session.
+ */
+async function awardCompletionMilestonePoints(session) {
+    const hasActions = Array.isArray(session.actions) && session.actions.length > 0;
+    if (!hasActions) return;
+
+    const driver = getDriver();
+    const neoSession = driver.session({ database: getDatabase() });
+
+    try {
+        const result = await neoSession.run(
+            `
+            MATCH (s:StrategicSession {id: $id})
+            WITH s, coalesce(s.completionRewardGiven, false) as alreadyGiven
+            WHERE alreadyGiven = false
+            SET s.completionRewardGiven = true
+            RETURN s.id as id
+        `,
+            { id: session.id }
+        );
+
+        if (!result.records.length) {
+            // Reward already given or session not found
+            return;
+        }
+    } finally {
+        await neoSession.close();
+    }
+
+    const participantIds = await getSessionParticipantIds(session.id);
+    await Promise.all(
+        Array.from(participantIds).map((userId) => awardStrategicPoints(userId, 2.0))
+    );
 }
 
 /**
@@ -718,6 +859,12 @@ async function addIssue({ sessionId, title, description, userId }) {
         }
 
         const updated = serializeSession(result.records[0].get('s').properties);
+
+        // Participation reward: +0.3 points for adding an Issue
+        if (userId) {
+            await awardStrategicPoints(userId, 0.3);
+        }
+
         // Return just the new issue from the serialized structure
         return updated.issues.find((i) => i.id === issueId);
     } finally {
@@ -784,6 +931,10 @@ async function voteOnIssue({ sessionId, issueId, userId }) {
         }
 
         const updated = serializeSession(writeResult.records[0].get('s').properties);
+
+        // Participation reward: +0.1 points for supporting an Issue
+        await awardStrategicPoints(userId, 0.1);
+
         return updated.issues.find((i) => i.id === issueId);
     } finally {
         await session.close();
@@ -839,6 +990,12 @@ async function addComment({ sessionId, text, section = 'session', sectionItemId 
         }
 
         const updated = serializeSession(result.records[0].get('s').properties);
+
+        // Participation reward: +0.1 points for adding a Comment
+        if (userId) {
+            await awardStrategicPoints(userId, 0.1);
+        }
+
         return updated.comments.find((c) => c.id === commentId);
     } finally {
         await session.close();
@@ -890,6 +1047,12 @@ async function addAction({ sessionId, description, dueDate, userId }) {
         }
 
         const updated = serializeSession(result.records[0].get('s').properties);
+
+        // Participation reward: +0.2 points for adding an Action
+        if (userId) {
+            await awardStrategicPoints(userId, 0.2);
+        }
+
         return updated.actions.find((a) => a.id === actionId);
     } finally {
         await session.close();
@@ -945,6 +1108,12 @@ async function addGoal({ sessionId, title, description, metric, dueDate, userId 
         }
 
         const updated = serializeSession(result.records[0].get('s').properties);
+
+        // Participation reward: +0.3 points for adding a Goal
+        if (userId) {
+            await awardStrategicPoints(userId, 0.3);
+        }
+
         return updated.goals.find((g) => g.id === goalId);
     } finally {
         await session.close();
@@ -1006,7 +1175,14 @@ async function updateGoalProgress({ sessionId, goalId, status, currentValue }) {
         }
 
         const updated = serializeSession(result.records[0].get('s').properties);
-        return updated.goals.find((g) => g.id === goalId);
+
+        // Participation reward: +0.2 points for updating Goal progress
+        const goal = updated.goals.find((g) => g.id === goalId);
+        if (goal && goal.createdByUserId) {
+            await awardStrategicPoints(goal.createdByUserId, 0.2);
+        }
+
+        return goal;
     } finally {
         await session.close();
     }

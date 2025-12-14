@@ -8,6 +8,7 @@ const express = require('express');
 const router = express.Router();
 const locationService = require('../services/locationService');
 const { getSession } = require('../config/db');
+const { authenticate, requireAdmin } = require('../middleware/auth');
 
 // GET /api/locations - Get full location hierarchy
 router.get('/', async (req, res) => {
@@ -70,6 +71,67 @@ router.get('/countries', async (req, res) => {
         res.json(countries);
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/locations/countries - Create or update a country (admin only)
+router.post('/countries', authenticate, requireAdmin, async (req, res) => {
+    const session = getSession();
+    const { id, name, code } = req.body || {};
+
+    if (!id || !name) {
+        return res.status(400).json({ error: 'id and name are required' });
+    }
+
+    const normalizedCode = (code || String(id)).toUpperCase();
+
+    try {
+        // Ensure the planet exists
+        await session.run(`
+            MERGE (p:Planet {id: 'earth'})
+            ON CREATE SET p.name = 'Earth', p.createdAt = datetime()
+        `);
+
+        // Create or update the country
+        await session.run(`
+            MERGE (c:Country {id: $id})
+            ON CREATE SET 
+                c.name = $name,
+                c.code = $code,
+                c.createdAt = datetime()
+            ON MATCH SET
+                c.name = $name,
+                c.code = $code
+        `, { id, name, code: normalizedCode });
+
+        // Ensure the relationship from planet to country exists
+        await session.run(`
+            MATCH (p:Planet {id: 'earth'}), (c:Country {id: $id})
+            MERGE (p)-[:HAS_COUNTRY]->(c)
+        `, { id });
+
+        const result = await session.run(`
+            MATCH (c:Country {id: $id})
+            OPTIONAL MATCH (c)-[:HAS_PROVINCE]->(p:Province)
+            WITH c, count(p) as provinceCount
+            RETURN c, provinceCount
+        `, { id });
+
+        const record = result.records[0];
+        const country = record.get('c').properties;
+        const provinceCount = record.get('provinceCount');
+
+        res.status(201).json({
+            ...country,
+            provinceCount: typeof provinceCount?.toNumber === 'function'
+                ? provinceCount.toNumber()
+                : Number(provinceCount) || 0
+        });
+    } catch (error) {
+        console.error('Error creating country:', error);
+        res.status(500).json({ error: error.message });
+    } finally {
+        await session.close();
     }
 });
 

@@ -21,14 +21,21 @@ async function getAllUsers() {
             WITH u,
                  collect(DISTINCT {node: loc, labels: labels(loc)}) as locations,
                  count(DISTINCT supporter) as points
-            RETURN u, locations, points
+                        OPTIONAL MATCH (u)-[:POSTED]->(idea:Idea)<-[:SUPPORTED]-(supporter:User)
+                        WITH u,
+                             locations,
+                             count(DISTINCT supporter) as ideaPoints,
+                             coalesce(u.strategicPoints, 0) as strategicPoints
+                        RETURN u, locations, ideaPoints, strategicPoints
             ORDER BY coalesce(u.name, u.email) ASC
         `);
 
         return result.records.map(record => {
             const userNode = record.get('u');
             const rawLocations = record.get('locations') || [];
-            const points = toNumber(record.get('points'));
+                    const ideaPoints = toNumber(record.get('ideaPoints'));
+                    const strategicPoints = Number(record.get('strategicPoints') || 0);
+                    const points = ideaPoints + strategicPoints;
 
             const user = userNode.properties;
 
@@ -70,11 +77,20 @@ async function getUserById(userId) {
     try {
         const result = await session.run(`
             MATCH (u:User {id: $userId})
-            OPTIONAL MATCH (u)-[:LOCATED_IN]->(loc)
+            // Direct locations the user is attached to (riding, town, group, etc.)
+            OPTIONAL MATCH (u)-[:LOCATED_IN]->(directLoc)
+            // Provinces that contain those locations
+            OPTIONAL MATCH (prov:Province)-[]->(directLoc)
+            // Countries that contain those provinces
+            OPTIONAL MATCH (country:Country)-[:HAS_PROVINCE]->(prov)
+            WITH u,
+                 collect(DISTINCT {node: directLoc, labels: labels(directLoc)}) +
+                 collect(DISTINCT {node: prov, labels: labels(prov)}) +
+                 collect(DISTINCT {node: country, labels: labels(country)}) AS allLocations
             OPTIONAL MATCH (u)-[:POSTED]->(idea:Idea)<-[:SUPPORTED]-(supporter:User)
             OPTIONAL MATCH (endorser:User)-[:ENDORSED]->(u)
             OPTIONAL MATCH (nominator:User)-[:NOMINATED]->(u)
-            WITH u, collect(DISTINCT {node: loc, labels: labels(loc)}) as locations,
+            WITH u, allLocations AS locations,
                  count(DISTINCT supporter) as points,
                  count(DISTINCT endorser) as endorsementCount,
                  count(DISTINCT nominator) as nominationCount
@@ -84,8 +100,8 @@ async function getUserById(userId) {
         if (result.records.length === 0) return null;
         
         const record = result.records[0];
-        const user = record.get('u').properties;
-        const rawLocations = record.get('locations');
+            const user = record.get('u').properties;
+            const rawLocations = record.get('locations');
         
         // Process locations with their types
         const locations = rawLocations
@@ -93,8 +109,8 @@ async function getUserById(userId) {
             .map(loc => {
                 const labels = loc.labels || [];
                 // Find the specific location type (not generic labels)
-                const type = labels.find(l => 
-                    ['FederalRiding', 'ProvincialRiding', 'Town', 'FirstNation', 'AdhocGroup'].includes(l)
+                const type = labels.find(l =>
+                    ['Country', 'Province', 'FederalRiding', 'ProvincialRiding', 'Town', 'FirstNation', 'AdhocGroup'].includes(l)
                 ) || 'Unknown';
                 return {
                     ...loc.node.properties,
@@ -105,14 +121,17 @@ async function getUserById(userId) {
         // Keep backward compatibility with single location
         const primaryLocation = locations[0] || null;
         
-        return {
-            ...user,
-            location: primaryLocation,  // backward compat
-            locations,                  // all locations
-            points: toNumber(record.get('points')),
-            endorsementCount: toNumber(record.get('endorsementCount')),
-            nominationCount: toNumber(record.get('nominationCount'))
-        };
+            const ideaPoints = toNumber(record.get('points'));
+            const strategicPoints = Number(user.strategicPoints || 0);
+            
+            return {
+                ...user,
+                location: primaryLocation,  // backward compat
+                locations,                  // all locations
+                points: ideaPoints + strategicPoints,
+                endorsementCount: toNumber(record.get('endorsementCount')),
+                nominationCount: toNumber(record.get('nominationCount'))
+            };
     } finally {
         await session.close();
     }

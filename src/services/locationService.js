@@ -243,7 +243,7 @@ async function getCandidatesForLocation({ locationId, locationType }) {
     
     try {
         let query;
-        
+
         if (locationType === 'Country') {
             query = `
                 MATCH (c:Country {id: $locationId})-[:HAS_PROVINCE]->(prov:Province)-[]->(childLoc)<-[:LOCATED_IN]-(candidate:User {candidate: true})
@@ -251,8 +251,11 @@ async function getCandidatesForLocation({ locationId, locationType }) {
                 OPTIONAL MATCH (candidate)-[:POSTED]->(idea:Idea)<-[:SUPPORTED]-(supporter:User)
                 WITH DISTINCT candidate, childLoc,
                      count(DISTINCT endorser) as endorsementCount,
-                     count(DISTINCT supporter) as points
-                RETURN candidate, childLoc as location, endorsementCount, points
+                     count(DISTINCT supporter) as ideaPoints,
+                     coalesce(candidate.strategicPoints, 0) as strategicPoints
+                WITH candidate, childLoc as location, endorsementCount,
+                     ideaPoints + strategicPoints as points
+                RETURN candidate, location, endorsementCount, points
                 ORDER BY points DESC
             `;
         } else if (locationType === 'Province') {
@@ -262,8 +265,11 @@ async function getCandidatesForLocation({ locationId, locationType }) {
                 OPTIONAL MATCH (candidate)-[:POSTED]->(idea:Idea)<-[:SUPPORTED]-(supporter:User)
                 WITH DISTINCT candidate, childLoc,
                      count(DISTINCT endorser) as endorsementCount,
-                     count(DISTINCT supporter) as points
-                RETURN candidate, childLoc as location, endorsementCount, points
+                     count(DISTINCT supporter) as ideaPoints,
+                     coalesce(candidate.strategicPoints, 0) as strategicPoints
+                WITH candidate, childLoc as location, endorsementCount,
+                     ideaPoints + strategicPoints as points
+                RETURN candidate, location, endorsementCount, points
                 ORDER BY points DESC
             `;
         } else {
@@ -273,14 +279,17 @@ async function getCandidatesForLocation({ locationId, locationType }) {
                 OPTIONAL MATCH (candidate)-[:POSTED]->(idea:Idea)<-[:SUPPORTED]-(supporter:User)
                 WITH candidate, loc,
                      count(DISTINCT endorser) as endorsementCount,
-                     count(DISTINCT supporter) as points
-                RETURN candidate, loc as location, endorsementCount, points
+                     count(DISTINCT supporter) as ideaPoints,
+                     coalesce(candidate.strategicPoints, 0) as strategicPoints
+                WITH candidate, loc as location, endorsementCount,
+                     ideaPoints + strategicPoints as points
+                RETURN candidate, location, endorsementCount, points
                 ORDER BY points DESC
             `;
         }
-        
+
         const result = await session.run(query, { locationId });
-        
+
         return result.records.map(record => ({
             ...record.get('candidate').properties,
             location: record.get('location')?.properties,

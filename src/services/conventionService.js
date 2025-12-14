@@ -195,7 +195,11 @@ async function getRaceById(raceId) {
             OPTIONAL MATCH (candidate)-[:POSTED]->(idea:Idea)<-[:SUPPORTED]-(supporter:User)
             WITH race, riding, conv, province, candidate, r,
                  count(DISTINCT endorser) as endorsementCount,
-                 count(DISTINCT supporter) as points
+                 count(DISTINCT supporter) as ideaPoints,
+                 coalesce(candidate.strategicPoints, 0) as strategicPoints
+            WITH race, riding, conv, province, candidate, r,
+                 endorsementCount,
+                 ideaPoints + strategicPoints as points
             ORDER BY points DESC, endorsementCount DESC
             WITH race, riding, conv, province, 
                  collect({
