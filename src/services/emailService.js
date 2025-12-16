@@ -77,6 +77,9 @@ async function sendVerificationEmail({ to, token }) {
         return;
     }
 
+    // eslint-disable-next-line no-console
+    console.log(`[email] Sending verification email via SMTP to ${to} using host ${process.env.SMTP_HOST}`);
+
     await tx.sendMail({
         from,
         to,
