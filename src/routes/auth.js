@@ -226,6 +226,43 @@ router.post('/request-password-reset', loginLimiter, async (req, res) => {
     }
 });
 
+// POST /api/auth/resend-verification
+router.post('/resend-verification', signupLimiter, async (req, res) => {
+    const { email } = req.body || {};
+
+    if (!email) {
+        return res.status(400).json({ error: 'Email is required.' });
+    }
+
+    try {
+        const normalizedEmail = String(email).trim().toLowerCase();
+
+        // Always respond with success to avoid leaking which emails exist or are verified
+        try {
+            const result = await authService.createOrRefreshEmailVerificationToken(normalizedEmail);
+            if (result && result.user && result.token) {
+                await emailService.sendVerificationEmail({
+                    to: normalizedEmail,
+                    token: result.token
+                });
+            }
+        } catch (innerErr) {
+            // Log but do not leak details to the client
+            // eslint-disable-next-line no-console
+            console.error('[auth] resend-verification error:', innerErr);
+        }
+
+        return res.json({
+            success: true,
+            message: 'If that email is registered and not yet verified, a verification link has been sent.'
+        });
+    } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('[auth] resend-verification outer error:', err);
+        return res.status(500).json({ error: 'Unable to resend verification right now.' });
+    }
+});
+
 // GET /api/auth/reset-password?token=...
 router.get('/reset-password', (req, res) => {
     const { token } = req.query;

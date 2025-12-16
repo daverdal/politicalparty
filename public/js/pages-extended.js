@@ -24,7 +24,12 @@ App.updateAuthUi = function() {
     }
 
     if (App.authUser) {
-        const verifiedText = App.authUser.verified ? '✅ Verified' : '✉️ Not verified';
+        const isVerified = !!App.authUser.verified;
+        const verifiedText = isVerified ? '✅ Verified' : '✉️ Not verified – please verify your email.';
+        const verifyButtonHtml = isVerified
+            ? ''
+            : '<button class="btn btn-outline btn-sm" id="auth-resend-verification-btn">Resend verification email</button>';
+
         container.innerHTML = `
             <div class="auth-summary">
                 <div class="auth-summary-main">
@@ -33,6 +38,7 @@ App.updateAuthUi = function() {
                 </div>
                 <div class="auth-summary-meta">
                     <span class="auth-summary-status">${verifiedText}</span>
+                    ${verifyButtonHtml}
                     <button class="btn btn-secondary btn-sm" id="auth-logout-btn">Sign out</button>
                 </div>
             </div>
@@ -49,6 +55,30 @@ App.updateAuthUi = function() {
                 App.setAuthUser(null);
                 // Reload to ensure state is consistent (user list, pages, etc.)
                 window.location.reload();
+            });
+        }
+
+        const resendBtn = document.getElementById('auth-resend-verification-btn');
+        if (resendBtn) {
+            resendBtn.addEventListener('click', async () => {
+                try {
+                    resendBtn.disabled = true;
+                    resendBtn.textContent = 'Sending...';
+                    const { response, data } = await App.apiPost('/auth/resend-verification', {
+                        email: App.authUser.email
+                    });
+                    if (!response.ok || !data.success) {
+                        alert(data.error || 'Unable to resend verification email right now.');
+                    } else {
+                        alert(data.message || 'If that email is registered and not yet verified, a verification link has been sent.');
+                    }
+                } catch (err) {
+                    console.error('Failed to resend verification email', err);
+                    alert('Unable to resend verification email right now.');
+                } finally {
+                    resendBtn.disabled = false;
+                    resendBtn.textContent = 'Resend verification email';
+                }
             });
         }
     } else {

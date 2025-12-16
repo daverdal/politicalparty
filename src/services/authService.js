@@ -142,6 +142,35 @@ async function verifyEmailByToken(token) {
     }
 }
 
+async function createOrRefreshEmailVerificationToken(email) {
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+    const normalizedEmail = email.trim().toLowerCase();
+    const token = generateEmailVerificationToken();
+
+    try {
+        const result = await session.run(
+            `
+            MATCH (u:User {email: $email})
+            WHERE u.verifiedAt IS NULL
+            SET u.emailVerificationToken = $token,
+                u.emailVerificationExpiresAt = datetime() + duration('PT24H'),
+                u.updatedAt = datetime()
+            RETURN u, $token AS token
+        `,
+            { email: normalizedEmail, token }
+        );
+
+        if (!result.records.length) return null;
+        return {
+            user: mapUser(result.records[0].get('u')),
+            token: result.records[0].get('token')
+        };
+    } finally {
+        await session.close();
+    }
+}
+
 async function validatePassword(user, password) {
     if (!user || !user.passwordHash) return false;
     return bcrypt.compare(password, user.passwordHash);
@@ -236,6 +265,7 @@ module.exports = {
     findUserByEmail,
     findUserById,
     verifyEmailByToken,
+    createOrRefreshEmailVerificationToken,
     validatePassword,
     createJwtForUser,
     createPasswordResetToken,
