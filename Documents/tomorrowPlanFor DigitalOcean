@@ -1,0 +1,36 @@
+1. Source & basic app setup
+Source: GitHub → repo daverdal/politicalparty, branch master.
+Service type: Web service (Node.js).
+Build command: npm install
+Run command: node src/server.js
+HTTP port: 3000
+2. Core environment variables (must set)
+Replace placeholder values with your real ones.
+Auth / security
+JWT_SECRET=some-long-random-string-here
+OWNER_EMAIL=daverdal@gmail.com
+Neo4j (Aura or other)
+If using Neo4j Aura:
+NEO4J_URI=neo4j+s://YOUR_AURA_ID.databases.neo4j.io
+NEO4J_USERNAME=your-aura-username
+NEO4J_PASSWORD=your-aura-password
+NEO4J_DATABASE=neo4j
+If using a self‑hosted Neo4j:
+NEO4J_URI=bolt://your-neo4j-host:7687
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=your-db-password
+NEO4J_DATABASE=neo4j
+App URL (DigitalOcean URL)
+After DO gives you an app URL like https://your-app-name.ondigitalocean.app, set:
+APP_BASE_URL=https://your-app-name.ondigitalocean.app
+3. Email (Bluehost SMTP)
+Use the mailbox you created:
+SMTP_HOST=box2024.bluehost.com
+SMTP_PORT=465
+SMTP_USER=no-reply@manitobasocial.net
+SMTP_PASS=the-exact-mailbox-password
+SMTP_SECURE=true
+EMAIL_FROM="Political Party <no-reply@manitobasocial.net>"
+4. Optional / environment
+NODE_ENV=production (recommended on DO)
+You can copy this list into a note and tomorrow, in DigitalOcean App Platform, just paste each name/value into the Environment Variables section, then deploy.

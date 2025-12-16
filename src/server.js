@@ -3,7 +3,12 @@
  * Main entry point - kept minimal by design
  */
 
-require('dotenv').config();
+// Load environment variables
+// - Locally: use `.env` (dev) by default
+// - Optionally: use `.env.production` when NODE_ENV=production (e.g. on a droplet)
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
+require('dotenv').config({ path: envFile });
+
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const path = require('path');
@@ -12,6 +17,9 @@ const db = require('./config/db');
 const routes = require('./routes');
 
 const app = express();
+
+// Behind DigitalOcean / proxies, trust X-Forwarded-* so rate limiting and IPs work correctly
+app.set('trust proxy', 1);
 
 // Middleware
 app.use(express.json());
