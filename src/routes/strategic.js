@@ -7,7 +7,7 @@ const express = require('express');
 const router = express.Router();
 
 const strategicService = require('../services/strategicService');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, requireVerifiedUser } = require('../middleware/auth');
 
 const typeMap = {
     countries: 'Country',
@@ -60,8 +60,8 @@ router.get('/location/:type/:id/history', async (req, res) => {
 });
 
 // POST /api/strategic-sessions/location/:type/:id
-// Create a new session for a location (requires authentication)
-router.post('/location/:type/:id', authenticate, async (req, res) => {
+// Create a new session for a location (requires a verified, authenticated user)
+router.post('/location/:type/:id', authenticate, requireVerifiedUser, async (req, res) => {
     try {
         const locationType = resolveLocationType(req.params.type);
         const { title, vision } = req.body || {};
@@ -85,8 +85,8 @@ router.post('/location/:type/:id', authenticate, async (req, res) => {
 });
 
 // PUT /api/strategic-sessions/:id
-// Update basic fields (title, vision, status)
-router.put('/:id', authenticate, async (req, res) => {
+// Update basic fields (title, vision, status) – admin + verified required
+router.put('/:id', authenticate, requireVerifiedUser, async (req, res) => {
     try {
         if (!req.user || req.user.role !== 'admin') {
             return res
@@ -107,7 +107,7 @@ router.put('/:id', authenticate, async (req, res) => {
 });
 
 // POST /api/strategic-sessions/:id/archive
-router.post('/:id/archive', authenticate, async (req, res) => {
+router.post('/:id/archive', authenticate, requireVerifiedUser, async (req, res) => {
     try {
         if (!req.user || req.user.role !== 'admin') {
             return res
@@ -123,7 +123,7 @@ router.post('/:id/archive', authenticate, async (req, res) => {
 });
 
 // POST /api/strategic-sessions/:id/issues - add an issue/priority
-router.post('/:id/issues', authenticate, async (req, res) => {
+router.post('/:id/issues', authenticate, requireVerifiedUser, async (req, res) => {
     try {
         const { title, description } = req.body || {};
         if (!title || !title.trim()) {
@@ -146,7 +146,7 @@ router.post('/:id/issues', authenticate, async (req, res) => {
 });
 
 // POST /api/strategic-sessions/:id/issues/:issueId/vote - support an issue
-router.post('/:id/issues/:issueId/vote', authenticate, async (req, res) => {
+router.post('/:id/issues/:issueId/vote', authenticate, requireVerifiedUser, async (req, res) => {
     try {
         const updatedIssue = await strategicService.voteOnIssue({
             sessionId: req.params.id,
@@ -160,7 +160,7 @@ router.post('/:id/issues/:issueId/vote', authenticate, async (req, res) => {
 });
 
 // POST /api/strategic-sessions/:id/comments - add a comment
-router.post('/:id/comments', authenticate, async (req, res) => {
+router.post('/:id/comments', authenticate, requireVerifiedUser, async (req, res) => {
     try {
         const { text, section, sectionItemId } = req.body || {};
         if (!text || !text.trim()) {
@@ -184,7 +184,7 @@ router.post('/:id/comments', authenticate, async (req, res) => {
 });
 
 // POST /api/strategic-sessions/:id/actions - add an action/decision
-router.post('/:id/actions', authenticate, async (req, res) => {
+router.post('/:id/actions', authenticate, requireVerifiedUser, async (req, res) => {
     try {
         const { description, dueDate } = req.body || {};
         if (!description || !description.trim()) {
@@ -203,7 +203,7 @@ router.post('/:id/actions', authenticate, async (req, res) => {
 });
 
 // POST /api/strategic-sessions/:id/goals - add a goal/objective
-router.post('/:id/goals', authenticate, async (req, res) => {
+router.post('/:id/goals', authenticate, requireVerifiedUser, async (req, res) => {
     try {
         const { title, description, metric, dueDate } = req.body || {};
         if (!title || !title.trim()) {
@@ -224,7 +224,7 @@ router.post('/:id/goals', authenticate, async (req, res) => {
 });
 
 // PUT /api/strategic-sessions/:id/swot - update SWOT analysis
-router.put('/:id/swot', authenticate, async (req, res) => {
+router.put('/:id/swot', authenticate, requireVerifiedUser, async (req, res) => {
     try {
         const { swot } = req.body || {};
         if (!swot || typeof swot !== 'object') {
@@ -241,7 +241,7 @@ router.put('/:id/swot', authenticate, async (req, res) => {
 });
 
 // PUT /api/strategic-sessions/:id/pest - update PEST analysis
-router.put('/:id/pest', authenticate, async (req, res) => {
+router.put('/:id/pest', authenticate, requireVerifiedUser, async (req, res) => {
     try {
         const { pest } = req.body || {};
         if (!pest || typeof pest !== 'object') {
@@ -258,7 +258,7 @@ router.put('/:id/pest', authenticate, async (req, res) => {
 });
 
 // POST /api/strategic-sessions/:id/goals/:goalId/progress - update goal status/progress
-router.post('/:id/goals/:goalId/progress', authenticate, async (req, res) => {
+router.post('/:id/goals/:goalId/progress', authenticate, requireVerifiedUser, async (req, res) => {
     try {
         const { status, currentValue } = req.body || {};
         const updated = await strategicService.updateGoalProgress({
@@ -274,7 +274,7 @@ router.post('/:id/goals/:goalId/progress', authenticate, async (req, res) => {
 });
 
 // PUT /api/strategic-sessions/:id/review - update review/lessons
-router.put('/:id/review', authenticate, async (req, res) => {
+router.put('/:id/review', authenticate, requireVerifiedUser, async (req, res) => {
     try {
         const { review } = req.body || {};
         if (!review || typeof review !== 'object') {
@@ -304,7 +304,7 @@ router.get('/:id/participation', authenticate, async (req, res) => {
 });
 
 // POST /api/strategic-sessions/:id/reveal - opt in/out of being named on a completed plan
-router.post('/:id/reveal', authenticate, async (req, res) => {
+router.post('/:id/reveal', authenticate, requireVerifiedUser, async (req, res) => {
     try {
         const { reveal } = req.body || {};
         const result = await strategicService.setRevealPreference({

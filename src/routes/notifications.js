@@ -6,7 +6,7 @@
 const express = require('express');
 const router = express.Router();
 
-const { authenticate } = require('../middleware/auth');
+const { authenticate, requireVerifiedUser } = require('../middleware/auth');
 const notificationService = require('../services/notificationService');
 
 // Require authentication for all notification routes
@@ -35,8 +35,8 @@ router.get('/', async (req, res) => {
     }
 });
 
-// POST /api/notifications/:id/read - mark a single notification as read
-router.post('/:id/read', async (req, res) => {
+// POST /api/notifications/:id/read - mark a single notification as read (verified users only)
+router.post('/:id/read', requireVerifiedUser, async (req, res) => {
     try {
         const ok = await notificationService.markNotificationRead(req.user.id, req.params.id);
         if (!ok) {
@@ -50,8 +50,8 @@ router.post('/:id/read', async (req, res) => {
     }
 });
 
-// POST /api/notifications/mark-all-read
-router.post('/mark-all-read', async (req, res) => {
+// POST /api/notifications/mark-all-read (verified users only)
+router.post('/mark-all-read', requireVerifiedUser, async (req, res) => {
     try {
         await notificationService.markAllNotificationsRead(req.user.id);
         res.json({ success: true });

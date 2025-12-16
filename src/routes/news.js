@@ -9,13 +9,13 @@ const express = require('express');
 const router = express.Router();
 
 const newsService = require('../services/newsService');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, requireVerifiedUser } = require('../middleware/auth');
 
 // All news routes require an authenticated user
 router.use(authenticate);
 
-// POST /api/news/posts - create a new news post
-router.post('/posts', async (req, res) => {
+// POST /api/news/posts - create a new news post (verified users only)
+router.post('/posts', requireVerifiedUser, async (req, res) => {
     try {
         const { body } = req.body || {};
         if (!body || !body.trim()) {
@@ -31,8 +31,8 @@ router.post('/posts', async (req, res) => {
     }
 });
 
-// POST /api/news/follow/:userId - follow or unfollow a user
-router.post('/follow/:userId', async (req, res) => {
+// POST /api/news/follow/:userId - follow or unfollow a user (verified users only)
+router.post('/follow/:userId', requireVerifiedUser, async (req, res) => {
     try {
         const { follow } = req.body || {};
         const result = await newsService.setFollow({
