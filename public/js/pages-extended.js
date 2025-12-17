@@ -1663,6 +1663,79 @@ App.pages.planning = async function() {
                     )
                     .join('');
 
+                const buildPlanTimeline = (session) => {
+                    if (!session || !session.createdAt) return '';
+                    const start = new Date(session.createdAt);
+                    const now = new Date();
+                    let end = now;
+                    if (session.status === 'completed' || session.status === 'archived') {
+                        if (session.archivedAt) {
+                            end = new Date(session.archivedAt);
+                        } else if (session.updatedAt) {
+                            end = new Date(session.updatedAt);
+                        }
+                    }
+                    const spanMs = Math.max(end - start, 1);
+
+                    const markers = [];
+                    const addMarker = (label, dateStr, kind) => {
+                        if (!dateStr) return;
+                        const d = new Date(dateStr);
+                        if (isNaN(d.getTime())) return;
+                        const pct = Math.min(100, Math.max(0, ((d - start) / spanMs) * 100));
+                        markers.push({ label, dateStr, kind, pct });
+                    };
+
+                    // Goals and actions act as simple milestones
+                    (session.goals || []).forEach((g) => {
+                        addMarker(g.title || 'Goal', g.dueDate || g.createdAt, 'goal');
+                    });
+                    (session.actions || []).forEach((a) => {
+                        addMarker(a.description || 'Action', a.dueDate || a.createdAt, 'action');
+                    });
+
+                    const startLabel = App.formatDate(session.createdAt);
+                    const endLabel =
+                        session.status === 'completed' || session.status === 'archived'
+                            ? App.formatDate(end.toISOString())
+                            : 'Now';
+
+                    const markersHtml = markers
+                        .map(
+                            (m) => `
+                        <div class="plan-timeline-marker plan-timeline-marker-${m.kind}" style="left:${m.pct}%;">
+                            <div class="plan-timeline-dot"></div>
+                            <div class="plan-timeline-tooltip">
+                                <strong>${m.label}</strong><br>
+                                <span>${App.formatDate(m.dateStr)}</span>
+                            </div>
+                        </div>
+                    `
+                        )
+                        .join('');
+
+                    return `
+                        <div class="plan-timeline">
+                            <div class="plan-timeline-header">Timeline</div>
+                            <p class="location-help" style="margin-top:4px;">
+                                Started ${startLabel}${
+                                    session.status === 'completed' || session.status === 'archived'
+                                        ? ` • Completed ${endLabel}`
+                                        : ' • In progress'
+                                }
+                            </p>
+                            <div class="plan-timeline-bar">
+                                <div class="plan-timeline-track"></div>
+                                <div class="plan-timeline-endcap plan-timeline-start"></div>
+                                <div class="plan-timeline-endcap plan-timeline-end"></div>
+                                <div class="plan-timeline-label plan-timeline-label-start">${startLabel}</div>
+                                <div class="plan-timeline-label plan-timeline-label-end">${endLabel}</div>
+                                ${markersHtml}
+                            </div>
+                        </div>
+                    `;
+                };
+
                 if (activeSession) {
                     const isAdmin = App.authUser && App.authUser.role === 'admin';
 
@@ -1717,6 +1790,7 @@ App.pages.planning = async function() {
                                         <p class="location-help" id="planning-stage-countdown" style="margin-top: 4px;"></p>
                                     </div>
                                 </div>
+                                ${buildPlanTimeline(activeSession)}
                                 <div class="plan-participants-block">
                                     <p class="location-help">
                                         <strong>${activeSession.participantCount || 0}</strong> participant(s) have contributed to this plan so far.
