@@ -27,14 +27,15 @@ async function createReferendumQuestion({ title, body, scope, locationId, opensA
             MATCH (u:User {id: $authorId})
             OPTIONAL MATCH (explicitLoc {id: $locationId})
             OPTIONAL MATCH (u)-[:LOCATED_IN]->(userLoc)
-            WITH u, explicitLoc, userLoc, $scope as scope,
+            WITH u, explicitLoc, userLoc,
+                 $scope AS sc,
                  CASE
-                    WHEN scope = 'riding' AND explicitLoc IS NULL THEN userLoc
+                    WHEN $scope = 'riding' AND explicitLoc IS NULL THEN userLoc
                     ELSE explicitLoc
                  END AS loc
             // If riding-scoped but no location, block creation
             CALL apoc.util.validate(
-                scope = 'riding' AND loc IS NULL,
+                sc = 'riding' AND loc IS NULL,
                 'You must set your riding in your profile before creating a riding-level referendum.',
                 []
             )
@@ -42,7 +43,7 @@ async function createReferendumQuestion({ title, body, scope, locationId, opensA
                 id: $id,
                 title: $title,
                 body: $body,
-                scope: scope,
+                scope: sc,
                 status: 'open',
                 opensAt: $opensAt,
                 closesAt: $closesAt,
