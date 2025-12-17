@@ -41,17 +41,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize theme
     App.initTheme();
     
-    // Initialize user selector
-    await App.initUserSelector();
+    // Load authenticated user (if any) and update auth UI
+    if (typeof App.loadAuthUser === 'function') {
+        await App.loadAuthUser();
+    }
+
+    // Initialize user selector (depends on authUser to decide admin-only controls)
+    if (typeof App.initUserSelector === 'function') {
+        await App.initUserSelector();
+    }
 
     // Initialize notifications UI
     if (typeof App.initNotificationsUi === 'function') {
         App.initNotificationsUi();
-    }
-
-    // Load authenticated user (if any) and update auth UI
-    if (typeof App.loadAuthUser === 'function') {
-        await App.loadAuthUser();
     }
     
     // Set up navigation

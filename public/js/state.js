@@ -82,10 +82,41 @@ App.allUsers = [];
 
 App.initUserSelector = async function() {
     try {
-        App.allUsers = await App.api('/users');
         const selector = document.getElementById('current-user-select');
         if (!selector) return;
-        
+
+        // Load all users once (needed for admin "playing as" selector)
+        App.allUsers = await App.api('/users');
+
+        const wrapper = selector.closest('.user-selector');
+        const isAdmin = App.authUser && App.authUser.role === 'admin';
+
+        if (!isAdmin) {
+            // For non-admins, hide the "Playing as" UI and bind currentUser to their own account
+            if (wrapper) {
+                wrapper.style.display = 'none';
+            }
+
+            if (App.authUser) {
+                const matching = App.allUsers.find(
+                    (u) => u.email && App.authUser.email && u.email.toLowerCase() === App.authUser.email.toLowerCase()
+                );
+                if (matching) {
+                    App.currentUser = matching;
+                    localStorage.setItem('currentUserId', matching.id);
+                } else {
+                    App.currentUser = null;
+                    localStorage.removeItem('currentUserId');
+                }
+            } else {
+                App.currentUser = null;
+                localStorage.removeItem('currentUserId');
+            }
+
+            return;
+        }
+
+        // Admin view: full "Playing as" selector for testing/management
         selector.innerHTML = `
             <option value="">-- Select a user --</option>
             ${App.allUsers.map(u => `
@@ -95,7 +126,7 @@ App.initUserSelector = async function() {
                 </option>
             `).join('')}
         `;
-        
+
         // Restore from localStorage
         const savedUserId = localStorage.getItem('currentUserId');
         if (savedUserId) {
@@ -112,7 +143,7 @@ App.initUserSelector = async function() {
                 localStorage.setItem('currentUserId', matching.id);
             }
         }
-        
+
         // Handle selection change
         selector.addEventListener('change', (e) => {
             const userId = e.target.value;

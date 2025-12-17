@@ -1,0 +1,18 @@
+Verify an Email addres if email is down
+MATCH (u:User {email: 'YOUR_EMAIL_HERE'})
+SET u.verifiedAt = datetime(),
+    u.emailVerificationToken = null,
+    u.emailVerificationExpiresAt = null
+RETURN u.email, u.verifiedAt;
+
+
+
+To reseed the DB with Canada
+cd C:\apps\speakeasy
+
+set NEO4J_URI=bolt://134.122.44.248:7687
+set NEO4J_USERNAME=neo4j
+set NEO4J_PASSWORD=bHwall.123!@#T
+set NEO4J_DATABASE=neo4j
+
+npm run seed
