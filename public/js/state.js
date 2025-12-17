@@ -117,6 +117,10 @@ App.initUserSelector = async function() {
         }
 
         // Admin view: full "Playing as" selector for testing/management
+        if (wrapper) {
+            wrapper.style.display = '';
+        }
+
         selector.innerHTML = `
             <option value="">-- Select a user --</option>
             ${App.allUsers.map(u => `
