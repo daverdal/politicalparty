@@ -2151,6 +2151,21 @@ a:hover {
   margin-bottom: 12px;
 }
 
+/* Voice notes – News posts */
+.voice-note-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.voice-note-status {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
 .location-selector-form {
   display: flex;
   gap: 10px;

@@ -3,8 +3,11 @@
  * Handles user news posts and activity feeds (posts, ideas, plans).
  */
 
+const fs = require('fs');
+const path = require('path');
 const { getDriver, getDatabase } = require('../config/db');
 const { toISODate } = require('../utils/neo4jHelpers');
+const config = require('../config');
 
 function serializePost(node, author) {
     const props = node.properties;
@@ -13,6 +16,8 @@ function serializePost(node, author) {
         body: props.body,
         createdAt: toISODate(props.createdAt),
         type: props.type || 'post',
+        audioUrl: props.audioUrl || null,
+        audioExpiresAt: props.audioExpiresAt ? toISODate(props.audioExpiresAt) : null,
         author: author
             ? {
                   id: author.properties.id,
@@ -227,6 +232,10 @@ async function getFeedForUser({
                     id: item.node.properties.id,
                     createdAt,
                     body: item.node.properties.body,
+                    audioUrl: item.node.properties.audioUrl || null,
+                    audioExpiresAt: item.node.properties.audioExpiresAt
+                        ? toISODate(item.node.properties.audioExpiresAt)
+                        : null,
                     author: {
                         id: item.author.properties.id,
                         name:

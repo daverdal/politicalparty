@@ -4,7 +4,7 @@
  */
 
 const { getDriver, getDatabase } = require('../config/db');
-const { toNumber } = require('../utils/neo4jHelpers');
+const { toNumber, toISODate } = require('../utils/neo4jHelpers');
 
 /**
  * Get all countries
@@ -224,11 +224,15 @@ async function getIdeasForLocation({ locationId, locationType, limit }) {
 
         const result = await session.run(query, params);
         
-        return result.records.map(record => ({
-            ...record.get('idea').properties,
-            author: record.get('author').properties,
-            supportCount: toNumber(record.get('supportCount'))
-        }));
+        return result.records.map(record => {
+            const ideaProps = record.get('idea').properties;
+            return {
+                ...ideaProps,
+                createdAt: ideaProps.createdAt ? toISODate(ideaProps.createdAt) : null,
+                author: record.get('author').properties,
+                supportCount: toNumber(record.get('supportCount'))
+            };
+        });
     } finally {
         await session.close();
     }

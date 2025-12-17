@@ -29,6 +29,9 @@ app.use(cookieParser());
 // Serve static files from public folder
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Serve uploaded files (e.g., news audio) under /uploads when enabled
+app.use('/uploads', express.static(path.join(process.cwd(), config.uploads?.baseDir || 'uploads')));
+
 // API Routes
 app.use('/api', routes);
 

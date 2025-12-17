@@ -182,7 +182,7 @@ App.pages.browse = async function() {
     await App.initLocationTree(pageId, App.onIdeasLocationSelect);
 };
 
-App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = false) {
+App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = false, selectedIdeaId = null) {
     const pageId = 'ideas';
 
     // Track selected location for posting new ideas
@@ -193,6 +193,22 @@ App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = fal
     App.browseState.selectedLocationType = type;
     App.browseState.selectedLocationName = name;
 
+    // Highlight the matching location in the unified tree (left pane), if present
+    try {
+        const selector = `.tree-header[data-tree-page="${pageId}"][data-tree-type="${type}"][data-tree-location-id="${CSS.escape(
+            id
+        )}"]`;
+        const header = document.querySelector(selector);
+        if (header) {
+            document
+                .querySelectorAll(`[data-tree-page="${pageId}"].tree-header`)
+                .forEach((h) => h.classList.remove('active'));
+            header.classList.add('active');
+        }
+    } catch (e) {
+        // ignore; CSS.escape may not exist in very old browsers
+    }
+
     App.showSelectedBadge(pageId, name);
     App.showDetailEmpty(pageId, '💡', 'Select an idea to view details');
     
@@ -202,17 +218,14 @@ App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = fal
         const list = document.getElementById(`${pageId}-list`);
         const showMapLink = type === 'provinces' || type === 'countries';
         
-        // Always render the toolbar (including Map button) for provinces/countries,
-        // even when there are no ideas, so the map is still accessible.
-        let html = '';
-        if (showMapLink) {
-            html += `
-                <div class="panel-toolbar">
-                    <span class="panel-toolbar-title">${name}</span>
-                    <button class="map-link-btn" id="ideas-map-link">🗺️ Map</button>
-                </div>
-            `;
-        }
+        // Always render a toolbar so the middle pane clearly shows where ideas are from.
+        // For provinces/countries also show the Map button.
+        let html = `
+            <div class="panel-toolbar">
+                <span class="panel-toolbar-title">Ideas from ${name}</span>
+                ${showMapLink ? '<button class="map-link-btn" id="ideas-map-link">🗺️ Map</button>' : ''}
+            </div>
+        `;
 
         if (!ideas.length) {
             html += `
@@ -223,7 +236,7 @@ App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = fal
             `;
             list.innerHTML = html;
         } else {
-        App.panelState[pageId].currentItems = ideas;
+            App.panelState[pageId].currentItems = ideas;
             html += ideas.map((idea, index) => `
             <div class="list-item" data-index="${index}" data-id="${idea.id}">
                 <div class="list-item-title">${idea.title}</div>
@@ -234,15 +247,15 @@ App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = fal
             </div>
         `).join('');
             list.innerHTML = html;
-        
-        document.querySelectorAll(`#${pageId}-list .list-item`).forEach(item => {
-            item.addEventListener('click', () => {
-                document.querySelectorAll(`#${pageId}-list .list-item`).forEach(i => i.classList.remove('selected'));
-                item.classList.add('selected');
-                const idx = parseInt(item.dataset.index);
-                App.showIdeaDetailPanel(App.panelState[pageId].currentItems[idx]);
+
+            document.querySelectorAll(`#${pageId}-list .list-item`).forEach(item => {
+                item.addEventListener('click', () => {
+                    document.querySelectorAll(`#${pageId}-list .list-item`).forEach(i => i.classList.remove('selected'));
+                    item.classList.add('selected');
+                    const idx = parseInt(item.dataset.index);
+                    App.showIdeaDetailPanel(App.panelState[pageId].currentItems[idx]);
+                });
             });
-        });
         }
         
         // Map link
@@ -269,12 +282,27 @@ App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = fal
             });
         }
         
-        // Auto-select first item if requested
-        if (autoSelectFirst && ideas.length > 0) {
-            const firstItem = document.querySelector(`#${pageId}-list .list-item`);
-            if (firstItem) {
-                firstItem.classList.add('selected');
-                App.showIdeaDetailPanel(ideas[0]);
+        // Auto-select a specific idea (e.g., newly created) or the first item if requested
+        if (ideas.length > 0) {
+            let targetItem = null;
+            if (selectedIdeaId) {
+                targetItem = document.querySelector(
+                    `#${pageId}-list .list-item[data-id="${CSS.escape(selectedIdeaId)}"]`
+                );
+            }
+            if (!targetItem && autoSelectFirst) {
+                targetItem = document.querySelector(`#${pageId}-list .list-item`);
+            }
+            if (targetItem) {
+                document
+                    .querySelectorAll(`#${pageId}-list .list-item`)
+                    .forEach(i => i.classList.remove('selected'));
+                targetItem.classList.add('selected');
+                const idx = parseInt(targetItem.dataset.index);
+                if (Number.isFinite(idx) && App.panelState[pageId].currentItems[idx]) {
+                    App.showIdeaDetailPanel(App.panelState[pageId].currentItems[idx]);
+                }
+                targetItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         }
 
@@ -290,6 +318,10 @@ App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = fal
 
 App.showIdeaDetailPanel = function(idea) {
     const detail = document.getElementById('ideas-detail');
+    const devVoiceUrl =
+        typeof App.loadIdeaVoiceNote === 'function' && idea && idea.id
+            ? App.loadIdeaVoiceNote(idea.id)
+            : null;
     detail.innerHTML = `
         <div class="detail-content">
             <div class="detail-header">
@@ -306,6 +338,19 @@ App.showIdeaDetailPanel = function(idea) {
                 </div>
             </div>
             <div class="detail-body">${idea.description || 'No description provided.'}</div>
+            ${
+                devVoiceUrl
+                    ? `
+            <div class="detail-section" style="margin-top:16px;">
+                <h3>Voice note (dev)</h3>
+                <audio controls src="${devVoiceUrl}" style="width:100%; margin-top:4px;"></audio>
+                <p class="form-help" style="margin-top:4px; font-size:0.8rem;">
+                    This recording is stored only in your browser for up to 2 days.
+                </p>
+            </div>
+            `
+                    : ''
+            }
             ${idea.tags?.length ? `<div class="detail-tags">${idea.tags.map(tag => `<span class="tag accent">${tag}</span>`).join('')}</div>` : ''}
         </div>
     `;
@@ -589,11 +634,46 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
                         `;
 
                         if (!ideasCache[p.id]) {
-                            const ideas = await App.api(`/locations/first-nations/${encodeURIComponent(p.id)}/ideas?limit=10`);
+                            const ideas = await App.api(
+                                `/locations/first-nations/${encodeURIComponent(p.id)}/ideas?limit=10`
+                            );
                             ideasCache[p.id] = ideas;
                         }
 
                         const ideas = ideasCache[p.id] || [];
+
+                        // Adjust dot color based on recency of newest idea (if any)
+                        if (Array.isArray(ideas) && ideas.length && dot) {
+                            const parseCreatedAt = (val) => {
+                                if (!val) return null;
+                                if (typeof val === 'string') return new Date(val);
+                                return null;
+                            };
+                            const newest = ideas
+                                .map((idea) => parseCreatedAt(idea.createdAt))
+                                .filter((d) => d && !isNaN(d.getTime()))
+                                .sort((a, b) => b - a)[0];
+                            if (newest) {
+                                const ageDays = (Date.now() - newest.getTime()) / (1000 * 60 * 60 * 24);
+                                let color = 'var(--accent-secondary)';
+                                let glow = 'rgba(0, 168, 255, 0.9)';
+                                if (ageDays <= 2) {
+                                    // Very new: bright red
+                                    color = '#ff4b5c';
+                                    glow = 'rgba(255, 75, 92, 0.9)';
+                                } else if (ageDays <= 7) {
+                                    // Recent: amber
+                                    color = '#ffb347';
+                                    glow = 'rgba(255, 179, 71, 0.9)';
+                                } else {
+                                    // Older: softer teal/blue
+                                    color = '#4cc9f0';
+                                    glow = 'rgba(76, 201, 240, 0.9)';
+                                }
+                                dot.style.backgroundColor = color;
+                                dot.style.boxShadow = `0 0 6px ${glow}`;
+                            }
+                        }
 
                         if (!ideas.length) {
                             info.innerHTML = `

@@ -441,6 +441,19 @@ App.showPostIdeaModal = function() {
                         <span>Tags (optional, comma-separated)</span>
                         <input type="text" name="tags" placeholder="e.g. healthcare, transit, environment">
                     </label>
+                    <div class="form-group dev-only">
+                        <label>Optional: Add a short voice note (ideas)</label>
+                        <div class="voice-note-controls">
+                            <button type="button" class="btn btn-secondary btn-sm" id="idea-voice-record">🎙 Record</button>
+                            <button type="button" class="btn btn-secondary btn-sm" id="idea-voice-stop" disabled>Stop</button>
+                            <button type="button" class="btn btn-link btn-sm" id="idea-voice-clear" disabled>Clear</button>
+                        </div>
+                        <div class="voice-note-status" id="idea-voice-status"></div>
+                        <audio id="idea-voice-audio" controls style="display:none; margin-top:8px; width:100%;"></audio>
+                        <p class="form-help" style="margin-top:4px;">
+                            Experimental and dev-only: recordings stay in this browser for up to 2 days and are not uploaded yet.
+                        </p>
+                    </div>
                     <button type="submit" class="btn btn-primary auth-submit-btn">Post Idea</button>
                     <div class="auth-feedback" id="post-idea-feedback"></div>
                 </form>
@@ -459,6 +472,175 @@ App.showPostIdeaModal = function() {
     const form = modal.querySelector('#post-idea-form');
     const feedback = modal.querySelector('#post-idea-feedback');
     const submitBtn = form.querySelector('.auth-submit-btn');
+
+    const voiceRecordBtn = modal.querySelector('#idea-voice-record');
+    const voiceStopBtn = modal.querySelector('#idea-voice-stop');
+    const voiceClearBtn = modal.querySelector('#idea-voice-clear');
+    const voiceStatusEl = modal.querySelector('#idea-voice-status');
+    const voiceAudioEl = modal.querySelector('#idea-voice-audio');
+
+    const DEFAULT_MAX_VOICE_SECONDS_IDEA = 10;
+
+    function getIdeaMaxVoiceDurationMs() {
+        try {
+            const raw = localStorage.getItem('devVoiceMaxSeconds');
+            const num = raw ? parseInt(raw, 10) : NaN;
+            if (Number.isFinite(num) && num > 0 && num <= 60) {
+                return num * 1000;
+            }
+        } catch (e) {
+            // ignore
+        }
+        return DEFAULT_MAX_VOICE_SECONDS_IDEA * 1000;
+    }
+
+    let ideaMediaRecorder = null;
+    let ideaRecordedChunks = [];
+    let ideaVoiceBlob = null;
+    let ideaVoiceCreatedAt = null;
+    let ideaVoiceTimerId = null;
+
+    function resetIdeaVoiceState() {
+        try {
+            if (ideaMediaRecorder && ideaMediaRecorder.state !== 'inactive') {
+                ideaMediaRecorder.stop();
+            }
+        } catch (e) {
+            // ignore
+        }
+        ideaMediaRecorder = null;
+        ideaRecordedChunks = [];
+        ideaVoiceBlob = null;
+        ideaVoiceCreatedAt = null;
+        if (ideaVoiceTimerId) {
+            clearTimeout(ideaVoiceTimerId);
+            ideaVoiceTimerId = null;
+        }
+        if (voiceAudioEl) {
+            voiceAudioEl.src = '';
+            voiceAudioEl.style.display = 'none';
+        }
+        if (voiceStatusEl) {
+            voiceStatusEl.textContent = '';
+        }
+        if (voiceRecordBtn) {
+            voiceRecordBtn.disabled = false;
+        }
+        if (voiceStopBtn) {
+            voiceStopBtn.disabled = true;
+        }
+        if (voiceClearBtn) {
+            voiceClearBtn.disabled = true;
+        }
+    }
+
+    function isIdeaVoiceSupported() {
+        return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+    }
+
+    if (!isIdeaVoiceSupported() && voiceStatusEl) {
+        voiceStatusEl.textContent = 'Voice notes are not supported in this browser.';
+    }
+
+    if (isIdeaVoiceSupported() && voiceRecordBtn && voiceStopBtn && voiceClearBtn) {
+        voiceRecordBtn.addEventListener('click', async () => {
+            if (ideaMediaRecorder && ideaMediaRecorder.state === 'recording') {
+                return;
+            }
+            try {
+                resetIdeaVoiceState();
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const options = {};
+                if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                    options.mimeType = 'audio/webm;codecs=opus';
+                }
+                ideaMediaRecorder = new MediaRecorder(stream, options);
+                ideaRecordedChunks = [];
+                ideaVoiceCreatedAt = Date.now();
+
+                ideaMediaRecorder.addEventListener('dataavailable', (event) => {
+                    if (event.data && event.data.size > 0) {
+                        ideaRecordedChunks.push(event.data);
+                    }
+                });
+
+                ideaMediaRecorder.addEventListener('stop', () => {
+                    try {
+                        stream.getTracks().forEach((t) => t.stop());
+                    } catch (e) {
+                        // ignore
+                    }
+                    if (!ideaRecordedChunks.length) return;
+                    ideaVoiceBlob = new Blob(ideaRecordedChunks, { type: 'audio/webm' });
+                    const url = URL.createObjectURL(ideaVoiceBlob);
+                    if (voiceAudioEl) {
+                        voiceAudioEl.src = url;
+                        voiceAudioEl.style.display = 'block';
+                    }
+                    if (voiceStatusEl) {
+                        voiceStatusEl.textContent = 'Recorded voice note (dev-only, stored locally for up to 2 days).';
+                    }
+                    if (voiceClearBtn) {
+                        voiceClearBtn.disabled = false;
+                    }
+                });
+
+                ideaMediaRecorder.start(500);
+                if (voiceStatusEl) {
+                    const maxSeconds = Math.round(getIdeaMaxVoiceDurationMs() / 1000);
+                    voiceStatusEl.textContent = `Recording… (max ${maxSeconds} seconds)`;
+                }
+                voiceRecordBtn.disabled = true;
+                voiceStopBtn.disabled = false;
+
+                ideaVoiceTimerId = setTimeout(() => {
+                    try {
+                        if (ideaMediaRecorder && ideaMediaRecorder.state === 'recording') {
+                            ideaMediaRecorder.stop();
+                            if (voiceStatusEl) {
+                                const maxSeconds = Math.round(getIdeaMaxVoiceDurationMs() / 1000);
+                                voiceStatusEl.textContent = `Recording stopped (${maxSeconds}-second limit reached).`;
+                            }
+                            voiceRecordBtn.disabled = false;
+                            voiceStopBtn.disabled = true;
+                        }
+                    } finally {
+                        if (ideaVoiceTimerId) {
+                            clearTimeout(ideaVoiceTimerId);
+                            ideaVoiceTimerId = null;
+                        }
+                    }
+                }, getIdeaMaxVoiceDurationMs());
+            } catch (err) {
+                if (voiceStatusEl) {
+                    voiceStatusEl.textContent = err && err.message ? err.message : 'Unable to access microphone.';
+                }
+            }
+        });
+
+        voiceStopBtn.addEventListener('click', () => {
+            if (ideaMediaRecorder && ideaMediaRecorder.state === 'recording') {
+                try {
+                    ideaMediaRecorder.stop();
+                } catch (e) {
+                    // ignore
+                }
+                if (voiceStatusEl) {
+                    voiceStatusEl.textContent = 'Recording stopped.';
+                }
+                voiceRecordBtn.disabled = false;
+                voiceStopBtn.disabled = true;
+                if (ideaVoiceTimerId) {
+                    clearTimeout(ideaVoiceTimerId);
+                    ideaVoiceTimerId = null;
+                }
+            }
+        });
+
+        voiceClearBtn.addEventListener('click', () => {
+            resetIdeaVoiceState();
+        });
+    }
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -513,12 +695,62 @@ App.showPostIdeaModal = function() {
             feedback.classList.remove('error');
             feedback.classList.add('success');
 
-            // Refresh the ideas list for the current location
-            const type = App.browseState.selectedLocationType;
-            const idLoc = App.browseState.selectedLocation;
-            const nameLoc = App.browseState.selectedLocationName || locName;
+            // Save dev-only voice note locally
+            if (ideaVoiceBlob && typeof App.saveIdeaVoiceNote === 'function') {
+                App.saveIdeaVoiceNote(id, ideaVoiceBlob, ideaVoiceCreatedAt || Date.now());
+                resetIdeaVoiceState();
+            }
+
+            // Prefer the creator's own riding/location (from Profile) for browsing,
+            // falling back to the currently selected location in the Ideas tree.
+            let type = App.browseState.selectedLocationType;
+            let idLoc = App.browseState.selectedLocation;
+            let nameLoc = App.browseState.selectedLocationName || locName;
+
+            try {
+                if (App.currentUser && App.currentUser.id) {
+                    const userDetails = await App.api(`/users/${App.currentUser.id}`);
+                    const locations = (userDetails && userDetails.locations) || [];
+                    if (locations.length) {
+                        const priority = [
+                            'FirstNation',
+                            'ProvincialRiding',
+                            'FederalRiding',
+                            'Town',
+                            'AdhocGroup',
+                            'Province',
+                            'Country'
+                        ];
+                        const chosen =
+                            priority
+                                .map((t) => locations.find((loc) => loc.type === t))
+                                .find(Boolean) || locations[0];
+                        if (chosen && chosen.id) {
+                            const typeMap = {
+                                Country: 'countries',
+                                Province: 'provinces',
+                                FederalRiding: 'federal-ridings',
+                                ProvincialRiding: 'provincial-ridings',
+                                Town: 'towns',
+                                FirstNation: 'first-nations',
+                                AdhocGroup: 'adhoc-groups'
+                            };
+                            const mappedType = typeMap[chosen.type];
+                            if (mappedType) {
+                                type = mappedType;
+                                idLoc = chosen.id;
+                                nameLoc = chosen.name || nameLoc;
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                // If anything fails here, we just fall back to the existing browse selection.
+            }
+
+            // Refresh the ideas list for the chosen location and focus on the new idea
             if (typeof App.onIdeasLocationSelect === 'function' && type && idLoc) {
-                await App.onIdeasLocationSelect(type, idLoc, nameLoc, true);
+                await App.onIdeasLocationSelect(type, idLoc, nameLoc, false, id);
             }
 
             setTimeout(() => {
@@ -2943,6 +3175,19 @@ App.pages.news = async function() {
                         <label for="news-post-body">Your update</label>
                         <textarea id="news-post-body" class="form-input" rows="3" placeholder="What are you working on or thinking about?"></textarea>
                     </div>
+                    <div class="form-group dev-only">
+                        <label>Optional: Add a short voice note</label>
+                        <div id="news-voice-controls" class="voice-note-controls">
+                            <button type="button" class="btn btn-secondary btn-sm" id="news-voice-record">🎙 Record</button>
+                            <button type="button" class="btn btn-secondary btn-sm" id="news-voice-stop" disabled>Stop</button>
+                            <button type="button" class="btn btn-link btn-sm" id="news-voice-clear" disabled>Clear</button>
+                        </div>
+                        <div class="voice-note-status" id="news-voice-status"></div>
+                        <audio id="news-voice-audio" controls style="display:none; margin-top:8px; width:100%;"></audio>
+                        <p class="location-help" style="margin-top:4px;">
+                            Voice notes are experimental, saved only in this browser, and automatically removed after 2 days.
+                        </p>
+                    </div>
                     <button class="btn btn-primary" id="news-post-submit">Post</button>
                     <div id="news-post-feedback" class="form-feedback"></div>
                 </div>
@@ -2997,6 +3242,234 @@ App.pages.news = async function() {
     const feedEl = document.getElementById('news-feed');
     const followingListEl = document.getElementById('news-following-list');
 
+    const voiceRecordBtn = document.getElementById('news-voice-record');
+    const voiceStopBtn = document.getElementById('news-voice-stop');
+    const voiceClearBtn = document.getElementById('news-voice-clear');
+    const voiceStatusEl = document.getElementById('news-voice-status');
+    const voiceAudioEl = document.getElementById('news-voice-audio');
+
+    const DEV_VOICE_PREFIX = 'devNewsVoice_';
+    const DEFAULT_MAX_VOICE_SECONDS = 10; // default max length, adjustable later via settings
+
+    function getMaxVoiceDurationMs() {
+        // Simple hook for future admin settings:
+        // - If localStorage.devVoiceMaxSeconds is set to a positive number <= 60, use that.
+        // - Otherwise fall back to DEFAULT_MAX_VOICE_SECONDS.
+        try {
+            const raw = localStorage.getItem('devVoiceMaxSeconds');
+            const num = raw ? parseInt(raw, 10) : NaN;
+            if (Number.isFinite(num) && num > 0 && num <= 60) {
+                return num * 1000;
+            }
+        } catch (e) {
+            // ignore and use default
+        }
+        return DEFAULT_MAX_VOICE_SECONDS * 1000;
+    }
+
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let voiceBlob = null;
+    let voiceCreatedAt = null;
+    let voiceTimerId = null;
+
+    function resetVoiceState() {
+        try {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+        } catch (e) {
+            // ignore
+        }
+        mediaRecorder = null;
+        recordedChunks = [];
+        voiceBlob = null;
+        voiceCreatedAt = null;
+        if (voiceTimerId) {
+            clearTimeout(voiceTimerId);
+            voiceTimerId = null;
+        }
+        if (voiceAudioEl) {
+            voiceAudioEl.src = '';
+            voiceAudioEl.style.display = 'none';
+        }
+        if (voiceStatusEl) {
+            voiceStatusEl.textContent = '';
+        }
+        if (voiceRecordBtn) {
+            voiceRecordBtn.disabled = false;
+            voiceRecordBtn.textContent = '🎙 Start recording';
+        }
+        if (voiceStopBtn) {
+            voiceStopBtn.disabled = true;
+        }
+        if (voiceClearBtn) {
+            voiceClearBtn.disabled = true;
+        }
+    }
+
+    function isVoiceSupported() {
+        return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+    }
+
+    if (!isVoiceSupported() && voiceStatusEl) {
+        voiceStatusEl.textContent = 'Voice notes are not supported in this browser.';
+    }
+
+    function saveVoiceForPost(postId, blob, createdAt) {
+        if (!postId || !blob) return;
+        try {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const dataUrl = reader.result;
+                const payload = {
+                    createdAt,
+                    dataUrl
+                };
+                try {
+                    localStorage.setItem(DEV_VOICE_PREFIX + postId, JSON.stringify(payload));
+                } catch (e) {
+                    // best-effort only; ignore quota errors
+                    // eslint-disable-next-line no-console
+                    console.warn('Failed to save dev voice note:', e);
+                }
+            };
+            reader.readAsDataURL(blob);
+        } catch (e) {
+            // eslint-disable-next-line no-console
+            console.warn('Failed to prepare dev voice note for saving:', e);
+        }
+    }
+
+    function loadVoiceForPost(postId) {
+        if (!postId) return null;
+        try {
+            const raw = localStorage.getItem(DEV_VOICE_PREFIX + postId);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || !parsed.dataUrl || !parsed.createdAt) {
+                localStorage.removeItem(DEV_VOICE_PREFIX + postId);
+                return null;
+            }
+            const ageMs = Date.now() - parsed.createdAt;
+            const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
+            if (ageMs > twoDaysMs) {
+                localStorage.removeItem(DEV_VOICE_PREFIX + postId);
+                return null;
+            }
+            return parsed.dataUrl;
+        } catch (e) {
+            localStorage.removeItem(DEV_VOICE_PREFIX + postId);
+            return null;
+        }
+    }
+
+    function attachVoiceHandlers() {
+        if (!isVoiceSupported() || !voiceRecordBtn || !voiceStopBtn || !voiceClearBtn) {
+            return;
+        }
+
+        voiceRecordBtn.addEventListener('click', async () => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                return;
+            }
+            try {
+                resetVoiceState();
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const options = {};
+                if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                    options.mimeType = 'audio/webm;codecs=opus';
+                }
+                mediaRecorder = new MediaRecorder(stream, options);
+                recordedChunks = [];
+                voiceCreatedAt = Date.now();
+
+                mediaRecorder.addEventListener('dataavailable', (event) => {
+                    if (event.data && event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                });
+
+                mediaRecorder.addEventListener('stop', () => {
+                    try {
+                        stream.getTracks().forEach((t) => t.stop());
+                    } catch (e) {
+                        // ignore
+                    }
+                    if (!recordedChunks.length) return;
+                    voiceBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+                    const url = URL.createObjectURL(voiceBlob);
+                    if (voiceAudioEl) {
+                        voiceAudioEl.src = url;
+                        voiceAudioEl.style.display = 'block';
+                    }
+                    if (voiceStatusEl) {
+                        voiceStatusEl.textContent = 'Recorded voice note (saved locally for up to 2 days).';
+                    }
+                    if (voiceClearBtn) {
+                        voiceClearBtn.disabled = false;
+                    }
+                });
+
+                mediaRecorder.start(500);
+                if (voiceStatusEl) {
+                    const maxSeconds = Math.round(getMaxVoiceDurationMs() / 1000);
+                    voiceStatusEl.textContent = `Recording… (max ${maxSeconds} seconds)`;
+                }
+                voiceRecordBtn.disabled = true;
+                voiceStopBtn.disabled = false;
+
+                voiceTimerId = setTimeout(() => {
+                    try {
+                        if (mediaRecorder && mediaRecorder.state === 'recording') {
+                            mediaRecorder.stop();
+                            if (voiceStatusEl) {
+                                const maxSeconds = Math.round(getMaxVoiceDurationMs() / 1000);
+                                voiceStatusEl.textContent = `Recording stopped (${maxSeconds}-second limit reached).`;
+                            }
+                            voiceRecordBtn.disabled = false;
+                            voiceStopBtn.disabled = true;
+                        }
+                    } finally {
+                        if (voiceTimerId) {
+                            clearTimeout(voiceTimerId);
+                            voiceTimerId = null;
+                        }
+                    }
+                }, MAX_VOICE_DURATION_MS);
+            } catch (err) {
+                if (voiceStatusEl) {
+                    voiceStatusEl.textContent = err && err.message ? err.message : 'Unable to access microphone.';
+                }
+            }
+        });
+
+        voiceStopBtn.addEventListener('click', () => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                try {
+                    mediaRecorder.stop();
+                } catch (e) {
+                    // ignore
+                }
+                if (voiceStatusEl) {
+                    voiceStatusEl.textContent = 'Recording stopped.';
+                }
+                voiceRecordBtn.disabled = false;
+                voiceStopBtn.disabled = true;
+                if (voiceTimerId) {
+                    clearTimeout(voiceTimerId);
+                    voiceTimerId = null;
+                }
+            }
+        });
+
+        voiceClearBtn.addEventListener('click', () => {
+            resetVoiceState();
+        });
+    }
+
+    attachVoiceHandlers();
+
     async function loadFollowing() {
         try {
             const following = await App.api('/news/following');
@@ -3036,11 +3509,26 @@ App.pages.news = async function() {
             feedEl.innerHTML = feed
                 .map((item) => {
                     if (item.kind === 'post') {
+                        const backendAudioUrl =
+                            item.audioUrl &&
+                            (!item.audioExpiresAt || new Date(item.audioExpiresAt) > new Date())
+                                ? item.audioUrl
+                                : null;
+                        const devVoiceDataUrl = !backendAudioUrl ? loadVoiceForPost(item.id) : null;
+                        const audioSrc = backendAudioUrl || devVoiceDataUrl || null;
+                        const voiceHtml = audioSrc
+                            ? `
+                                <div class="simple-list-meta" style="margin-top:4px;">
+                                    <audio controls src="${audioSrc}" style="width:100%;"></audio>
+                                </div>
+                              `
+                            : '';
                         return `
                             <div class="simple-list-item">
                                 <div class="simple-list-main">
                                     <div class="simple-list-name">📝 ${item.author?.name || 'Member'}</div>
                                     <div class="simple-list-meta">${item.body}</div>
+                                    ${voiceHtml}
                                 </div>
                                 <div class="simple-list-meta">
                                     <span>${App.formatDate(item.createdAt)} ${App.formatTime(
@@ -3113,6 +3601,35 @@ App.pages.news = async function() {
                 postFeedbackEl.textContent = 'Posted!';
                 postFeedbackEl.classList.add('success');
                 postBodyEl.value = '';
+
+                const postId = data && data.id;
+                if (voiceBlob && postId) {
+                    let uploaded = false;
+                    try {
+                        const uploadResp = await fetch(
+                            `/api/news/posts/${encodeURIComponent(postId)}/audio`,
+                            {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'audio/webm'
+                                },
+                                body: voiceBlob
+                            }
+                        );
+                        if (uploadResp.ok) {
+                            uploaded = true;
+                        }
+                    } catch (e) {
+                        // ignore and fall back to local-only storage
+                    }
+
+                    if (!uploaded) {
+                        saveVoiceForPost(postId, voiceBlob, voiceCreatedAt || Date.now());
+                    }
+
+                    resetVoiceState();
+                }
+
                 await loadFeed();
             }
         } catch (err) {
@@ -3671,6 +4188,26 @@ App.pages.admin = async function() {
                             The reset button will wipe <strong>all</strong> Neo4j data and re-run the full seed script.
                             Use only on your local development database.
                         </p>
+                        <hr style="margin: 16px 0; border-color: var(--border-color);">
+                        <h4 style="margin-bottom: 6px;">🎙 Audio Settings (News posts)</h4>
+                        <p class="form-help" style="margin-bottom: 8px; color: var(--text-muted); font-size: 0.85rem;">
+                            Configure how long members can record voice notes on News posts in this environment.
+                        </p>
+                        <div class="form-group" style="margin-bottom: 8px;">
+                            <label for="admin-audio-max-seconds">Max voice note length (seconds)</label>
+                            <input id="admin-audio-max-seconds" type="number" min="5" max="60" step="1" class="form-input" placeholder="10">
+                            <p class="form-help" style="margin-top: 4px;">
+                                Default is 10 seconds. This setting is stored per browser (local only) for testing.
+                            </p>
+                        </div>
+                        <button class="admin-btn" id="admin-audio-save">💾 Save audio settings</button>
+                        <div id="admin-audio-settings-result" class="form-feedback" style="margin-top: 8px;"></div>
+                        <hr style="margin: 16px 0; border-color: var(--border-color);">
+                        <button class="admin-btn" id="admin-audio-cleanup">🧹 Clean up expired news audio files</button>
+                        <div id="admin-audio-cleanup-result" class="form-feedback" style="margin-top: 8px;"></div>
+                        <p class="form-help" style="margin-top: 4px; color: var(--text-muted); font-size: 0.85rem;">
+                            Runs a best-effort cleanup on the server for any News audio whose retention period has passed.
+                        </p>
                     </div>
                 </div>
 
@@ -3852,6 +4389,10 @@ App.pages.admin = async function() {
                 </div>
             </div>
         `;
+
+        if (typeof App.initAdminAudioSettings === 'function') {
+            App.initAdminAudioSettings();
+        }
 
         // Hook up toggle for Create New Convention form
         const toggleConvFormBtn = document.getElementById('toggle-create-conv-form');
@@ -4092,6 +4633,157 @@ App.resetDatabase = async function() {
             resultEl.classList.add('error');
         }
     }
+};
+
+/**
+ * Dev-only helpers for attaching voice notes to Ideas using localStorage.
+ */
+App.saveIdeaVoiceNote = function(ideaId, blob, createdAt) {
+    if (!ideaId || !blob) return;
+    const PREFIX = 'devIdeaVoice_';
+    try {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const dataUrl = reader.result;
+            const payload = {
+                createdAt,
+                dataUrl
+            };
+            try {
+                localStorage.setItem(PREFIX + ideaId, JSON.stringify(payload));
+            } catch (e) {
+                // eslint-disable-next-line no-console
+                console.warn('Failed to save dev idea voice note:', e);
+            }
+        };
+        reader.readAsDataURL(blob);
+    } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('Failed to prepare dev idea voice note for saving:', e);
+    }
+};
+
+App.loadIdeaVoiceNote = function(ideaId) {
+    if (!ideaId) return null;
+    const PREFIX = 'devIdeaVoice_';
+    try {
+        const raw = localStorage.getItem(PREFIX + ideaId);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.dataUrl || !parsed.createdAt) {
+            localStorage.removeItem(PREFIX + ideaId);
+            return null;
+        }
+        const ageMs = Date.now() - parsed.createdAt;
+        const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
+        if (ageMs > twoDaysMs) {
+            localStorage.removeItem(PREFIX + ideaId);
+            return null;
+        }
+        return parsed.dataUrl;
+    } catch (e) {
+        localStorage.removeItem(PREFIX + ideaId);
+        return null;
+    }
+};
+
+/**
+ * Admin: Audio settings for News voice notes.
+ * - Stores max seconds in localStorage.devVoiceMaxSeconds (per browser).
+ * - Can trigger backend cleanup of expired News audio files.
+ */
+App.initAdminAudioSettings = function() {
+    const maxInput = document.getElementById('admin-audio-max-seconds');
+    const saveBtn = document.getElementById('admin-audio-save');
+    const saveResultEl = document.getElementById('admin-audio-settings-result');
+    const cleanupBtn = document.getElementById('admin-audio-cleanup');
+    const cleanupResultEl = document.getElementById('admin-audio-cleanup-result');
+
+    if (!maxInput || !saveBtn || !cleanupBtn) {
+        return;
+    }
+
+    // Initialize from localStorage if present
+    try {
+        const raw = localStorage.getItem('devVoiceMaxSeconds');
+        const num = raw ? parseInt(raw, 10) : NaN;
+        if (Number.isFinite(num) && num > 0 && num <= 60) {
+            maxInput.value = String(num);
+        }
+    } catch (e) {
+        // ignore
+    }
+
+    saveBtn.addEventListener('click', () => {
+        if (saveResultEl) {
+            saveResultEl.textContent = '';
+            saveResultEl.classList.remove('error', 'success');
+        }
+
+        const value = maxInput.value.trim();
+        const num = value ? parseInt(value, 10) : NaN;
+
+        if (!Number.isFinite(num) || num < 5 || num > 60) {
+            if (saveResultEl) {
+                saveResultEl.textContent = 'Please enter a value between 5 and 60 seconds.';
+                saveResultEl.classList.add('error');
+            }
+            return;
+        }
+
+        try {
+            localStorage.setItem('devVoiceMaxSeconds', String(num));
+            if (saveResultEl) {
+                saveResultEl.textContent = `Saved. New max length is ${num} second(s) for this browser.`;
+                saveResultEl.classList.add('success');
+            }
+        } catch (e) {
+            if (saveResultEl) {
+                saveResultEl.textContent = 'Unable to save setting in this browser.';
+                saveResultEl.classList.add('error');
+            }
+        }
+    });
+
+    cleanupBtn.addEventListener('click', async () => {
+        if (!confirm('Run cleanup of expired News audio files on the server?')) {
+            if (cleanupResultEl) {
+                cleanupResultEl.textContent = 'Cancelled.';
+                cleanupResultEl.classList.remove('error');
+                cleanupResultEl.classList.add('success');
+            }
+            return;
+        }
+
+        if (cleanupResultEl) {
+            cleanupResultEl.textContent = 'Running cleanup...';
+            cleanupResultEl.classList.remove('error', 'success');
+        }
+
+        try {
+            const { response, data } = await App.apiPost('/news/cleanup-audio', {});
+            if (!response.ok) {
+                if (cleanupResultEl) {
+                    cleanupResultEl.textContent =
+                        data && data.error ? data.error : 'Failed to run audio cleanup (feature may be disabled).';
+                    cleanupResultEl.classList.add('error');
+                }
+            } else {
+                const removed = data && typeof data.removed === 'number' ? data.removed : 0;
+                if (cleanupResultEl) {
+                    cleanupResultEl.textContent = `Cleanup complete. Removed ${removed} expired audio entr${
+                        removed === 1 ? 'y' : 'ies'
+                    }.`;
+                    cleanupResultEl.classList.add('success');
+                }
+            }
+        } catch (err) {
+            if (cleanupResultEl) {
+                cleanupResultEl.textContent = `Error: ${err.message}`;
+                cleanupResultEl.classList.add('error');
+            }
+        }
+    });
 };
 
 App.startAllVoting = async function(convId) {

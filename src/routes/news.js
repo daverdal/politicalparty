@@ -9,6 +9,8 @@ const express = require('express');
 const router = express.Router();
 
 const newsService = require('../services/newsService');
+const newsAudioService = require('../services/newsAudioService');
+const config = require('../config');
 const { authenticate, requireVerifiedUser } = require('../middleware/auth');
 
 // All news routes require an authenticated user
@@ -26,6 +28,37 @@ router.post('/posts', requireVerifiedUser, async (req, res) => {
             body: body.trim()
         });
         res.status(201).json(post);
+    } catch (error) {
+        res.status(error.statusCode || 500).json({ error: error.message });
+    }
+});
+
+// POST /api/news/posts/:id/audio - attach audio to a news post (dev/feature-flag only)
+router.post('/posts/:id/audio', requireVerifiedUser, async (req, res) => {
+    if (!config.features.newsAudio) {
+        return res.status(404).json({ error: 'News audio is not enabled.' });
+    }
+
+    try {
+        const chunks = [];
+        req.on('data', (chunk) => chunks.push(chunk));
+        req.on('end', async () => {
+            try {
+                if (!chunks.length) {
+                    return res.status(400).json({ error: 'Empty audio payload.' });
+                }
+                const buffer = Buffer.concat(chunks);
+                const mimeType = req.headers['content-type'] || 'application/octet-stream';
+                const { audioUrl, audioExpiresAt } = await newsAudioService.attachAudioToPost({
+                    postId: req.params.id,
+                    buffer,
+                    mimeType
+                });
+                res.status(201).json({ audioUrl, audioExpiresAt });
+            } catch (error) {
+                res.status(error.statusCode || 500).json({ error: error.message });
+            }
+        });
     } catch (error) {
         res.status(error.statusCode || 500).json({ error: error.message });
     }
@@ -68,6 +101,20 @@ router.get('/feed', async (req, res) => {
             includePlans: includePlans !== 'false'
         });
         res.json(feed);
+    } catch (error) {
+        res.status(error.statusCode || 500).json({ error: error.message });
+    }
+});
+
+// POST /api/news/cleanup-audio - best-effort cleanup of expired audio (admin/maintenance)
+router.post('/cleanup-audio', async (req, res) => {
+    if (!config.features.newsAudio) {
+        return res.status(404).json({ error: 'News audio is not enabled.' });
+    }
+
+    try {
+        const result = await newsAudioService.cleanupExpiredAudio();
+        res.json(result);
     } catch (error) {
         res.status(error.statusCode || 500).json({ error: error.message });
     }
