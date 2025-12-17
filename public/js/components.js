@@ -720,15 +720,29 @@ App.loadIdeasForLocation = async function(type, id, locationName) {
             return;
         }
         
-        ideasList.innerHTML = ideas.map((idea, index) => `
+        ideasList.innerHTML = ideas.map((idea, index) => {
+            let voiceBadge = '';
+            try {
+                if (App.loadIdeaVoiceNote && idea.id && App.loadIdeaVoiceNote(idea.id)) {
+                    voiceBadge =
+                        '<span class="idea-list-voice" title="Voice note available" style="margin-left:6px;">🎙</span>';
+                }
+            } catch (e) {
+                // ignore if not available
+            }
+            return `
             <div class="idea-list-item" data-idea-index="${index}" data-idea-id="${idea.id}">
-                <div class="idea-list-title">${idea.title}</div>
+                <div class="idea-list-title">
+                    ${idea.title}
+                    ${voiceBadge}
+                </div>
                 <div class="idea-list-meta">
                     <span class="idea-list-support">👍 ${idea.supportCount || 0}</span>
                     <span>${idea.author?.name || 'Anonymous'}</span>
                 </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
         
         App.browseState.currentIdeas = ideas;
         

@@ -20,6 +20,13 @@ function getRetentionDays() {
 
 async function attachAudioToPost({ postId, buffer, mimeType }) {
     const dir = getNewsAudioDir();
+    const maxBytes = config.uploads?.newsAudioMaxBytes || 524288;
+
+    if (buffer && buffer.length > maxBytes) {
+        const err = new Error('Audio file is too large.');
+        err.statusCode = 413;
+        throw err;
+    }
     const ext = mimeType === 'audio/webm' ? 'webm' : 'dat';
     const fileName = `${postId}_${Date.now()}.${ext}`;
     const filePath = path.join(dir, fileName);
@@ -50,8 +57,15 @@ async function attachAudioToPost({ postId, buffer, mimeType }) {
             }
         );
 
+        const audioUrl = `/${relativePath.replace(/\\/g, '/')}`;
+        if (config.env !== 'test') {
+            console.log(
+                `[newsAudio] Attached audio to post ${postId} → ${audioUrl}, expires ${expiresAt}`
+            );
+        }
+
         return {
-            audioUrl: `/${relativePath.replace(/\\/g, '/')}`,
+            audioUrl,
             audioExpiresAt: expiresAt
         };
     } finally {
@@ -96,6 +110,10 @@ async function cleanupExpiredAudio() {
             `,
                 { postId }
             );
+        }
+
+        if (config.env !== 'test') {
+            console.log(`[newsAudio] Cleanup removed ${records.length} expired audio entrie(s).`);
         }
 
         return { removed: records.length };

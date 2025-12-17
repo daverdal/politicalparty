@@ -8,7 +8,8 @@ const express = require('express');
 const router = express.Router();
 const locationService = require('../services/locationService');
 const { getSession } = require('../config/db');
-const { authenticate, requireAdmin } = require('../middleware/auth');
+const { authenticate, requireAdmin, requireVerifiedUser } = require('../middleware/auth');
+const moderatorService = require('../services/moderatorService');
 
 // GET /api/locations - Get full location hierarchy
 router.get('/', async (req, res) => {
@@ -391,20 +392,45 @@ router.post('/towns', async (req, res) => {
     }
 });
 
-// POST /api/locations/adhoc-groups - Create a new adhoc group
-router.post('/adhoc-groups', async (req, res) => {
+// POST /api/locations/adhoc-groups - Create a new adhoc group (verified users can create)
+router.post('/adhoc-groups', authenticate, requireVerifiedUser, async (req, res) => {
     const session = getSession();
     const { id, name, description, provinceId } = req.body;
     
     try {
-        await session.run(`
-            CREATE (ag:AdhocGroup {id: $id, name: $name, description: $description, createdAt: datetime()})
-        `, { id, name, description });
+        await session.run(
+            `
+            CREATE (ag:AdhocGroup {
+                id: $id,
+                name: $name,
+                description: $description,
+                createdAt: datetime(),
+                createdByUserId: $createdByUserId
+            })
+        `,
+            { id, name, description, createdByUserId: req.user.id }
+        );
         
-        await session.run(`
+        await session.run(
+            `
             MATCH (p:Province {id: $provinceId}), (ag:AdhocGroup {id: $groupId})
             CREATE (p)-[:HAS_ADHOC_GROUP]->(ag)
-        `, { provinceId, groupId: id });
+        `,
+            { provinceId, groupId: id }
+        );
+        
+        // Automatically make the creator a moderator of this adhoc group (via service)
+        try {
+            await moderatorService.assignModerator({
+                userId: req.user.id,
+                locationId: id,
+                locationType: 'AdhocGroup'
+            });
+        } catch (e) {
+            // Best-effort; log but don't fail group creation
+            // eslint-disable-next-line no-console
+            console.warn('[locations] Failed to assign moderator for adhoc group:', e.message || e);
+        }
         
         const result = await session.run('MATCH (ag:AdhocGroup {id: $id}) RETURN ag', { id });
         res.status(201).json(result.records[0].get('ag').properties);
@@ -412,6 +438,107 @@ router.post('/adhoc-groups', async (req, res) => {
         res.status(500).json({ error: error.message });
     } finally {
         await session.close();
+    }
+});
+
+// ============================================
+// Moderator management (admin only)
+// ============================================
+
+// POST /api/locations/:type/:id/moderators - assign a moderator to a location
+router.post('/:type/:id/moderators', authenticate, requireAdmin, async (req, res) => {
+    const { type, id } = req.params;
+    const { userId } = req.body || {};
+
+    if (!userId) {
+        return res.status(400).json({ error: 'userId is required.' });
+    }
+
+    const typeMap = {
+        countries: 'Country',
+        provinces: 'Province',
+        'federal-ridings': 'FederalRiding',
+        'provincial-ridings': 'ProvincialRiding',
+        towns: 'Town',
+        'first-nations': 'FirstNation',
+        'adhoc-groups': 'AdhocGroup'
+    };
+
+    const locationType = typeMap[type];
+    if (!locationType) {
+        return res.status(400).json({ error: 'Invalid location type' });
+    }
+
+    try {
+        const result = await moderatorService.assignModerator({
+            userId,
+            locationId: id,
+            locationType
+        });
+        res.status(201).json(result);
+    } catch (error) {
+        res.status(error.statusCode || 500).json({ error: error.message });
+    }
+});
+
+// DELETE /api/locations/:type/:id/moderators/:userId - remove a moderator from a location
+router.delete('/:type/:id/moderators/:userId', authenticate, requireAdmin, async (req, res) => {
+    const { type, id, userId } = req.params;
+
+    const typeMap = {
+        countries: 'Country',
+        provinces: 'Province',
+        'federal-ridings': 'FederalRiding',
+        'provincial-ridings': 'ProvincialRiding',
+        towns: 'Town',
+        'first-nations': 'FirstNation',
+        'adhoc-groups': 'AdhocGroup'
+    };
+
+    const locationType = typeMap[type];
+    if (!locationType) {
+        return res.status(400).json({ error: 'Invalid location type' });
+    }
+
+    try {
+        const { removed } = await moderatorService.removeModerator({
+            userId,
+            locationId: id,
+            locationType
+        });
+        res.json({ removed });
+    } catch (error) {
+        res.status(error.statusCode || 500).json({ error: error.message });
+    }
+});
+
+// GET /api/locations/:type/:id/moderators - list moderators for a location
+router.get('/:type/:id/moderators', authenticate, requireAdmin, async (req, res) => {
+    const { type, id } = req.params;
+
+    const typeMap = {
+        countries: 'Country',
+        provinces: 'Province',
+        'federal-ridings': 'FederalRiding',
+        'provincial-ridings': 'ProvincialRiding',
+        towns: 'Town',
+        'first-nations': 'FirstNation',
+        'adhoc-groups': 'AdhocGroup'
+    };
+
+    const locationType = typeMap[type];
+    if (!locationType) {
+        return res.status(400).json({ error: 'Invalid location type' });
+    }
+
+    try {
+        const mods = await moderatorService.listModeratorsForLocation({
+            locationId: id,
+            locationType
+        });
+        res.json(mods);
+    } catch (error) {
+        res.status(error.statusCode || 500).json({ error: error.message });
     }
 });
 

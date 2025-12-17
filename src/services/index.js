@@ -12,6 +12,7 @@ const eventService = require('./eventService');
 const voteService = require('./voteService');
 const priorityService = require('./priorityService');
 const votingService = require('./votingService');
+const moderatorService = require('./moderatorService');
 
 module.exports = {
     conventionService,
@@ -22,5 +23,6 @@ module.exports = {
     eventService,
     voteService,
     priorityService,
-    votingService
+    votingService,
+    moderatorService
 };

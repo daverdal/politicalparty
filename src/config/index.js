@@ -14,7 +14,9 @@ module.exports = {
         baseDir: process.env.UPLOADS_DIR || 'uploads',
         newsAudioSubdir: 'news-audio',
         // Default retention for news audio in days
-        newsAudioRetentionDays: parseInt(process.env.NEWS_AUDIO_RETENTION_DAYS || '2', 10)
+        newsAudioRetentionDays: parseInt(process.env.NEWS_AUDIO_RETENTION_DAYS || '2', 10),
+        // Maximum allowed size for a single news audio upload in bytes (default ~512KB)
+        newsAudioMaxBytes: parseInt(process.env.NEWS_AUDIO_MAX_BYTES || '524288', 10)
     }
 };
 

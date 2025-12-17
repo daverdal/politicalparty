@@ -1215,8 +1215,14 @@ App.pages.convention = async function() {
         const activeConv = conventions.find(c => c.status !== 'completed') || conventions[0];
         
         let activeRaces = [];
+        let votes = [];
         if (activeConv) {
             activeRaces = await App.api(`/conventions/${activeConv.id}/races`);
+            try {
+                votes = await App.api('/votes');
+            } catch (e) {
+                votes = [];
+            }
         }
         
         const totalRaces = activeRaces.length;
@@ -1283,8 +1289,8 @@ App.pages.convention = async function() {
                     <button class="convention-tab active" data-tab="progress" onclick="App.switchConventionTab('progress')">
                         📊 Convention Progress
                     </button>
-                    <button class="convention-tab" data-tab="races" onclick="App.switchConventionTab('races')">
-                        🏁 Active Races <span class="tab-badge">${activeRaces.length}</span>
+                    <button class="convention-tab" data-tab="voting" onclick="App.switchConventionTab('voting')">
+                        🗳️ Convention Voting <span class="tab-badge">${votes.length}</span>
                     </button>
                 </div>
                 
@@ -1306,8 +1312,8 @@ App.pages.convention = async function() {
                     </div>
                 </div>
                 
-                <!-- Active Races Tab -->
-                <div id="convention-tab-races" class="convention-tab-content" style="display: none;">
+                <!-- Convention Voting Tab -->
+                <div id="convention-tab-voting" class="convention-tab-content" style="display: none;">
                     ${activeConv.status?.includes('-voting') ? `
                         <div class="card">
                             <div class="card-header">
@@ -1351,6 +1357,62 @@ App.pages.convention = async function() {
                             </div>
                         </div>
                     `}
+                    
+                    <div class="card" style="margin-top: 16px;">
+                        <div class="card-header">
+                            <h3 class="card-title">Convention Voting Sessions</h3>
+                            <span class="badge">${votes.length} session(s)</span>
+                        </div>
+                        <div class="card-body">
+                            ${
+                                !votes.length
+                                    ? '<p class="empty-text">No convention-wide votes have been created yet.</p>'
+                                    : `
+                            <div class="cards-grid">
+                                ${votes
+                                    .map((vote) => {
+                                        let resultHtml = '<div class="badge warning">⏳ Voting in progress</div>';
+                                        if (vote.result?.resultData) {
+                                            try {
+                                                const data = JSON.parse(vote.result.resultData);
+                                                if (data.yes !== undefined) {
+                                                    resultHtml = `<div class="vote-results">
+                                                        <span class="badge success">✓ Yes: ${data.yes}</span>
+                                                        <span class="badge danger">✗ No: ${data.no}</span>
+                                                        ${
+                                                            data.abstain
+                                                                ? `<span class="badge">⊘ Abstain: ${data.abstain}</span>`
+                                                                : ''
+                                                        }
+                                                    </div>`;
+                                                }
+                                            } catch (e) {
+                                                // ignore parse errors, keep default badge
+                                            }
+                                        }
+                                        return `
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <div>
+                                                        <span class="event-type" style="background: rgba(0, 212, 170, 0.1); color: var(--accent-primary);">${vote.type || 'vote'}</span>
+                                                        <h3 class="card-title">${vote.question}</h3>
+                                                    </div>
+                                                </div>
+                                                ${
+                                                    vote.event
+                                                        ? `<p class="card-subtitle" style="margin-bottom: 12px;">Part of: ${vote.event.title}</p>`
+                                                        : ''
+                                                }
+                                                <div class="card-body">${resultHtml}</div>
+                                            </div>
+                                        `;
+                                    })
+                                    .join('')}
+                            </div>
+                            `
+                            }
+                        </div>
+                    </div>
                 </div>
             ` : '<div class="card"><div class="card-body"><p>No conventions available yet.</p></div></div>'}
         `;
@@ -3516,6 +3578,7 @@ App.pages.news = async function() {
                                 : null;
                         const devVoiceDataUrl = !backendAudioUrl ? loadVoiceForPost(item.id) : null;
                         const audioSrc = backendAudioUrl || devVoiceDataUrl || null;
+                        const hasVoice = !!audioSrc;
                         const voiceHtml = audioSrc
                             ? `
                                 <div class="simple-list-meta" style="margin-top:4px;">
@@ -3526,7 +3589,14 @@ App.pages.news = async function() {
                         return `
                             <div class="simple-list-item">
                                 <div class="simple-list-main">
-                                    <div class="simple-list-name">📝 ${item.author?.name || 'Member'}</div>
+                                    <div class="simple-list-name">
+                                        📝 ${item.author?.name || 'Member'}
+                                        ${
+                                            hasVoice
+                                                ? '<span style="margin-left:6px; font-size:12px; color: var(--accent-primary);">🎙 Voice note</span>'
+                                                : ''
+                                        }
+                                    </div>
                                     <div class="simple-list-meta">${item.body}</div>
                                     ${voiceHtml}
                                 </div>
@@ -4240,6 +4310,49 @@ App.pages.admin = async function() {
                     </div>
                 </div>
                 
+                <!-- Location Moderators Card (Admin tools) -->
+                <div class="card">
+                    <div class="card-header"><h3 class="card-title">👥 Location Moderators (Admin)</h3></div>
+                    <div class="card-body">
+                        <p class="card-subtitle" style="margin-bottom: 8px;">
+                            Assign moderators to specific locations (ridings, towns, First Nations, or adhoc groups).
+                            Moderators will later be able to help with local questions and content review.
+                        </p>
+                        <div class="form-group">
+                            <label for="mod-location-type">Location type</label>
+                            <select id="mod-location-type" class="form-select">
+                                <option value="federal-ridings">Federal Riding</option>
+                                <option value="provincial-ridings">Provincial Riding</option>
+                                <option value="towns">Town</option>
+                                <option value="first-nations">First Nation</option>
+                                <option value="adhoc-groups">Adhoc Group</option>
+                                <option value="provinces">Province</option>
+                                <option value="countries">Country</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="mod-location-id">Location ID</label>
+                            <input id="mod-location-id" class="form-input" placeholder="e.g. riding or group ID">
+                            <p class="form-help" style="margin-top:4px;">
+                                Use the location ID from the database or admin tools. This stays internal (not shown to players).
+                            </p>
+                        </div>
+                        <div class="form-group">
+                            <label for="mod-user-select">Moderator user</label>
+                            <select id="mod-user-select" class="form-select">
+                                <option value="">-- Select user --</option>
+                            </select>
+                        </div>
+                        <button class="admin-btn primary" id="mod-assign-btn">➕ Assign Moderator</button>
+                        <div id="mod-assign-result" class="form-feedback" style="margin-top: 8px;"></div>
+                        
+                        <hr style="margin: 16px 0; border-color: var(--border-color);">
+                        <button class="admin-btn" id="mod-refresh-list-btn">🔍 Show Moderators for Location</button>
+                        <div id="mod-list-result" class="form-feedback" style="margin-top: 8px;"></div>
+                        <ul id="mod-list" class="locations-list" style="margin-top: 8px; max-height: 160px; overflow-y:auto;"></ul>
+                    </div>
+                </div>
+                
                 ${activeConv ? `
                 <!-- Active Convention Controls -->
                 <div class="card" style="grid-column: span 2;">
@@ -4392,6 +4505,9 @@ App.pages.admin = async function() {
 
         if (typeof App.initAdminAudioSettings === 'function') {
             App.initAdminAudioSettings();
+        }
+        if (typeof App.initModeratorAdminPanel === 'function') {
+            App.initModeratorAdminPanel();
         }
 
         // Hook up toggle for Create New Convention form
@@ -4635,6 +4751,141 @@ App.resetDatabase = async function() {
     }
 };
 
+/**
+ * Admin: Location Moderators panel
+ * - Admins can assign moderators to locations and view existing moderators.
+ * - Uses App.allUsers loaded by initUserSelector for the user dropdown.
+ */
+App.initModeratorAdminPanel = function() {
+    const userSelect = document.getElementById('mod-user-select');
+    const typeSelect = document.getElementById('mod-location-type');
+    const locIdInput = document.getElementById('mod-location-id');
+    const assignBtn = document.getElementById('mod-assign-btn');
+    const assignResultEl = document.getElementById('mod-assign-result');
+    const refreshBtn = document.getElementById('mod-refresh-list-btn');
+    const listResultEl = document.getElementById('mod-list-result');
+    const listEl = document.getElementById('mod-list');
+
+    if (!userSelect || !typeSelect || !locIdInput || !assignBtn || !refreshBtn || !listEl) {
+        return;
+    }
+
+    // Populate user dropdown from App.allUsers if available
+    try {
+        const users = Array.isArray(App.allUsers) ? App.allUsers : [];
+        userSelect.innerHTML =
+            '<option value=\"\">-- Select user --</option>' +
+            users
+                .map(
+                    (u) =>
+                        `<option value=\"${u.id}\">${(u.name || '(no name)').replace(
+                            /\"/g,
+                            '&quot;'
+                        )}${u.email ? ' – ' + u.email : ''}</option>`
+                )
+                .join('');
+    } catch (e) {
+        // ignore; leave default option
+    }
+
+    const clearAssignFeedback = () => {
+        if (assignResultEl) {
+            assignResultEl.textContent = '';
+            assignResultEl.classList.remove('error', 'success');
+        }
+    };
+
+    const clearListFeedback = () => {
+        if (listResultEl) {
+            listResultEl.textContent = '';
+            listResultEl.classList.remove('error', 'success');
+        }
+    };
+
+    assignBtn.addEventListener('click', async () => {
+        clearAssignFeedback();
+
+        const userId = userSelect.value;
+        const type = typeSelect.value;
+        const locId = locIdInput.value.trim();
+
+        if (!userId || !type || !locId) {
+            if (assignResultEl) {
+                assignResultEl.textContent =
+                    'Please select a user, choose a location type, and enter a location ID.';
+                assignResultEl.classList.add('error');
+            }
+            return;
+        }
+
+        assignBtn.disabled = true;
+        try {
+            const { response, data } = await App.apiPost(
+                `/locations/${encodeURIComponent(type)}/${encodeURIComponent(locId)}/moderators`,
+                { userId }
+            );
+            if (!response.ok) {
+                if (assignResultEl) {
+                    assignResultEl.textContent =
+                        (data && data.error) || 'Unable to assign moderator (admin only).';
+                    assignResultEl.classList.add('error');
+                }
+            } else if (assignResultEl) {
+                assignResultEl.textContent = 'Moderator assigned.';
+                assignResultEl.classList.add('success');
+            }
+        } catch (err) {
+            if (assignResultEl) {
+                assignResultEl.textContent = err.message || 'Unexpected error assigning moderator.';
+                assignResultEl.classList.add('error');
+            }
+        } finally {
+            assignBtn.disabled = false;
+        }
+    });
+
+    refreshBtn.addEventListener('click', async () => {
+        clearListFeedback();
+        listEl.innerHTML = '';
+
+        const type = typeSelect.value;
+        const locId = locIdInput.value.trim();
+
+        if (!type || !locId) {
+            if (listResultEl) {
+                listResultEl.textContent = 'Enter a location ID and type first.';
+                listResultEl.classList.add('error');
+            }
+            return;
+        }
+
+        try {
+            const mods = await App.api(
+                `/locations/${encodeURIComponent(type)}/${encodeURIComponent(locId)}/moderators`
+            );
+            if (!mods.length) {
+                listEl.innerHTML = '<li>No moderators assigned yet.</li>';
+                return;
+            }
+
+            listEl.innerHTML = mods
+                .map(
+                    (m) => `
+                <li>
+                    ${m.name}${m.email ? ` <span class=\"location-type\">(${m.email})</span>` : ''}
+                </li>
+            `
+                )
+                .join('');
+        } catch (err) {
+            if (listResultEl) {
+                listResultEl.textContent =
+                    err.message || 'Unable to load moderators (admin only, check permissions).';
+                listResultEl.classList.add('error');
+            }
+        }
+    });
+};
 /**
  * Dev-only helpers for attaching voice notes to Ideas using localStorage.
  */
