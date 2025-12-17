@@ -2750,6 +2750,11 @@ App.wireCreateReferendumForm = function(options = {}) {
                 feedback.classList.remove('error');
                 feedback.classList.add('success');
             }
+
+            // Reload the referendums page so the new question appears in the list
+            if (App.pages && typeof App.pages.referendums === 'function') {
+                setTimeout(() => App.pages.referendums(), 400);
+            }
         } catch (err) {
             if (feedback) {
                 feedback.textContent = err.message || 'Unexpected error creating referendum.';
@@ -2766,6 +2771,24 @@ App.wireCreateReferendumForm = function(options = {}) {
 App.pages.referendums = async function() {
     const content = document.getElementById('content');
     content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+    // Require a signed-in, verified user to create or participate
+    if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) {
+        content.innerHTML = `
+            <header class="page-header">
+                <h1 class="page-title">📑 Referendums</h1>
+                <p class="page-subtitle">Ask big questions, explore perspectives, and add your voice.</p>
+            </header>
+            <div class="card">
+                <div class="card-body">
+                    <p class="empty-text">
+                        Sign in with a verified account to propose new questions and add perspectives to referendums.
+                    </p>
+                </div>
+            </div>
+        `;
+        return;
+    }
 
     try {
         const referendums = await App.api('/referendums');
