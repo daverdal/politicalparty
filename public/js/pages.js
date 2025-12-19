@@ -429,8 +429,8 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
     const info = document.createElement('div');
     info.className = 'province-map-info';
     info.textContent = isCandidatesPage
-        ? 'Hover or click a dot to see First Nation candidates running there.'
-        : 'Hover or click a dot to see First Nation details.';
+        ? 'Hover, click or tap a dot to see First Nation candidates running there. On touch screens, pinch to zoom and drag to pan.'
+        : 'Hover, click or tap a dot to see First Nation details. On touch screens, pinch to zoom and drag to pan.';
 
     wrapper.appendChild(title);
     wrapper.appendChild(canvas);
@@ -550,11 +550,85 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
             startX: 0,
             startY: 0,
             startTranslateX: 0,
-            startTranslateY: 0
+            startTranslateY: 0,
+            pinchZooming: false,
+            pinchStartDistance: 0,
+            pinchStartScale: 1,
+            pinchCenterX: 0,
+            pinchCenterY: 0
         };
 
         const applyTransform = () => {
             inner.style.transform = `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale})`;
+        };
+
+        // Helper to attach touch-based pan + pinch zoom (for mobile)
+        const attachTouchPanAndZoom = () => {
+            canvas.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    // One-finger pan
+                    const t = e.touches[0];
+                    state.panning = true;
+                    state.pinchZooming = false;
+                    state.startX = t.clientX;
+                    state.startY = t.clientY;
+                    state.startTranslateX = state.translateX;
+                    state.startTranslateY = state.translateY;
+                    canvas.classList.add('panning');
+                } else if (e.touches.length === 2) {
+                    // Two-finger pinch zoom
+                    state.panning = false;
+                    state.pinchZooming = true;
+                    const t1 = e.touches[0];
+                    const t2 = e.touches[1];
+                    const dx = t2.clientX - t1.clientX;
+                    const dy = t2.clientY - t1.clientY;
+                    state.pinchStartDistance = Math.hypot(dx, dy) || 1;
+                    state.pinchStartScale = state.scale;
+
+                    const rect = canvas.getBoundingClientRect();
+                    state.pinchCenterX = ((t1.clientX + t2.clientX) / 2) - rect.left;
+                    state.pinchCenterY = ((t1.clientY + t2.clientY) / 2) - rect.top;
+                }
+            }, { passive: false });
+
+            canvas.addEventListener('touchmove', (e) => {
+                if (state.pinchZooming && e.touches.length === 2) {
+                    e.preventDefault();
+                    const t1 = e.touches[0];
+                    const t2 = e.touches[1];
+                    const dx = t2.clientX - t1.clientX;
+                    const dy = t2.clientY - t1.clientY;
+                    const dist = Math.hypot(dx, dy) || 1;
+                    const factor = dist / state.pinchStartDistance;
+                    const newScale = Math.min(8, Math.max(0.2, state.pinchStartScale * factor));
+                    if (newScale === state.scale) return;
+
+                    const scaleRatio = newScale / state.scale;
+                    state.translateX = state.pinchCenterX - (state.pinchCenterX - state.translateX) * scaleRatio;
+                    state.translateY = state.pinchCenterY - (state.pinchCenterY - state.translateY) * scaleRatio;
+                    state.scale = newScale;
+                    applyTransform();
+                } else if (state.panning && e.touches.length === 1) {
+                    e.preventDefault();
+                    const t = e.touches[0];
+                    const dx = t.clientX - state.startX;
+                    const dy = t.clientY - state.startY;
+                    state.translateX = state.startTranslateX + dx;
+                    state.translateY = state.startTranslateY + dy;
+                    applyTransform();
+                }
+            }, { passive: false });
+
+            canvas.addEventListener('touchend', (e) => {
+                if (state.pinchZooming && (!e.touches || e.touches.length === 0)) {
+                    state.pinchZooming = false;
+                }
+                if (state.panning) {
+                    state.panning = false;
+                    canvas.classList.remove('panning');
+                }
+            });
         };
 
         // Initial render positions (0–100%) inside the inner container
@@ -793,6 +867,9 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
 
         window.addEventListener('mousemove', handleMove);
         window.addEventListener('mouseup', handleUp);
+
+        // Enable touch support on mobile for pan + pinch zoom
+        attachTouchPanAndZoom();
 
         // Initial transform
         applyTransform();
@@ -1266,7 +1343,7 @@ App.pages.map = async function() {
                     <div class="province-map-inner" id="canada-map-inner"></div>
                 </div>
                 <div class="province-map-info" id="canada-map-info">
-                    Hover or click a dot to see First Nation details.
+                    Hover, click or tap a dot to see First Nation details. On touch screens, pinch to zoom and drag to pan.
                 </div>
             </section>
             <aside class="canada-map-controls canada-map-controls-bottom">
@@ -1464,11 +1541,80 @@ App.pages.map = async function() {
             startX: 0,
             startY: 0,
             startTranslateX: 0,
-            startTranslateY: 0
+            startTranslateY: 0,
+            pinchZooming: false,
+            pinchStartDistance: 0,
+            pinchStartScale: 1,
+            pinchCenterX: 0,
+            pinchCenterY: 0
         };
 
         const applyTransform = () => {
             inner.style.transform = `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale}) rotate(${state.rotation}deg)`;
+        };
+
+        const attachTouchPanAndZoom = () => {
+            canvas.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    const t = e.touches[0];
+                    state.panning = true;
+                    state.pinchZooming = false;
+                    state.startX = t.clientX;
+                    state.startY = t.clientY;
+                    state.startTranslateX = state.translateX;
+                    state.startTranslateY = state.translateY;
+                    canvas.classList.add('panning');
+                } else if (e.touches.length === 2) {
+                    state.panning = false;
+                    state.pinchZooming = true;
+                    const t1 = e.touches[0];
+                    const t2 = e.touches[1];
+                    const dx = t2.clientX - t1.clientX;
+                    const dy = t2.clientY - t1.clientY;
+                    state.pinchStartDistance = Math.hypot(dx, dy) || 1;
+                    state.pinchStartScale = state.scale;
+
+                    const rect = canvas.getBoundingClientRect();
+                    state.pinchCenterX = ((t1.clientX + t2.clientX) / 2) - rect.left;
+                    state.pinchCenterY = ((t1.clientY + t2.clientY) / 2) - rect.top;
+                }
+            }, { passive: false });
+
+            canvas.addEventListener('touchmove', (e) => {
+                if (state.pinchZooming && e.touches.length === 2) {
+                    e.preventDefault();
+                    const t1 = e.touches[0];
+                    const t2 = e.touches[1];
+                    const dx = t2.clientX - t1.clientX;
+                    const dy = t2.clientY - t1.clientY;
+                    const dist = Math.hypot(dx, dy) || 1;
+                    const factor = dist / state.pinchStartDistance;
+                    const newScale = Math.min(8, Math.max(0.2, state.pinchStartScale * factor));
+                    if (newScale === state.scale) return;
+
+                    const scaleRatio = newScale / state.scale;
+                    state.translateX = state.pinchCenterX - (state.pinchCenterX - state.translateX) * scaleRatio;
+                    state.translateY = state.pinchCenterY - (state.pinchCenterY - state.translateY) * scaleRatio;
+                    state.scale = newScale;
+                    applyTransform();
+                } else if (state.panning && e.touches.length === 1) {
+                    e.preventDefault();
+                    const t = e.touches[0];
+                    const dx = t.clientX - state.startX;
+                    const dy = t.clientY - state.startY;
+                    state.translateX = state.startTranslateX + dx;
+                    state.translateY = state.startTranslateY + dy;
+                    applyTransform();
+                }
+            }, { passive: false });
+
+            canvas.addEventListener('touchend', () => {
+                state.pinchZooming = false;
+                if (state.panning) {
+                    state.panning = false;
+                    canvas.classList.remove('panning');
+                }
+            });
         };
 
         canvas.addEventListener('wheel', (e) => {
@@ -1514,6 +1660,8 @@ App.pages.map = async function() {
 
         window.addEventListener('mousemove', handleMove);
         window.addEventListener('mouseup', handleUp);
+
+        attachTouchPanAndZoom();
 
         applyTransform();
 

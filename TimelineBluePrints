@@ -1,0 +1,217 @@
+Timeline System Blueprint
+Purpose
+
+This document defines the Timeline Architecture for the political simulation game. The timeline is the core system that records history, drives narrative, and enables multiple perspectives (riding, ad-hoc group, global, player).
+
+This blueprint is intended to be handed directly to Cursor or another AI coding assistant.
+Core Design Principle
+
+    There is ONE master event stream. Timelines are filtered views of that stream.
+
+    Events are immutable historical facts
+    Nothing meaningful happens outside an Event
+    All game state is derived from events
+
+Core Concepts
+1. Event (Atomic Unit of History)
+
+Every meaningful action creates an Event.
+
+Event Properties:
+
+    id
+    type (enum)
+    turn or timestamp
+    title
+    summary
+    visibility (public | internal | secret)
+    severity (optional, for UI emphasis)
+
+Example:
+
+Event {
+  type: "ReferendumPassed",
+  turn: 42,
+  title: "Transit Plan Approved",
+  summary: "Voters approved the Green Transit proposal",
+  visibility: "public"
+}
+
+2. Involvement Model (No Owned Timelines)
+
+Events never belong to a riding or group. Instead, they involve entities.
+
+Relationships:
+
+(:Event)-[:INVOLVES]->(:Riding)
+(:Event)-[:INVOLVES]->(:AdHocGroup)
+(:Event)-[:INVOLVES]->(:Idea)
+(:Event)-[:INVOLVES]->(:StrategicPlan)
+(:Event)-[:INVOLVES]->(:Player)
+
+This allows:
+
+    Cross-riding effects
+    Global events
+    Zero duplication
+
+Timeline Perspectives (Views)
+1. Global Timeline
+
+Definition: All events, ordered by time.
+
+Use cases:
+
+    Historical replay
+    Macro political trends
+    Election cycle overview
+
+Filter logic:
+
+MATCH (e:Event)
+RETURN e ORDER BY e.turn
+
+2. Riding Timeline (Primary Player View)
+
+Definition: Events that involve a specific riding.
+
+Includes:
+
+    Referendums
+    Conventions
+    Strategic plans
+    Spillover events from other ridings
+
+Filter logic:
+
+MATCH (e:Event)-[:INVOLVES]->(r:Riding {id: $ridingId})
+RETURN e ORDER BY e.turn
+
+3. Ad-Hoc Group Timeline
+
+Same pattern as riding timeline, but filtered by AdHocGroup.
+
+Used for:
+
+    Faction pressure
+    Grassroots movements
+    Chaos and disruption
+
+4. Idea Lineage Timeline
+
+Shows the evolution of an idea over time.
+
+Relationships:
+
+(:Idea)-[:EVOLVES_FROM]->(:Idea)
+(:Event)-[:INVOLVES]->(:Idea)
+
+Use cases:
+
+    Narrative depth
+    Teaching compromise and mutation
+
+5. Player Action Timeline
+
+Tracks what a specific player has done.
+
+Use cases:
+
+    Accountability
+    Role-based replay
+    Multiplayer audits
+
+Event Types (Minimal Starting Set)
+Core Event Types
+
+    IdeaProposed
+    IdeaEvolved
+    ReferendumAnnounced
+    ReferendumPassed
+    ReferendumFailed
+    ConventionOpened
+    ConventionResolved
+    StrategicPlanAdopted
+    StrategicPlanMilestone
+    StrategicPlanAbandoned
+
+Keep the list small; extend later.
+Strategic Plans as Time-Spanning Objects
+
+Strategic plans are not single points — they span time.
+
+Model:
+
+(:StrategicPlan)
+-[:STARTED_BY]->(:Event)
+-[:HAS_MILESTONE]->(:Event)
+-[:ENDED_BY]->(:Event)
+
+UI Representation:
+
+    Timeline bar spanning multiple turns
+    Milestones appear as ticks on the bar
+
+Referendums as Mini Story Arcs
+
+A referendum consists of multiple linked events:
+
+    Announcement
+    Campaign phase events
+    Vote outcome
+
+This creates natural drama and anticipation.
+Visibility & Fog of War
+
+Each event has a visibility level:
+
+    public: visible to all players
+    internal: visible to members of involved entities
+    secret: visible only to certain roles
+
+Timelines respect visibility filters.
+Derived State (Important)
+
+Current state is computed, not stored.
+
+Examples:
+
+    Current strategic plan = most recent StrategicPlanAdopted not abandoned
+    Current policy stance = most recent successful referendum
+
+This allows:
+
+    Rewind / replay
+    What-if simulations
+    No corruption of history
+
+UI Recommendations
+
+Timeline elements:
+
+    Dots = Referendums
+    Flags = Conventions
+    Bars = Strategic Plans
+
+Filters:
+
+    By entity (riding, group)
+    By event type
+    By visibility
+
+Non-NegOTIABLE RULES
+
+    No deleting events
+    No editing past events (only superseding)
+    All state changes must reference an event
+
+Outcome
+
+This timeline system:
+
+    Creates narrative
+    Enables multiple perspectives
+    Scales cleanly
+    Supports replay, analysis, and fun
+
+This is the backbone of the game.

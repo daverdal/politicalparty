@@ -84,10 +84,12 @@ async function getLocationLeaderboard({ locationId, locationType, limit = 10 }) 
         LIMIT $limit
     `;
 
+    const numericLimit = Number.isFinite(limit) ? Math.max(1, Math.floor(limit)) : 10;
+
     try {
         const result = await session.run(query, {
             locationId,
-            limit: Number.isFinite(limit) ? Number(limit) : 10
+            limit: numericLimit
         });
 
         if (!result.records.length) {
