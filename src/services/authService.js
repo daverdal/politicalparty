@@ -246,6 +246,34 @@ async function resetPasswordByToken(token, newPassword) {
     }
 }
 
+async function changePassword(userId, newPassword) {
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    try {
+        const result = await session.run(
+            `
+            MATCH (u:User {id: $id})
+            SET u.passwordHash = $passwordHash,
+                u.passwordResetToken = null,
+                u.passwordResetExpiresAt = null,
+                u.updatedAt = datetime()
+            RETURN u
+        `,
+            { id: userId, passwordHash }
+        );
+
+        if (!result.records.length) {
+            return null;
+        }
+
+        return mapUser(result.records[0].get('u'));
+    } finally {
+        await session.close();
+    }
+}
+
 function mapUser(node) {
     const props = node.properties;
     // Cast numeric fields if any are present later
@@ -269,7 +297,8 @@ module.exports = {
     validatePassword,
     createJwtForUser,
     createPasswordResetToken,
-    resetPasswordByToken
+    resetPasswordByToken,
+    changePassword
 };
 
 

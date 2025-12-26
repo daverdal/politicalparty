@@ -8,7 +8,7 @@ const rateLimit = require('express-rate-limit');
 const authService = require('../services/authService');
 const emailService = require('../services/emailService');
 const captchaService = require('../services/captchaService');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, requireVerifiedUser } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -340,6 +340,46 @@ router.post('/reset-password', async (req, res) => {
         return res
             .status(500)
             .send('<h1>Password reset error</h1><p>Something went wrong. Please try again later.</p>');
+    }
+});
+
+// POST /api/auth/change-password (logged-in users)
+router.post('/change-password', authenticate, requireVerifiedUser, async (req, res) => {
+    const { currentPassword, newPassword, confirmPassword } = req.body || {};
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        return res.status(400).json({ error: 'Current password, new password, and confirmation are required.' });
+    }
+
+    if (newPassword !== confirmPassword) {
+        return res.status(400).json({ error: 'New password and confirmation do not match.' });
+    }
+
+    if (typeof newPassword !== 'string' || newPassword.length < 8) {
+        return res.status(400).json({ error: 'New password must be at least 8 characters long.' });
+    }
+
+    try {
+        const user = await authService.findUserById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found.' });
+        }
+
+        const valid = await authService.validatePassword(user, currentPassword);
+        if (!valid) {
+            return res.status(401).json({ error: 'Current password is incorrect.' });
+        }
+
+        const updated = await authService.changePassword(req.user.id, newPassword);
+        if (!updated) {
+            return res.status(500).json({ error: 'Unable to update password right now.' });
+        }
+
+        return res.json({ success: true, message: 'Password updated successfully.' });
+    } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('[auth] change-password error:', err);
+        return res.status(500).json({ error: 'Unable to change password right now. Please try again later.' });
     }
 });
 

@@ -39,6 +39,7 @@ App.updateAuthUi = function() {
                 <div class="auth-summary-meta">
                     <span class="auth-summary-status">${verifiedText}</span>
                     ${verifyButtonHtml}
+                    <button class="btn btn-outline btn-sm" id="auth-change-password-btn">Change password</button>
                     <button class="btn btn-secondary btn-sm" id="auth-logout-btn">Sign out</button>
                 </div>
             </div>
@@ -78,6 +79,15 @@ App.updateAuthUi = function() {
                 } finally {
                     resendBtn.disabled = false;
                     resendBtn.textContent = 'Resend verification email';
+                }
+            });
+        }
+
+        const changePwBtn = document.getElementById('auth-change-password-btn');
+        if (changePwBtn) {
+            changePwBtn.addEventListener('click', () => {
+                if (typeof App.showChangePasswordModal === 'function') {
+                    App.showChangePasswordModal();
                 }
             });
         }
@@ -390,6 +400,106 @@ App.showAuthModal = function(initialTab = 'login') {
             feedback.classList.add('error');
             submitBtn.disabled = false;
             submitBtn.textContent = 'Create account';
+        }
+    });
+};
+
+// Change Password Modal (for signed-in users)
+App.showChangePasswordModal = function() {
+    if (!App.authUser) {
+        if (typeof App.showAuthModal === 'function') {
+            App.showAuthModal('login');
+        }
+        return;
+    }
+
+    const existing = document.querySelector('.modal-overlay.change-password-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay change-password-modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Change password</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="change-password-form" class="auth-form">
+                    <label>
+                        <span>Current password</span>
+                        <input type="password" name="currentPassword" required autocomplete="current-password">
+                    </label>
+                    <label>
+                        <span>New password</span>
+                        <input type="password" name="newPassword" required minlength="8" autocomplete="new-password">
+                    </label>
+                    <label>
+                        <span>Confirm new password</span>
+                        <input type="password" name="confirmPassword" required minlength="8" autocomplete="new-password">
+                    </label>
+                    <p class="auth-help">
+                        Password must be at least 8 characters long.
+                    </p>
+                    <button type="submit" class="btn btn-primary auth-submit-btn">Update password</button>
+                    <div class="auth-feedback" id="change-password-feedback"></div>
+                </form>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const close = () => modal.remove();
+    modal.querySelector('.modal-close').addEventListener('click', close);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+    });
+
+    const form = modal.querySelector('#change-password-form');
+    const feedback = modal.querySelector('#change-password-feedback');
+    const submitBtn = form.querySelector('.auth-submit-btn');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        feedback.textContent = '';
+        feedback.classList.remove('error', 'success');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Updating...';
+
+        const formData = new FormData(form);
+        const currentPassword = formData.get('currentPassword');
+        const newPassword = formData.get('newPassword');
+        const confirmPassword = formData.get('confirmPassword');
+
+        try {
+            const { response, data } = await App.apiPost('/auth/change-password', {
+                currentPassword,
+                newPassword,
+                confirmPassword
+            });
+
+            if (!response.ok || !data.success) {
+                feedback.textContent = data.error || 'Unable to change password.';
+                feedback.classList.add('error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Update password';
+                return;
+            }
+
+            feedback.textContent = data.message || 'Password updated successfully.';
+            feedback.classList.add('success');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Updated';
+
+            setTimeout(() => {
+                close();
+            }, 1200);
+        } catch (err) {
+            feedback.textContent = err.message || 'Unable to change password.';
+            feedback.classList.add('error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Update password';
         }
     });
 };
