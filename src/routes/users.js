@@ -5,6 +5,7 @@
  */
 
 const express = require('express');
+const crypto = require('crypto');
 const router = express.Router();
 const userService = require('../services/userService');
 const { getSession } = require('../config/db');
@@ -292,6 +293,78 @@ router.delete('/:id/location', authenticate, requireVerifiedUser, async (req, re
         res.json(result);
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+// PUT /api/users/:id/resume - Update user's resume and public share settings
+router.put('/:id/resume', authenticate, requireVerifiedUser, async (req, res) => {
+    const session = getSession();
+    const { resume, makePublic } = req.body || {};
+
+    try {
+        if (!ensureSelfOrAdmin(req, res)) {
+            return;
+        }
+
+        const makePublicBool = !!makePublic;
+        let publicToken = null;
+
+        if (makePublicBool) {
+            // Generate a stable token for sharing if one does not exist yet
+            publicToken = crypto.randomBytes(24).toString('hex');
+        }
+
+        const result = await session.run(
+            `
+            MATCH (u:User {id: $id})
+            SET u.resume = $resume,
+                u.resumeUpdatedAt = datetime(),
+                u.resumePublic = $makePublic,
+                u.resumePublicToken = CASE 
+                    WHEN $makePublic THEN coalesce(u.resumePublicToken, $publicToken)
+                    ELSE null
+                END,
+                u.updatedAt = datetime()
+            RETURN 
+                u.resume AS resume,
+                coalesce(u.resumePublic, false) AS resumePublic,
+                u.resumePublicToken AS resumePublicToken
+        `,
+            {
+                id: req.params.id,
+                resume: typeof resume === 'string' ? resume : '',
+                makePublic: makePublicBool,
+                publicToken
+            }
+        );
+
+        if (!result.records.length) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const record = result.records[0];
+        const updatedResume = record.get('resume') || '';
+        const resumePublic = record.get('resumePublic');
+        const resumePublicToken = record.get('resumePublicToken');
+
+        let shareUrl = null;
+        if (resumePublic && resumePublicToken) {
+            const baseUrl = (process.env.APP_BASE_URL || '').trim() || `${req.protocol}://${req.get('host')}`;
+            shareUrl = `${baseUrl.replace(/\/$/, '')}/resumes/${resumePublicToken}`;
+        }
+
+        return res.json({
+            success: true,
+            resume: updatedResume,
+            resumePublic,
+            shareUrl
+        });
+    } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Error updating resume:', error);
+        res.status(500).json({ error: 'Failed to update resume' });
+    } finally {
+        await session.close();
     }
 });
 

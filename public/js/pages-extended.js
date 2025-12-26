@@ -961,6 +961,11 @@ App.pages.profile = async function() {
         }
         
         const pendingNominations = nominations.filter(n => !n.hasAccepted);
+
+        const baseUrl = window.location.origin;
+        const existingResumeShareUrl = userDetails.resumePublic && userDetails.resumePublicToken
+            ? `${baseUrl.replace(/\/$/, '')}/resumes/${userDetails.resumePublicToken}`
+            : '';
         
         content.innerHTML = `
             <header class="page-header">
@@ -986,6 +991,27 @@ App.pages.profile = async function() {
                     <div class="profile-stats">
                         <div class="profile-stat"><span class="profile-stat-value">${userDetails.points || 0}</span><span class="profile-stat-label">Points</span></div>
                         <div class="profile-stat"><span class="profile-stat-value">${userDetails.endorsementCount || 0}</span><span class="profile-stat-label">Endorsements</span></div>
+                    </div>
+
+                    <div class="profile-resume-section">
+                        <h4>My Resume</h4>
+                        <p class="resume-help">
+                            Paste your resume or professional summary below. This helps members understand your background when viewing your profile.
+                        </p>
+                        <textarea id="profile-resume-input" class="form-textarea" rows="8" placeholder="Paste your resume here...">${userDetails.resume || ''}</textarea>
+                        <label class="checkbox-inline">
+                            <input type="checkbox" id="profile-resume-public" ${userDetails.resumePublic ? 'checked' : ''}>
+                            <span>Make my resume visible to anyone with the link</span>
+                        </label>
+                        <div class="resume-share" id="profile-resume-share">
+                            ${
+                                existingResumeShareUrl
+                                    ? `<span class="resume-share-label">Public link:</span> <a href="${existingResumeShareUrl}" target="_blank" rel="noopener">${existingResumeShareUrl}</a>`
+                                    : '<span class="resume-share-help">Turn on "Make my resume visible" and save to get a shareable link.</span>'
+                            }
+                        </div>
+                        <button class="btn btn-primary btn-sm" id="profile-resume-save-btn" style="margin-top: 8px;">Save resume</button>
+                        <div id="profile-resume-feedback" class="profile-resume-feedback"></div>
                     </div>
 
                     <div class="badge-shelf">
@@ -1159,6 +1185,56 @@ App.pages.profile = async function() {
             });
         }
         
+        // Resume handlers
+        const resumeInput = document.getElementById('profile-resume-input');
+        const resumePublicCheckbox = document.getElementById('profile-resume-public');
+        const resumeSaveBtn = document.getElementById('profile-resume-save-btn');
+        const resumeFeedback = document.getElementById('profile-resume-feedback');
+        const resumeShareEl = document.getElementById('profile-resume-share');
+
+        if (resumeSaveBtn && resumeInput && resumeFeedback) {
+            resumeSaveBtn.addEventListener('click', async () => {
+                resumeFeedback.textContent = '';
+                resumeFeedback.classList.remove('error', 'success');
+                resumeSaveBtn.disabled = true;
+                resumeSaveBtn.textContent = 'Saving...';
+
+                try {
+                    const { response, data } = await App.apiPost(`/users/${App.currentUser.id}/resume`, {
+                        resume: resumeInput.value || '',
+                        makePublic: !!(resumePublicCheckbox && resumePublicCheckbox.checked)
+                    });
+
+                    if (!response.ok || !data.success) {
+                        resumeFeedback.textContent = (data && data.error) || 'Unable to save resume.';
+                        resumeFeedback.classList.add('error');
+                        resumeSaveBtn.disabled = false;
+                        resumeSaveBtn.textContent = 'Save resume';
+                        return;
+                    }
+
+                    resumeFeedback.textContent = data.message || 'Resume saved.';
+                    resumeFeedback.classList.add('success');
+                    resumeSaveBtn.disabled = false;
+                    resumeSaveBtn.textContent = 'Save resume';
+
+                    if (resumeShareEl) {
+                        if (data.shareUrl) {
+                            resumeShareEl.innerHTML = `<span class="resume-share-label">Public link:</span> <a href="${data.shareUrl}" target="_blank" rel="noopener">${data.shareUrl}</a>`;
+                        } else {
+                            resumeShareEl.innerHTML =
+                                '<span class="resume-share-help">Turn on "Make my resume visible" and save to get a shareable link.</span>';
+                        }
+                    }
+                } catch (err) {
+                    resumeFeedback.textContent = err.message || 'Unable to save resume.';
+                    resumeFeedback.classList.add('error');
+                    resumeSaveBtn.disabled = false;
+                    resumeSaveBtn.textContent = 'Save resume';
+                }
+            });
+        }
+
         // Location selector handlers
         const provinceSelect = document.getElementById('province-select');
         const federalSelect = document.getElementById('federal-riding-select');

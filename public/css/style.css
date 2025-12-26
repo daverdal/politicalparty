@@ -827,6 +827,56 @@ a:hover {
   color: var(--accent-secondary);
 }
 
+/* Profile resume section */
+.profile-resume-section {
+  margin-top: 24px;
+}
+
+.profile-resume-section h4 {
+  margin-bottom: 6px;
+}
+
+.resume-help {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.checkbox-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 0.9rem;
+}
+
+.resume-share {
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+.resume-share-label {
+  margin-right: 6px;
+  color: var(--text-muted);
+}
+
+.resume-share-help {
+  color: var(--text-muted);
+}
+
+.profile-resume-feedback {
+  margin-top: 6px;
+  font-size: 0.85rem;
+}
+
+.profile-resume-feedback.success {
+  color: var(--success);
+}
+
+.profile-resume-feedback.error {
+  color: var(--danger);
+}
+
 .spinner {
   width: 32px;
   height: 32px;

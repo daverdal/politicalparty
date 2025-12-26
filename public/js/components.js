@@ -1125,6 +1125,12 @@ App.showCandidateDetail = function(candidate) {
                 <h3 class="bio-title">About</h3>
                 <p class="bio-text">${candidate.bio || 'No bio provided.'}</p>
             </div>
+            ${candidate.resume ? `
+                <div class="candidate-resume">
+                    <h3 class="bio-title">Resume</h3>
+                    <p class="resume-text">${candidate.resume}</p>
+                </div>
+            ` : ''}
             ${candidate.skills?.length ? `
                 <div class="candidate-skills">
                     <h3 class="skills-title">Skills</h3>
