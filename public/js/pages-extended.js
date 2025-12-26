@@ -227,7 +227,10 @@ App.showAuthModal = function(initialTab = 'login') {
                         </label>
                         <label>
                             <span>Password</span>
-                            <input type="password" name="password" required autocomplete="current-password">
+                            <div class="password-field">
+                                <input type="password" name="password" required autocomplete="current-password">
+                                <button type="button" class="password-toggle" aria-label="Show password">👁</button>
+                            </div>
                         </label>
                         <p class="auth-help">
                             Use the email and password you signed up with. We do not use Google or other third-party sign-in.
@@ -247,7 +250,10 @@ App.showAuthModal = function(initialTab = 'login') {
                         </label>
                         <label>
                             <span>Password</span>
-                            <input type="password" name="password" required minlength="8" autocomplete="new-password">
+                            <div class="password-field">
+                                <input type="password" name="password" required minlength="8" autocomplete="new-password">
+                                <button type="button" class="password-toggle" aria-label="Show password">👁</button>
+                            </div>
                         </label>
                         <label>
                             <span>Display name</span>
@@ -283,6 +289,11 @@ App.showAuthModal = function(initialTab = 'login') {
             if (content) content.classList.add('active');
         });
     });
+
+    // Initialize password visibility toggles
+    if (typeof App.initPasswordVisibilityToggles === 'function') {
+        App.initPasswordVisibilityToggles(modal);
+    }
 
     // Login submit
     const loginForm = modal.querySelector('#auth-login-form');
@@ -401,6 +412,28 @@ App.showAuthModal = function(initialTab = 'login') {
             submitBtn.disabled = false;
             submitBtn.textContent = 'Create account';
         }
+    });
+};
+
+// Initialize show/hide password toggles within a given container (modal)
+App.initPasswordVisibilityToggles = function(container) {
+    if (!container) return;
+    container.querySelectorAll('.password-field').forEach((wrapper) => {
+        const input = wrapper.querySelector('input[type="password"], input[type="text"]');
+        const toggle = wrapper.querySelector('.password-toggle');
+        if (!input || !toggle) return;
+
+        // Reset to password type each time modal opens
+        input.type = 'password';
+        toggle.textContent = '👁';
+        toggle.setAttribute('aria-label', 'Show password');
+
+        toggle.addEventListener('click', () => {
+            const isHidden = input.type === 'password';
+            input.type = isHidden ? 'text' : 'password';
+            toggle.textContent = isHidden ? '🙈' : '👁';
+            toggle.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+        });
     });
 };
 

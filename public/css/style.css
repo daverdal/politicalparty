@@ -802,6 +802,31 @@ a:hover {
   color: var(--text-muted);
 }
 
+/* Password field with show/hide toggle */
+.password-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.password-field input[type="password"],
+.password-field input[type="text"] {
+  flex: 1;
+}
+
+.password-toggle {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 4px;
+}
+
+.password-toggle:hover {
+  color: var(--accent-secondary);
+}
+
 .spinner {
   width: 32px;
   height: 32px;
