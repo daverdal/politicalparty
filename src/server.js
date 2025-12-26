@@ -18,6 +18,9 @@ const routes = require('./routes');
 
 const app = express();
 
+// Simple in-memory health flag for database connectivity
+let isDatabaseHealthy = true;
+
 // Behind DigitalOcean / proxies, trust X-Forwarded-* so rate limiting and IPs work correctly
 app.set('trust proxy', 1);
 
@@ -31,6 +34,18 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // Serve uploaded files (e.g., news audio) under /uploads when enabled
 app.use('/uploads', express.static(path.join(process.cwd(), config.uploads?.baseDir || 'uploads')));
+
+// Database health guard for all API routes
+app.use('/api', (req, res, next) => {
+    if (!isDatabaseHealthy) {
+        // User-friendly message when the database is unavailable
+        return res.status(503).json({
+            ok: false,
+            message: 'Our community data service is temporarily unavailable. Please try again in a few minutes.',
+        });
+    }
+    next();
+});
 
 // API Routes
 app.use('/api', routes);
@@ -47,8 +62,10 @@ async function start() {
     // Verify database connection
     const connected = await db.verifyConnection();
     if (!connected) {
-        console.error('Failed to connect to Neo4j. Exiting.');
-        process.exit(1);
+        console.error('Failed to connect to Neo4j at startup. Continuing with limited functionality.');
+        isDatabaseHealthy = false;
+    } else {
+        isDatabaseHealthy = true;
     }
 
     app.listen(config.port, () => {
