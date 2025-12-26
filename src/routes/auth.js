@@ -204,23 +204,28 @@ router.post('/request-password-reset', loginLimiter, async (req, res) => {
         return res.status(400).json({ error: 'Email is required.' });
     }
 
-    try {
-        const normalizedEmail = String(email).trim().toLowerCase();
+    const normalizedEmail = String(email).trim().toLowerCase();
 
-        // Always respond with success to avoid leaking which emails exist
-        try {
-            const user = await authService.findUserByEmail(normalizedEmail);
-            if (user) {
-                const token = await authService.createPasswordResetToken(normalizedEmail);
-                if (token) {
-                    await emailService.sendPasswordResetEmail({ to: normalizedEmail, token });
-                }
-            }
-        } catch (innerErr) {
-            // Log but do not leak details to the client
+    try {
+        const user = await authService.findUserByEmail(normalizedEmail);
+        if (!user) {
+            // Do not reveal whether the email exists – always respond with success
             // eslint-disable-next-line no-console
-            console.error('[auth] request-password-reset error:', innerErr);
+            console.log(`[auth] request-password-reset: no user found for email ${normalizedEmail}`);
+            return res.json({
+                success: true,
+                message: 'If that email is registered, a password reset link has been sent.'
+            });
         }
+
+        const token = await authService.createPasswordResetToken(normalizedEmail);
+        if (!token) {
+            // eslint-disable-next-line no-console
+            console.error(`[auth] request-password-reset: failed to create password reset token for ${normalizedEmail}`);
+            return res.status(500).json({ error: 'Unable to start password reset right now. Please try again later.' });
+        }
+
+        await emailService.sendPasswordResetEmail({ to: normalizedEmail, token });
 
         return res.json({
             success: true,
@@ -228,8 +233,8 @@ router.post('/request-password-reset', loginLimiter, async (req, res) => {
         });
     } catch (err) {
         // eslint-disable-next-line no-console
-        console.error('[auth] request-password-reset outer error:', err);
-        return res.status(500).json({ error: 'Unable to process password reset right now.' });
+        console.error('[auth] request-password-reset error:', err);
+        return res.status(500).json({ error: 'Unable to process password reset right now. Please try again later.' });
     }
 });
 

@@ -79,14 +79,53 @@ async function sendVerificationEmail({ to, token }) {
 
     // eslint-disable-next-line no-console
     console.log(`[email] Sending verification email via SMTP to ${to} using host ${process.env.SMTP_HOST}`);
+    // Structured log for debugging SMTP sends
+    // eslint-disable-next-line no-console
+    console.log(
+        JSON.stringify({
+            event: 'email.send.start',
+            type: 'verification',
+            to,
+            host: process.env.SMTP_HOST
+        })
+    );
 
-    await tx.sendMail({
-        from,
-        to,
-        subject,
-        text,
-        html
-    });
+    try {
+        const info = await tx.sendMail({
+            from,
+            to,
+            subject,
+            text,
+            html
+        });
+        // eslint-disable-next-line no-console
+        console.log(
+            JSON.stringify({
+                event: 'email.send.success',
+                type: 'verification',
+                to,
+                host: process.env.SMTP_HOST,
+                messageId: info && info.messageId ? info.messageId : null,
+                accepted: info && info.accepted ? info.accepted : [],
+                rejected: info && info.rejected ? info.rejected : [],
+                response: info && info.response ? info.response : null
+            })
+        );
+    } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error(
+            JSON.stringify({
+                event: 'email.send.error',
+                type: 'verification',
+                to,
+                host: process.env.SMTP_HOST,
+                message: err && err.message ? err.message : String(err),
+                code: err && err.code ? err.code : null,
+                response: err && err.response ? err.response : null
+            })
+        );
+        throw err;
+    }
 }
 
 async function sendPasswordResetEmail({ to, token }) {
@@ -131,14 +170,53 @@ async function sendPasswordResetEmail({ to, token }) {
 
     // eslint-disable-next-line no-console
     console.log(`[email] Sending password reset email via SMTP to ${to} using host ${process.env.SMTP_HOST}`);
+    // Structured log for debugging SMTP sends
+    // eslint-disable-next-line no-console
+    console.log(
+        JSON.stringify({
+            event: 'email.send.start',
+            type: 'password_reset',
+            to,
+            host: process.env.SMTP_HOST
+        })
+    );
 
-    await tx.sendMail({
-        from,
-        to,
-        subject,
-        text,
-        html
-    });
+    try {
+        const info = await tx.sendMail({
+            from,
+            to,
+            subject,
+            text,
+            html
+        });
+        // eslint-disable-inline-line no-console
+        console.log(
+            JSON.stringify({
+                event: 'email.send.success',
+                type: 'password_reset',
+                to,
+                host: process.env.SMTP_HOST,
+                messageId: info && info.messageId ? info.messageId : null,
+                accepted: info && info.accepted ? info.accepted : [],
+                rejected: info && info.rejected ? info.rejected : [],
+                response: info && info.response ? info.response : null
+            })
+        );
+    } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error(
+            JSON.stringify({
+                event: 'email.send.error',
+                type: 'password_reset',
+                to,
+                host: process.env.SMTP_HOST,
+                message: err && err.message ? err.message : String(err),
+                code: err && err.code ? err.code : null,
+                response: err && err.response ? err.response : null
+            })
+        );
+        throw err;
+    }
 }
 
 module.exports = {
