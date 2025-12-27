@@ -491,6 +491,47 @@ a:hover {
   opacity: 0.8;
 }
 
+/* On very short viewports (e.g. mobile landscape), tighten sidebar spacing
+   and hide non-essential chrome so more of the main menu is visible. */
+@media (max-height: 600px) {
+  /* Let the sidebar scroll with the page instead of being viewport-fixed,
+     so the full menu can be reached on very short screens. */
+  .sidebar {
+    position: static;
+    height: auto;
+  }
+
+  .sidebar-header {
+    padding: 8px 12px;
+  }
+
+  .user-selector {
+    display: none;
+  }
+
+  .notifications-container {
+    display: none;
+  }
+
+  .nav-link {
+    padding: 4px 10px;
+    font-size: 13px;
+  }
+
+  .nav-link svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Hide lowest-priority nav items so the core game/menu fits without scrolling */
+  .nav-link[data-page="referendums"],
+  .nav-link[data-page="convention"],
+  .nav-link[data-page="documentation"],
+  #nav-admin-link {
+    display: none;
+  }
+}
+
 /* Main Content */
 .main-content {
   flex: 1;
