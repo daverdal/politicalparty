@@ -66,11 +66,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Handle browser back/forward
     window.addEventListener('popstate', (e) => {
-        const page = e.state?.page || 'dashboard';
+        const page = e.state?.page || 'map';
         App.navigate(page);
     });
     
-    // Load initial page from hash or default to dashboard
-    const initialPage = window.location.hash.slice(1) || 'dashboard';
+    // Load initial page from hash or default to map
+    const initialPage = window.location.hash.slice(1) || 'map';
     App.navigate(initialPage);
 });
