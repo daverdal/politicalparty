@@ -55,76 +55,36 @@ const CONSTRAINTS = [
 // ============================================
 const USERS = [
     // All users start as regular members - they become candidates when they accept a nomination
-    { id: 'u1', name: 'Alice Chen', region: 'Winnipeg', bio: 'Community organizer passionate about local governance', skills: ['public speaking', 'event planning'], experience: ['city council liaison'], interests: ['environment', 'education'] },
-    { id: 'u2', name: 'Marcus Johnson', region: 'Toronto', bio: 'Retired teacher advocating for youth programs', skills: ['teaching', 'writing'], experience: ['school board member'], interests: ['youth development', 'arts'] },
-    { id: 'u3', name: 'Sofia Rodriguez', region: 'Vancouver', bio: 'Small business owner focused on economic development', skills: ['business planning', 'networking'], experience: ['chamber of commerce'], interests: ['economy', 'small business'] },
-    { id: 'u4', name: 'James Wilson', region: 'Calgary', bio: 'Environmental scientist working on sustainability', skills: ['research', 'data analysis'], experience: ['EPA consultant'], interests: ['environment', 'sustainability'] },
-    { id: 'u5', name: 'Priya Patel', region: 'Edmonton', bio: 'Healthcare worker advocating for community health', skills: ['healthcare', 'community outreach'], experience: ['hospital administrator'], interests: ['healthcare', 'mental health'] },
-    { id: 'u6', name: 'David Kim', region: 'Ottawa', bio: 'Tech entrepreneur interested in civic innovation', skills: ['software development', 'project management'], experience: ['startup founder'], interests: ['technology', 'transparency'] },
-    { id: 'u7', name: 'Marie Tremblay', region: 'Montreal', bio: 'Cultural advocate promoting bilingual communities', skills: ['languages', 'arts management'], experience: ['festival organizer'], interests: ['culture', 'heritage'] },
-    { id: 'u8', name: 'Robert MacKenzie', region: 'Halifax', bio: 'Fisheries expert advocating for coastal communities', skills: ['marine biology', 'policy'], experience: ['fisheries board'], interests: ['environment', 'economy'] },
-    { id: 'u9', name: 'Jennifer White Elk', region: 'Regina', bio: 'Indigenous rights advocate and community leader', skills: ['advocacy', 'traditional knowledge'], experience: ['First Nations council'], interests: ['reconciliation', 'education'] },
-    { id: 'u10', name: 'Michael O\'Brien', region: 'St. John\'s', bio: 'Offshore energy transition specialist', skills: ['engineering', 'project management'], experience: ['energy sector'], interests: ['energy', 'jobs'] },
-    { id: 'u11', name: 'Sarah Greenberg', region: 'Kitchener', bio: 'Tech sector worker focused on digital inclusion', skills: ['software', 'training'], experience: ['nonprofit tech'], interests: ['technology', 'equity'] },
-    { id: 'u12', name: 'Ahmed Hassan', region: 'Mississauga', bio: 'Healthcare administrator focused on immigrant services', skills: ['healthcare admin', 'multilingual'], experience: ['community health'], interests: ['healthcare', 'immigration'] },
-    { id: 'u13', name: 'Linda Thompson', region: 'Brandon', bio: 'Agricultural specialist promoting sustainable farming', skills: ['agriculture', 'research'], experience: ['ag extension'], interests: ['agriculture', 'environment'] },
-    { id: 'u14', name: 'Pierre Gagnon', region: 'Quebec City', bio: 'Heritage preservation advocate', skills: ['history', 'architecture'], experience: ['preservation board'], interests: ['heritage', 'tourism'] },
-    { id: 'u15', name: 'Susan Wright', region: 'Victoria', bio: 'Retired public servant focused on senior services', skills: ['public policy', 'advocacy'], experience: ['government'], interests: ['seniors', 'healthcare'] },
-    { id: 'u16', name: 'Daniel Blackwood', region: 'Saskatoon', bio: 'University researcher on rural development', skills: ['research', 'data analysis'], experience: ['academia'], interests: ['rural development', 'economy'] },
-    { id: 'u17', name: 'Emily Chen', region: 'Richmond', bio: 'Small business owner advocating for immigrant entrepreneurs', skills: ['business', 'community building'], experience: ['chamber of commerce'], interests: ['economy', 'immigration'] },
-    { id: 'u18', name: 'Thomas Bear', region: 'Yellowknife', bio: 'Northern climate adaptation specialist', skills: ['environmental science', 'policy'], experience: ['territorial government'], interests: ['climate', 'indigenous rights'] }
+    { id: 'u1', name: 'Ayla Redsky', region: 'Winnipeg', bio: 'Anishinaabe organizer building local lodges for community decision-making', skills: ['public speaking', 'circle facilitation'], experience: ['urban Indigenous council'], interests: ['environment', 'education'] },
+    { id: 'u2', name: 'Noah Kîsik', region: 'Toronto', bio: 'Cree educator mentoring youth in land-based learning and leadership', skills: ['teaching', 'youth work'], experience: ['friendship centre youth programs'], interests: ['youth development', 'arts'] },
+    { id: 'u3', name: 'Sienna Clearwater', region: 'Vancouver', bio: 'Secwépemc small business owner supporting Indigenous entrepreneurs', skills: ['business planning', 'networking'], experience: ['community marketplace co-op'], interests: ['economy', 'small business'] },
+    { id: 'u4', name: 'Elias Whitecloud', region: 'Calgary', bio: 'Dakota environmental guardian tracking water and wildlife health', skills: ['research', 'data analysis'], experience: ['watershed monitoring'], interests: ['environment', 'sustainability'] },
+    { id: 'u5', name: 'Taya Medicine Lodge', region: 'Edmonton', bio: 'Cree-Métis health worker supporting community wellness circles', skills: ['healthcare', 'community outreach'], experience: ['community clinic'], interests: ['healthcare', 'mental health'] },
+    { id: 'u6', name: 'Jace Thunderbird', region: 'Ottawa', bio: 'Algonquin technologist building digital tools for nation-to-nation democracy', skills: ['software development', 'project management'], experience: ['civic tech collective'], interests: ['technology', 'transparency'] },
+    { id: 'u7', name: 'Élodie Wabanonik', region: 'Montreal', bio: 'Atikamekw and French cultural worker weaving languages, stories, and song', skills: ['languages', 'arts management'], experience: ['cultural festival organizer'], interests: ['culture', 'heritage'] },
+    { id: 'u8', name: 'Jonas Doucette-Paul', region: 'Halifax', bio: 'Mi\'kmaq fisheries steward defending the rights of coastal communities', skills: ['marine knowledge', 'policy'], experience: ['rights-based fishery'], interests: ['environment', 'economy'] },
+    { id: 'u9', name: 'Jennifer White Elk', region: 'Regina', bio: 'Nakoda-Saulteaux rights advocate and community leader', skills: ['advocacy', 'traditional knowledge'], experience: ['First Nations council'], interests: ['reconciliation', 'education'] },
+    { id: 'u10', name: 'Rowan K\'jipuktuk', region: 'St. John\'s', bio: 'Mi\'kmaq energy worker planning a just transition for offshore families', skills: ['engineering', 'project management'], experience: ['energy sector'], interests: ['energy', 'jobs'] },
+    { id: 'u11', name: 'Maya Fox-Walker', region: 'Kitchener', bio: 'Urban Indigenous tech worker focused on digital access for Elders and youth', skills: ['software', 'training'], experience: ['nonprofit tech lab'], interests: ['technology', 'equity'] },
+    { id: 'u12', name: 'Sahir Greywolf', region: 'Mississauga', bio: 'Anishinaabe health navigator supporting new families in the city', skills: ['healthcare admin', 'multilingual'], experience: ['community health centre'], interests: ['healthcare', 'immigration'] },
+    { id: 'u13', name: 'Autumn Standingbuffalo', region: 'Brandon', bio: 'Dakota agronomist helping farmers return to prairie-friendly growing', skills: ['agriculture', 'research'], experience: ['land-based extension'], interests: ['agriculture', 'environment'] },
+    { id: 'u14', name: 'Louis-Pascal Manitowabi', region: 'Quebec City', bio: 'Wendat heritage defender protecting stories, language, and old places', skills: ['history', 'architecture'], experience: ['heritage advisory circle'], interests: ['heritage', 'tourism'] },
+    { id: 'u15', name: 'Evelyn Cedar Bay', region: 'Victoria', bio: 'Nuu-chah-nulth Elder-in-training advocating for strong supports for seniors', skills: ['public policy', 'advocacy'], experience: ['Elders council'], interests: ['seniors', 'healthcare'] },
+    { id: 'u16', name: 'Caleb Ironquill', region: 'Saskatoon', bio: 'Métis researcher lifting up rural and northern community plans', skills: ['research', 'data analysis'], experience: ['university-community partnership'], interests: ['rural development', 'economy'] },
+    { id: 'u17', name: 'Kaya Riverstone', region: 'Richmond', bio: 'Haida and Chinese small business owner building bridges between trading partners', skills: ['business', 'community building'], experience: ['chamber of commerce'], interests: ['economy', 'immigration'] },
+    { id: 'u18', name: 'Thomas Bear', region: 'Yellowknife', bio: 'Dene climate adaptation worker helping communities respond to thawing lands', skills: ['environmental science', 'policy'], experience: ['territorial government'], interests: ['climate', 'indigenous rights'] }
 ];
 
-const IDEAS = [
-    // Original ideas
-    { id: 'i1', title: 'Community Solar Program', description: 'Establish shared solar panels for apartment residents who cannot install their own', tags: ['environment', 'energy', 'equity'], region: 'Winnipeg', authorId: 'u1' },
-    { id: 'i2', title: 'Youth Mentorship Network', description: 'Connect retired professionals with high school students for career guidance', tags: ['youth', 'education', 'community'], region: 'Toronto', authorId: 'u2' },
-    { id: 'i3', title: 'Small Business Incubator', description: 'Create a shared workspace with resources for new entrepreneurs', tags: ['economy', 'small business', 'jobs'], region: 'Vancouver', authorId: 'u3' },
-    { id: 'i4', title: 'Green Corridor Initiative', description: 'Plant native trees along main streets to reduce heat and improve air quality', tags: ['environment', 'urban planning', 'health'], region: 'Calgary', authorId: 'u4' },
-    { id: 'i5', title: 'Mobile Health Clinics', description: 'Deploy mobile units to provide basic healthcare in underserved areas', tags: ['healthcare', 'equity', 'access'], region: 'Edmonton', authorId: 'u5' },
-    { id: 'i6', title: 'Open Budget Dashboard', description: 'Create a public website showing real-time city spending and projects', tags: ['transparency', 'technology', 'government'], region: 'Ottawa', authorId: 'u6' },
-    { id: 'i7', title: 'Expand Solar to Schools', description: 'Amendment to include public schools in the community solar program', tags: ['environment', 'education', 'energy'], region: 'Winnipeg', authorId: 'u4', amendsId: 'i1' },
-    
-    // New ideas from Canadian users
-    { id: 'i8', title: 'Bilingual Cultural Exchange Program', description: 'Create exchange programs between French and English speaking communities to strengthen national unity', tags: ['culture', 'education', 'bilingualism'], region: 'Montreal', authorId: 'u7' },
-    { id: 'i9', title: 'Sustainable Fisheries Initiative', description: 'Implement community-managed fishing quotas with real-time stock monitoring', tags: ['environment', 'economy', 'fisheries'], region: 'Halifax', authorId: 'u8' },
-    { id: 'i10', title: 'Indigenous Language Preservation', description: 'Fund digital tools and school programs to preserve and teach indigenous languages', tags: ['reconciliation', 'education', 'heritage'], region: 'Regina', authorId: 'u9' },
-    { id: 'i11', title: 'Offshore Wind Transition', description: 'Convert offshore oil infrastructure to wind energy platforms, preserving jobs', tags: ['energy', 'jobs', 'environment'], region: 'St. John\'s', authorId: 'u10' },
-    { id: 'i12', title: 'Digital Literacy for Seniors', description: 'Free tech training programs for seniors at community centers and libraries', tags: ['technology', 'seniors', 'equity'], region: 'Kitchener', authorId: 'u11' },
-    { id: 'i13', title: 'Newcomer Health Navigator', description: 'Multilingual health navigators to help immigrants access healthcare services', tags: ['healthcare', 'immigration', 'equity'], region: 'Mississauga', authorId: 'u12' },
-    { id: 'i14', title: 'Regenerative Agriculture Grants', description: 'Provincial grants for farmers transitioning to regenerative practices', tags: ['agriculture', 'environment', 'economy'], region: 'Brandon', authorId: 'u13' },
-    { id: 'i15', title: 'Heritage Building Adaptive Reuse', description: 'Tax incentives for converting heritage buildings to affordable housing', tags: ['heritage', 'housing', 'urban planning'], region: 'Quebec City', authorId: 'u14' },
-    { id: 'i16', title: 'Age-Friendly Transit', description: 'On-demand transit service for seniors with mobility challenges', tags: ['seniors', 'transit', 'accessibility'], region: 'Victoria', authorId: 'u15' },
-    { id: 'i17', title: 'Rural Broadband Cooperative', description: 'Community-owned broadband network for underserved rural areas', tags: ['technology', 'rural', 'economy'], region: 'Saskatoon', authorId: 'u16' },
-    { id: 'i18', title: 'Immigrant Entrepreneur Accelerator', description: 'Business accelerator specifically supporting immigrant-owned startups', tags: ['economy', 'immigration', 'small business'], region: 'Richmond', authorId: 'u17' },
-    { id: 'i19', title: 'Northern Climate Adaptation Fund', description: 'Emergency fund for northern communities adapting to permafrost thaw and infrastructure damage', tags: ['climate', 'infrastructure', 'indigenous rights'], region: 'Yellowknife', authorId: 'u18' },
-    { id: 'i20', title: 'Prairie Water Conservation', description: 'Regional water sharing agreement between Manitoba, Saskatchewan, and Alberta', tags: ['water', 'environment', 'agriculture'], region: 'Winnipeg', authorId: 'u1' },
-    { id: 'i21', title: 'National Pharmacare Pilot', description: 'Test universal pharmacare program in select ridings before national rollout', tags: ['healthcare', 'policy', 'equity'], region: 'Toronto', authorId: 'u2' },
-    { id: 'i22', title: 'Electric Vehicle Infrastructure', description: 'Fast-charging network along Trans-Canada Highway', tags: ['transportation', 'environment', 'infrastructure'], region: 'Calgary', authorId: 'u4' },
-    { id: 'i23', title: 'Mental Health First Responders', description: 'Specialized mental health crisis teams to respond instead of police', tags: ['healthcare', 'mental health', 'equity'], region: 'Edmonton', authorId: 'u5' },
-    { id: 'i24', title: 'Open Source Government', description: 'All government software should be open source and publicly auditable', tags: ['technology', 'transparency', 'government'], region: 'Ottawa', authorId: 'u6' }
-];
+// For production-style installs, we start with no ideas/assemblies/votes/priorities.
+const IDEAS = [];
 
-const ASSEMBLY_EVENTS = [
-    { id: 'a1', title: 'North District Town Hall', description: 'Monthly gathering to discuss community priorities', type: 'town_hall', region: 'North', startTime: '2024-01-15T18:00:00', endTime: '2024-01-15T20:00:00' },
-    { id: 'a2', title: 'Regional Planning Summit', description: 'Cross-district meeting on shared infrastructure', type: 'summit', region: 'All', startTime: '2024-02-01T09:00:00', endTime: '2024-02-01T17:00:00' },
-    { id: 'a3', title: 'Environment Committee', description: 'Working session on green initiatives', type: 'committee', region: 'West', startTime: '2024-01-20T14:00:00', endTime: '2024-01-20T16:00:00' }
-];
+const ASSEMBLY_EVENTS = [];
 
-const VOTE_SESSIONS = [
-    { id: 'v1', question: 'Should we prioritize the Community Solar Program?', type: 'approval', assemblyId: 'a1' },
-    { id: 'v2', question: 'Rank the top 3 environmental initiatives', type: 'ranked_choice', assemblyId: 'a3' }
-];
+const VOTE_SESSIONS = [];
 
-const VOTE_RESULTS = [
-    { id: 'r1', sessionId: 'v1', resultData: { yes: 45, no: 12, abstain: 3 } },
-    { id: 'r2', sessionId: 'v2', resultData: { rankings: { 'i1': 1, 'i4': 2, 'i7': 3 } } }
-];
+const VOTE_RESULTS = [];
 
-const COMMUNITY_PRIORITIES = [
-    { id: 'p1', name: 'Clean Energy Transition', description: 'Community commitment to renewable energy sources', region: 'North', derivedFromId: 'i1' },
-    { id: 'p2', name: 'Youth Empowerment', description: 'Investing in the next generation of leaders', region: 'South', derivedFromId: 'i2' }
-];
+const COMMUNITY_PRIORITIES = [];
 
 // Relationships to create
 const NOMINATIONS = [
@@ -140,37 +100,7 @@ const ENDORSEMENTS = [
     { from: 'u1', to: 'u4', message: 'Environmental expertise we need' }
 ];
 
-const IDEA_SUPPORTS = [
-    // Original supports
-    { userId: 'u2', ideaId: 'i1' },
-    { userId: 'u4', ideaId: 'i1' },
-    { userId: 'u5', ideaId: 'i1' },
-    { userId: 'u1', ideaId: 'i2' },
-    { userId: 'u3', ideaId: 'i2' },
-    { userId: 'u1', ideaId: 'i4' },
-    { userId: 'u5', ideaId: 'i4' },
-    { userId: 'u2', ideaId: 'i5' },
-    { userId: 'u3', ideaId: 'i6' },
-    { userId: 'u4', ideaId: 'i6' },
-    // New supports for Canadian ideas (making some ideas very popular)
-    { userId: 'u7', ideaId: 'i8' }, { userId: 'u14', ideaId: 'i8' }, { userId: 'u2', ideaId: 'i8' },
-    { userId: 'u10', ideaId: 'i9' }, { userId: 'u8', ideaId: 'i11' }, { userId: 'u15', ideaId: 'i9' },
-    { userId: 'u1', ideaId: 'i10' }, { userId: 'u13', ideaId: 'i10' }, { userId: 'u16', ideaId: 'i10' }, { userId: 'u18', ideaId: 'i10' }, { userId: 'u7', ideaId: 'i10' },
-    { userId: 'u8', ideaId: 'i11' }, { userId: 'u15', ideaId: 'i11' }, { userId: 'u4', ideaId: 'i11' },
-    { userId: 'u15', ideaId: 'i12' }, { userId: 'u6', ideaId: 'i12' }, { userId: 'u2', ideaId: 'i12' },
-    { userId: 'u5', ideaId: 'i13' }, { userId: 'u11', ideaId: 'i13' }, { userId: 'u7', ideaId: 'i13' }, { userId: 'u17', ideaId: 'i13' },
-    { userId: 'u16', ideaId: 'i14' }, { userId: 'u4', ideaId: 'i14' }, { userId: 'u1', ideaId: 'i14' },
-    { userId: 'u7', ideaId: 'i15' }, { userId: 'u3', ideaId: 'i15' },
-    { userId: 'u12', ideaId: 'i16' }, { userId: 'u5', ideaId: 'i16' }, { userId: 'u11', ideaId: 'i16' }, { userId: 'u2', ideaId: 'i16' },
-    { userId: 'u13', ideaId: 'i17' }, { userId: 'u18', ideaId: 'i17' }, { userId: 'u9', ideaId: 'i17' },
-    { userId: 'u3', ideaId: 'i18' }, { userId: 'u12', ideaId: 'i18' }, { userId: 'u11', ideaId: 'i18' },
-    { userId: 'u9', ideaId: 'i19' }, { userId: 'u4', ideaId: 'i19' }, { userId: 'u13', ideaId: 'i19' }, { userId: 'u16', ideaId: 'i19' }, { userId: 'u1', ideaId: 'i19' },
-    { userId: 'u13', ideaId: 'i20' }, { userId: 'u16', ideaId: 'i20' }, { userId: 'u4', ideaId: 'i20' },
-    { userId: 'u5', ideaId: 'i21' }, { userId: 'u12', ideaId: 'i21' }, { userId: 'u11', ideaId: 'i21' }, { userId: 'u15', ideaId: 'i21' }, { userId: 'u1', ideaId: 'i21' }, { userId: 'u7', ideaId: 'i21' },
-    { userId: 'u1', ideaId: 'i22' }, { userId: 'u3', ideaId: 'i22' }, { userId: 'u18', ideaId: 'i22' },
-    { userId: 'u2', ideaId: 'i23' }, { userId: 'u11', ideaId: 'i23' }, { userId: 'u9', ideaId: 'i23' }, { userId: 'u12', ideaId: 'i23' }, { userId: 'u15', ideaId: 'i23' }, { userId: 'u7', ideaId: 'i23' }, { userId: 'u1', ideaId: 'i23' },
-    { userId: 'u11', ideaId: 'i24' }, { userId: 'u3', ideaId: 'i24' }, { userId: 'u4', ideaId: 'i24' }
-];
+const IDEA_SUPPORTS = [];
 
 // User locations - maps users to specific Canadian locations
 // Format: { userId, locationType, locationId }
