@@ -180,6 +180,18 @@ App.pages.browse = async function() {
     }
     
     await App.initLocationTree(pageId, App.onIdeasLocationSelect);
+
+    // After the unified tree is ready, auto-open Manitoba on the Ideas page
+    // so users immediately see Manitoba ideas and the Manitoba map.
+    try {
+        const provinces = await App.api('/locations/provinces');
+        const manitoba = provinces.find((p) => p.name === 'Manitoba');
+        if (manitoba) {
+            await App.onIdeasLocationSelect('provinces', manitoba.id, manitoba.name, true);
+        }
+    } catch (e) {
+        console.error('Failed to auto-select Manitoba on Ideas page:', e);
+    }
 };
 
 App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = false, selectedIdeaId = null) {
