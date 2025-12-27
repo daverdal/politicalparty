@@ -187,7 +187,8 @@ App.pages.browse = async function() {
         const provinces = await App.api('/locations/provinces');
         const manitoba = provinces.find((p) => p.name === 'Manitoba');
         if (manitoba) {
-            await App.onIdeasLocationSelect('provinces', manitoba.id, manitoba.name, true);
+            // Do not auto-select the first idea so the list doesn't grab focus or scroll.
+            await App.onIdeasLocationSelect('provinces', manitoba.id, manitoba.name, false);
         }
     } catch (e) {
         console.error('Failed to auto-select Manitoba on Ideas page:', e);
