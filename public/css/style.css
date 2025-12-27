@@ -914,6 +914,17 @@ a:hover {
   display: block;
 }
 
+/* Mobile tweaks: keep three-panel layout but add grab space between columns on Ideas page */
+@media (max-width: 768px) {
+  .browse-layout[data-page="ideas"] {
+    gap: 12px;
+  }
+
+  .browse-layout[data-page="ideas"] .browse-panel {
+    padding-bottom: 32px;
+  }
+}
+
 .spinner {
   width: 32px;
   height: 32px;
