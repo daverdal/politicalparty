@@ -1682,8 +1682,28 @@ App.pages.map = async function() {
         window.addEventListener('mousemove', handleMove);
         window.addEventListener('mouseup', handleUp);
 
+        // Enable touch pan + pinch zoom
         attachTouchPanAndZoom();
 
+        // Enable mouse wheel zoom on laptop/desktop (zoom around cursor)
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const cx = e.clientX - rect.left;
+            const cy = e.clientY - rect.top;
+
+            const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+            const newScale = Math.min(8, Math.max(0.2, state.scale * zoomFactor));
+            if (newScale === state.scale) return;
+
+            const scaleRatio = newScale / state.scale;
+            state.translateX = cx - (cx - state.translateX) * scaleRatio;
+            state.translateY = cy - (cy - state.translateY) * scaleRatio;
+            state.scale = newScale;
+            applyTransform();
+        }, { passive: false });
+
+        // Initial transform
         applyTransform();
 
         // Layer toggle for First Nations
