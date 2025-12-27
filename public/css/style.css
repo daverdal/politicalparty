@@ -930,16 +930,25 @@ a:hover {
 }
 
 .spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--border-color);
-  border-top-color: var(--accent-primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  /* Slim horizontal loading bar to avoid bright circular flash */
+  width: 64px;
+  height: 2px;
+  border: none;
+  border-radius: 0;
+  background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+  background-size: 200% 100%;
+  animation: loading-bar 0.8s linear infinite;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+@keyframes loading-bar {
+  from {
+    background-position: 200% 0;
+    opacity: 0.3;
+  }
+  to {
+    background-position: -200% 0;
+    opacity: 1;
+  }
 }
 
 /* Vote results */
