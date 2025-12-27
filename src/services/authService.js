@@ -135,9 +135,7 @@ async function verifyEmailByToken(token) {
             MATCH (u:User {emailVerificationToken: $token})
             WHERE u.emailVerificationExpiresAt IS NULL
                OR u.emailVerificationExpiresAt > datetime()
-            SET u.verifiedAt = datetime(),
-                u.emailVerificationToken = null,
-                u.emailVerificationExpiresAt = null,
+            SET u.verifiedAt = coalesce(u.verifiedAt, datetime()),
                 u.updatedAt = datetime()
             RETURN u
         `,
