@@ -1263,7 +1263,7 @@ App.pages.profile = async function() {
                 resumeSaveBtn.textContent = 'Saving...';
 
                 try {
-                    const { response, data } = await App.apiPost(`/users/${App.currentUser.id}/resume`, {
+                    const { response, data } = await App.apiPut(`/users/${App.currentUser.id}/resume`, {
                         resume: resumeInput.value || '',
                         makePublic: !!(resumePublicCheckbox && resumePublicCheckbox.checked)
                     });
