@@ -997,125 +997,170 @@ App.pages.profile = async function() {
                         <div class="profile-stat"><span class="profile-stat-value">${userDetails.endorsementCount || 0}</span><span class="profile-stat-label">Endorsements</span></div>
                     </div>
 
-                    <div class="profile-resume-section">
-                        <h4>My Resume</h4>
-                        <p class="resume-help">
-                            Paste your resume or professional summary below. This helps members understand your background when viewing your profile.
-                        </p>
-                        <textarea id="profile-resume-input" class="form-textarea" rows="8" placeholder="Paste your resume here...">${userDetails.resume || ''}</textarea>
-                        <label class="checkbox-inline">
-                            <input type="checkbox" id="profile-resume-public" ${userDetails.resumePublic ? 'checked' : ''}>
-                            <span>Make my resume visible to anyone with the link</span>
-                        </label>
-                        <div class="resume-share" id="profile-resume-share">
-                            ${
-                                existingResumeShareUrl
-                                    ? `<span class="resume-share-label">Public link:</span> <a href="${existingResumeShareUrl}" target="_blank" rel="noopener">${existingResumeShareUrl}</a>`
-                                    : '<span class="resume-share-help">Turn on "Make my resume visible" and save to get a shareable link.</span>'
-                            }
-                        </div>
-                        <button class="btn btn-primary btn-sm" id="profile-resume-save-btn" style="margin-top: 8px;">Save resume</button>
-                        <div id="profile-resume-feedback" class="profile-resume-feedback"></div>
+                    <div class="profile-tabs">
+                        <button class="profile-tab-button active" data-tab="resume">Resume</button>
+                        <button class="profile-tab-button" data-tab="nominations">Nominations & Badges</button>
+                        <button class="profile-tab-button" data-tab="locations">Locations</button>
+                        <button class="profile-tab-button" data-tab="display">Display</button>
                     </div>
 
-                    <div class="badge-shelf">
-                        <div class="badge-shelf-title">Badges</div>
-                        ${
-                            badges && badges.length
-                                ? `
-                            <div class="badge-row">
-                                ${badges
-                                    .map((b) => {
-                                        const scopeLabel = b.scope === 'local' ? 'Local' : 'Global';
-                                        const levelLabel = b.level ? b.level.charAt(0).toUpperCase() + b.level.slice(1) : '';
-                                        return `
-                                            <span class="badge-chip ${b.scope}">
-                                                <span class="badge-chip-level">${levelLabel}</span>
-                                                <span class="badge-chip-scope">${scopeLabel}</span>
-                                            </span>
-                                        `;
-                                    })
-                                    .join('')}
+                    <div class="profile-tab-panels">
+                        <section class="profile-tab-panel active" data-tab="resume">
+                            <div class="profile-resume-section">
+                                <h4>My Resume</h4>
+                                <p class="resume-help">
+                                    Paste your resume or professional summary below. This helps members understand your background when viewing your profile.
+                                </p>
+                                <textarea id="profile-resume-input" class="form-textarea" rows="8" placeholder="Paste your resume here...">${userDetails.resume || ''}</textarea>
+                                <label class="checkbox-inline">
+                                    <input type="checkbox" id="profile-resume-public" ${userDetails.resumePublic ? 'checked' : ''}>
+                                    <span>Make my resume visible to anyone with the link</span>
+                                </label>
+                                <div class="resume-share" id="profile-resume-share">
+                                    ${
+                                        existingResumeShareUrl
+                                            ? `<span class="resume-share-label">Public link:</span> <a href="${existingResumeShareUrl}" target="_blank" rel="noopener">${existingResumeShareUrl}</a>`
+                                            : '<span class="resume-share-help">Turn on "Make my resume visible" and save to get a shareable link.</span>'
+                                    }
+                                </div>
+                                <button class="btn btn-primary btn-sm" id="profile-resume-save-btn" style="margin-top: 8px;">Save resume</button>
+                                <div id="profile-resume-feedback" class="profile-resume-feedback"></div>
                             </div>
-                        `
-                                : '<p class="empty-text">Earn badges by collecting local and global support for your ideas.</p>'
-                        }
-                    </div>
-                    
-                    <div class="location-selector-section">
-                        <h4>My Location</h4>
-                        <p class="location-help">Set your location to appear in local candidates list and receive nominations for your area.</p>
-                        
-                        <div class="location-selector-row">
-                            <label>Province</label>
-                            <select id="province-select" class="form-select">
-                                <option value="">-- Select Province --</option>
-                                ${provinces.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
-                            </select>
-                        </div>
-                        
-                        <div class="location-selector-row">
-                            <label>Federal Riding</label>
-                            <select id="federal-riding-select" class="form-select" disabled><option value="">-- Select Federal Riding --</option></select>
-                        </div>
-                        
-                        <div class="location-selector-row">
-                            <label>Provincial Riding</label>
-                            <select id="provincial-riding-select" class="form-select" disabled><option value="">-- Select Provincial Riding --</option></select>
-                        </div>
-                        
-                        <div class="location-selector-row">
-                            <label>Town</label>
-                            <select id="town-select" class="form-select" disabled><option value="">-- Select Town --</option></select>
-                        </div>
-                        
-                        <div class="location-selector-row">
-                            <label>First Nation</label>
-                            <select id="first-nation-select" class="form-select" disabled><option value="">-- Select First Nation --</option></select>
-                        </div>
-                        
-                        <div class="location-selector-row">
-                            <label>Group</label>
-                            <select id="group-select" class="form-select" disabled><option value="">-- Select Group --</option></select>
-                        </div>
-                        
-                        <button class="btn btn-primary" id="save-location-btn" disabled style="margin-top: 12px;">Save Locations</button>
-                        <div id="location-feedback" class="location-feedback"></div>
-                        ${userDetails.locations && userDetails.locations.length > 0 ? `
-                            <div class="current-locations">
-                                <strong>Current Locations:</strong>
-                                <ul class="locations-list">
-                                    ${userDetails.locations.map(loc => `
-                                        <li>
-                                            ${loc.name} <span class="location-type">(${loc.type})</span>
-                                            <button 
-                                                class="btn btn-secondary btn-xs open-planning-btn"
-                                                data-loc-id="${loc.id}"
-                                                data-loc-type="${loc.type}"
-                                                data-loc-name="${loc.name}"
-                                                title="Open strategic planning for this location"
-                                            >
-                                                📋 Plan
-                                            </button>
+                        </section>
+
+                        <section class="profile-tab-panel" data-tab="nominations">
+                            <div class="badge-shelf">
+                                <div class="badge-shelf-title">Badges</div>
+                                ${
+                                    badges && badges.length
+                                        ? `
+                                    <div class="badge-row">
+                                        ${badges
+                                            .map((b) => {
+                                                const scopeLabel = b.scope === 'local' ? 'Local' : 'Global';
+                                                const levelLabel = b.level ? b.level.charAt(0).toUpperCase() + b.level.slice(1) : '';
+                                                return `
+                                                    <span class="badge-chip ${b.scope}">
+                                                        <span class="badge-chip-level">${levelLabel}</span>
+                                                        <span class="badge-chip-scope">${scopeLabel}</span>
+                                                    </span>
+                                                `;
+                                            })
+                                            .join('')}
+                                    </div>
+                                `
+                                        : '<p class="empty-text">Earn badges by collecting local and global support for your ideas.</p>'
+                                }
+                            </div>
+                            ${
+                                pendingNominations && pendingNominations.length
+                                    ? `
+                            <div class="pending-nominations">
+                                <h4>Pending Nominations</h4>
+                                <ul class="simple-list">
+                                    ${pendingNominations
+                                        .map(
+                                            (n) => `
+                                        <li class="simple-list-item">
+                                            <span class="simple-list-name">${n.nominatorName || 'Member'}</span>
+                                            <span class="simple-list-meta">${n.message || ''}</span>
                                         </li>
-                                    `).join('')}
+                                    `
+                                        )
+                                        .join('')}
                                 </ul>
                             </div>
-                        ` : ''}
-                    </div>
-                    
-                    <!-- Theme Toggle -->
-                    <div class="theme-toggle-section">
-                        <div class="theme-toggle-row">
-                            <div class="theme-toggle-info">
-                                <h4>🖥️ VT100 Mode</h4>
-                                <p>Classic 1980s green phosphor terminal</p>
+                            `
+                                    : ''
+                            }
+                        </section>
+
+                        <section class="profile-tab-panel" data-tab="locations">
+                            <div class="location-selector-section">
+                                <h4>My Location</h4>
+                                <p class="location-help">Set your location to appear in local candidates list and receive nominations for your area.</p>
+                                
+                                <div class="location-selector-row">
+                                    <label>Province</label>
+                                    <select id="province-select" class="form-select">
+                                        <option value="">-- Select Province --</option>
+                                        ${provinces.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+                                    </select>
+                                </div>
+                                
+                                <div class="location-selector-row">
+                                    <label>Federal Riding</label>
+                                    <select id="federal-riding-select" class="form-select" disabled><option value="">-- Select Federal Riding --</option></select>
+                                </div>
+                                
+                                <div class="location-selector-row">
+                                    <label>Provincial Riding</label>
+                                    <select id="provincial-riding-select" class="form-select" disabled><option value="">-- Select Provincial Riding --</option></select>
+                                </div>
+                                
+                                <div class="location-selector-row">
+                                    <label>Town</label>
+                                    <select id="town-select" class="form-select" disabled><option value="">-- Select Town --</option></select>
+                                </div>
+                                
+                                <div class="location-selector-row">
+                                    <label>First Nation</label>
+                                    <select id="first-nation-select" class="form-select" disabled><option value="">-- Select First Nation --</option></select>
+                                </div>
+                                
+                                <div class="location-selector-row">
+                                    <label>Group</label>
+                                    <select id="group-select" class="form-select" disabled><option value="">-- Select Group --</option></select>
+                                </div>
+                                
+                                <button class="btn btn-primary" id="save-location-btn" disabled style="margin-top: 12px;">Save Locations</button>
+                                <div id="location-feedback" class="location-feedback"></div>
+                                ${
+                                    userDetails.locations && userDetails.locations.length > 0
+                                        ? `
+                                    <div class="current-locations">
+                                        <strong>Current Locations:</strong>
+                                        <ul class="locations-list">
+                                            ${userDetails.locations
+                                                .map(
+                                                    (loc) => `
+                                                <li>
+                                                    ${loc.name} <span class="location-type">(${loc.type})</span>
+                                                    <button 
+                                                        class="btn btn-secondary btn-xs open-planning-btn"
+                                                        data-loc-id="${loc.id}"
+                                                        data-loc-type="${loc.type}"
+                                                        data-loc-name="${loc.name}"
+                                                        title="Open strategic planning for this location"
+                                                    >
+                                                        📋 Plan
+                                                    </button>
+                                                </li>
+                                            `
+                                                )
+                                                .join('')}
+                                        </ul>
+                                    </div>
+                                `
+                                        : ''
+                                }
                             </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="theme-toggle" ${App.currentTheme === 'vt100' ? 'checked' : ''} onchange="App.toggleTheme(this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
+                        </section>
+
+                        <section class="profile-tab-panel" data-tab="display">
+                            <div class="theme-toggle-section">
+                                <div class="theme-toggle-row">
+                                    <div class="theme-toggle-info">
+                                        <h4>🖥️ VT100 Mode</h4>
+                                        <p>Classic 1980s green phosphor terminal</p>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="theme-toggle" ${App.currentTheme === 'vt100' ? 'checked' : ''} onchange="App.toggleTheme(this.checked)">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </section>
                     </div>
                 </div>
             </div>
@@ -1189,6 +1234,20 @@ App.pages.profile = async function() {
             });
         }
         
+        // Profile tab handlers
+        const tabButtons = document.querySelectorAll('.profile-tab-button');
+        const tabPanels = document.querySelectorAll('.profile-tab-panel');
+
+        tabButtons.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tab;
+                tabButtons.forEach((b) => b.classList.toggle('active', b === btn));
+                tabPanels.forEach((panel) => {
+                    panel.classList.toggle('active', panel.dataset.tab === tab);
+                });
+            });
+        });
+
         // Resume handlers
         const resumeInput = document.getElementById('profile-resume-input');
         const resumePublicCheckbox = document.getElementById('profile-resume-public');

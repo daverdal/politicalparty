@@ -877,6 +877,43 @@ a:hover {
   color: var(--danger);
 }
 
+/* Profile tabs */
+.profile-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
+  margin-bottom: 16px;
+}
+
+.profile-tab-button {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.profile-tab-button.active {
+  border-color: var(--accent-primary);
+  background: rgba(0, 168, 255, 0.08);
+  color: var(--accent-primary);
+}
+
+.profile-tab-panels {
+  margin-top: 4px;
+}
+
+.profile-tab-panel {
+  display: none;
+}
+
+.profile-tab-panel.active {
+  display: block;
+}
+
 .spinner {
   width: 32px;
   height: 32px;
