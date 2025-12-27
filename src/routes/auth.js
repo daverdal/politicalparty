@@ -179,20 +179,168 @@ router.get('/verify-email', async (req, res) => {
 
     try {
         const user = await authService.verifyEmailByToken(token);
+        const appUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+
         if (!user) {
             return res
                 .status(400)
-                .send('<h1>Verification error</h1><p>This verification link is invalid or has expired.</p>');
+                .send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Verification error – Political Party</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000000;
+            color: #3bff3b; /* VT100 green */
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        .shell {
+            max-width: 480px;
+            margin: 16px;
+            padding: 20px 24px;
+            border-radius: 12px;
+            border: 1px solid #3bff3b;
+            background: radial-gradient(circle at top, rgba(0, 255, 0, 0.08), rgba(0, 0, 0, 0.96));
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.9);
+        }
+        h1 {
+            margin: 0 0 8px;
+            font-size: 1.4rem;
+        }
+        p {
+            margin: 0 0 10px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .btn {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 16px;
+            border-radius: 999px;
+            border: 1px solid #3bff3b;
+            background: transparent;
+            color: #3bff3b;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .btn:active {
+            transform: translateY(1px);
+        }
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 1.1em;
+            background: #3bff3b;
+            margin-left: 4px;
+            animation: blink 1s steps(1, start) infinite;
+            vertical-align: bottom;
+        }
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <h1>Verification error</h1>
+        <p>This verification link is invalid or has expired.</p>
+        <p>If you already verified your email, you can safely close this window and return to the app.</p>
+        <p>If not, try requesting a new verification link from the sign-in screen.</p>
+        <a class="btn" href="${appUrl}">Return to Political Party</a>
+        <div class="cursor"></div>
+    </main>
+</body>
+</html>`);
         }
 
-        const appUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
-        return res.send(
-            `<h1>Email verified</h1><p>Your email has been verified. You can now close this window and return to <a href="${appUrl}">${appUrl}</a>.</p>`
-        );
+        return res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Email verified – Political Party</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000000;
+            color: #3bff3b; /* VT100 green */
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        .shell {
+            max-width: 480px;
+            margin: 16px;
+            padding: 20px 24px;
+            border-radius: 12px;
+            border: 1px solid #3bff3b;
+            background: radial-gradient(circle at top, rgba(0, 255, 0, 0.08), rgba(0, 0, 0, 0.96));
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.9);
+        }
+        h1 {
+            margin: 0 0 8px;
+            font-size: 1.4rem;
+        }
+        p {
+            margin: 0 0 10px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .btn {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 16px;
+            border-radius: 999px;
+            border: 1px solid #3bff3b;
+            background: transparent;
+            color: #3bff3b;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .btn:active {
+            transform: translateY(1px);
+        }
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 1.1em;
+            background: #3bff3b;
+            margin-left: 4px;
+            animation: blink 1s steps(1, start) infinite;
+            vertical-align: bottom;
+        }
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <h1>Email verified</h1>
+        <p>Your email has been verified successfully.</p>
+        <p>You can now close this window and return to the Political Party app.</p>
+        <a class="btn" href="${appUrl}">Return to Political Party</a>
+        <div class="cursor"></div>
+    </main>
+</body>
+</html>`);
     } catch (err) {
         // eslint-disable-next-line no-console
         console.error('[auth] Verify email error:', err);
-        return res.status(500).send('<h1>Verification error</h1><p>Something went wrong. Please try again later.</p>');
+        return res
+            .status(500)
+            .send(
+                '<h1>Verification error</h1><p>Something went wrong. Please try again later or sign in to request a new link.</p>'
+            );
     }
 });
 
