@@ -74,6 +74,10 @@
 }
 
 /* VT100 specific styles */
+html, body {
+  background: #000000;
+}
+
 [data-theme="vt100"] body {
   text-shadow: 0 0 2px rgba(51, 255, 51, 0.3);
 }
