@@ -1211,15 +1211,10 @@ a:hover {
 }
 
 .canada-map-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  font-size: 13px;
+  /* Temporarily hide the bottom controls bar so it doesn't cover the map
+     on smaller screens. The map currently has only one active layer, so
+     this is safe UX-wise and keeps the focus on the map itself. */
+  display: none;
 }
 
 .canada-map-controls-bottom {
