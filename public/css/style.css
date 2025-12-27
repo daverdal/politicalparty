@@ -960,6 +960,24 @@ a:hover {
   min-width: 1600px;
 }
 
+/* Ideas page: swap ideas list and map, and make the map column narrower */
+.browse-layout[data-page="ideas"] {
+  grid-template-columns: 320px 1fr 2fr; /* locations | map (1x) | ideas (2x) */
+  grid-template-areas: "locations map ideas";
+}
+
+.browse-layout[data-page="ideas"] #ideas-location-panel {
+  grid-area: locations;
+}
+
+.browse-layout[data-page="ideas"] #ideas-detail-panel {
+  grid-area: map;
+}
+
+.browse-layout[data-page="ideas"] #ideas-list-panel {
+  grid-area: ideas;
+}
+
 .browse-layout.drag-scroll-enabled {
   cursor: grab;
 }
