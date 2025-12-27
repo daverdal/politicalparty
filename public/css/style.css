@@ -2685,12 +2685,6 @@ a:hover {
   text-align: center;
 }
 
-@media (max-width: 600px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
 .admin-table {
   width: 100%;
   border-collapse: collapse;
@@ -3747,32 +3741,6 @@ a:hover {
   font-style: italic;
   text-align: center;
   padding: 20px;
-}
-
-@media (max-width: 768px) {
-  .sidebar {
-    width: 100%;
-    height: auto;
-    position: relative;
-  }
-  
-  .main-content {
-    margin-left: 0;
-    padding: 20px;
-  }
-  
-  .cards-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .browse-layout {
-    grid-template-columns: 1fr;
-    height: auto;
-  }
-  
-  .browse-panel {
-    max-height: 50vh;
-  }
 }
 
 /* ============================================
