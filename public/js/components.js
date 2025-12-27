@@ -1095,6 +1095,7 @@ App.renderCandidatesList = function() {
 
 App.showCandidateDetail = function(candidate) {
     const detailPanel = document.getElementById('candidate-detail');
+    const canFollow = !!(App.currentUser && App.currentUser.id !== candidate.userId && candidate.userId);
     
     detailPanel.innerHTML = `
         <div class="candidate-detail">
@@ -1143,7 +1144,33 @@ App.showCandidateDetail = function(candidate) {
                     <div class="interests-list">${candidate.interests.map(i => `<span class="tag accent">${i}</span>`).join('')}</div>
                 </div>
             ` : ''}
+            ${canFollow ? `
+                <div class="candidate-actions">
+                    <button class="btn btn-secondary" data-action="follow-candidate" data-user-id="${candidate.userId}">Follow</button>
+                </div>
+            ` : ''}
         </div>
     `;
+
+    // Wire up follow button for candidate (news follow API)
+    const followBtn = detailPanel.querySelector('button[data-action="follow-candidate"]');
+    if (followBtn) {
+        followBtn.addEventListener('click', async () => {
+            if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) return;
+            const targetUserId = followBtn.getAttribute('data-user-id');
+            if (!targetUserId) return;
+            followBtn.disabled = true;
+            followBtn.textContent = 'Following...';
+            try {
+                await App.apiPost(`/news/follow/${encodeURIComponent(targetUserId)}`, { follow: true });
+                followBtn.textContent = 'Following';
+            } catch (err) {
+                console.error('Error following candidate:', err);
+                followBtn.textContent = 'Follow';
+                followBtn.disabled = false;
+                alert('Sorry, there was a problem following this candidate.');
+            }
+        });
+    }
 };
 

@@ -1162,6 +1162,9 @@ App.renderMembersListPanel = function(autoSelectFirst = false) {
 
 App.showMemberDetailPanel = function(member) {
     const detail = document.getElementById('members-detail');
+    const canFollow = !!(App.currentUser && App.currentUser.id !== member.id);
+    const canNominate = !!(App.currentUser && App.currentUser.id !== member.id);
+
     detail.innerHTML = `
         <div class="detail-content">
             <div class="detail-header with-avatar">
@@ -1184,12 +1187,34 @@ App.showMemberDetailPanel = function(member) {
             
             <div class="detail-actions">
                 <button class="btn btn-primary" onclick="App.showMemberDetail('${member.id}')">View Full Profile</button>
-                ${App.currentUser && App.currentUser.id !== member.id ? `
+                ${canFollow ? `
+                    <button class="btn btn-secondary" data-action="follow" data-user-id="${member.id}">Follow</button>
+                ` : ''}
+                ${canNominate ? `
                     <button class="btn btn-secondary" onclick="App.nominateMember('${member.id}')">Nominate</button>
                 ` : ''}
             </div>
         </div>
     `;
+
+    // Wire up follow button (uses news API)
+    const followBtn = detail.querySelector('button[data-action="follow"]');
+    if (followBtn) {
+        followBtn.addEventListener('click', async () => {
+            if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) return;
+            followBtn.disabled = true;
+            followBtn.textContent = 'Following...';
+            try {
+                await App.apiPost(`/news/follow/${member.id}`, { follow: true });
+                followBtn.textContent = 'Following';
+            } catch (err) {
+                console.error('Error following member:', err);
+                followBtn.textContent = 'Follow';
+                followBtn.disabled = false;
+                alert('Sorry, there was a problem following this member.');
+            }
+        });
+    }
 };
 
 // ============================================

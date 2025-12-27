@@ -977,6 +977,42 @@ a:hover {
   grid-area: ideas;
 }
 
+/* Members page: show province map in the middle, members list on the right */
+.browse-layout[data-page="members"] {
+  grid-template-columns: 320px 1fr 2fr; /* locations | map (1x) | members (2x) */
+  grid-template-areas: "locations map list";
+}
+
+.browse-layout[data-page="members"] #members-location-panel {
+  grid-area: locations;
+}
+
+.browse-layout[data-page="members"] #members-detail-panel {
+  grid-area: map;
+}
+
+.browse-layout[data-page="members"] #members-list-panel {
+  grid-area: list;
+}
+
+/* Candidates page: show province map in the middle, candidates list on the right */
+.browse-layout[data-page="candidates"] {
+  grid-template-columns: 320px 1fr 2fr; /* locations | map (1x) | candidates (2x) */
+  grid-template-areas: "locations map list";
+}
+
+.browse-layout[data-page="candidates"] #candidates-location-panel {
+  grid-area: locations;
+}
+
+.browse-layout[data-page="candidates"] #candidates-detail-panel {
+  grid-area: map;
+}
+
+.browse-layout[data-page="candidates"] #candidates-list-panel {
+  grid-area: list;
+}
+
 .browse-layout.drag-scroll-enabled {
   cursor: grab;
 }
@@ -1938,6 +1974,12 @@ a:hover {
 .candidate-skills,
 .candidate-interests {
   margin-bottom: 20px;
+}
+
+.candidate-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
 }
 
 .bio-title,
