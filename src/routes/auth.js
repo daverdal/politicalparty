@@ -430,27 +430,164 @@ router.get('/reset-password', (req, res) => {
     if (!token) {
         return res
             .status(400)
-            .send('<h1>Password reset error</h1><p>Missing or invalid reset token.</p>');
+            .send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Password reset error – Political Party</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000000;
+            color: #3bff3b; /* VT100 green */
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        .shell {
+            max-width: 480px;
+            margin: 16px;
+            padding: 20px 24px;
+            border-radius: 12px;
+            border: 1px solid #3bff3b;
+            background: radial-gradient(circle at top, rgba(0, 255, 0, 0.08), rgba(0, 0, 0, 0.96));
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.9);
+        }
+        h1 {
+            margin: 0 0 8px;
+            font-size: 1.4rem;
+        }
+        p {
+            margin: 0 0 10px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 1.1em;
+            background: #3bff3b;
+            margin-left: 4px;
+            animation: blink 1s steps(1, start) infinite;
+            vertical-align: bottom;
+        }
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <h1>Password reset error</h1>
+        <p>Missing or invalid reset token.</p>
+        <div class="cursor"></div>
+    </main>
+</body>
+</html>`);
     }
 
-    // Simple HTML form to set a new password
-    return res.send(`
+    const safeToken = String(token).replace(/"/g, '&quot;');
+
+    // VT100-styled HTML form to set a new password
+    return res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Reset your password – Political Party</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000000;
+            color: #3bff3b; /* VT100 green */
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        .shell {
+            max-width: 480px;
+            margin: 16px;
+            padding: 20px 24px;
+            border-radius: 12px;
+            border: 1px solid #3bff3b;
+            background: radial-gradient(circle at top, rgba(0, 255, 0, 0.08), rgba(0, 0, 0, 0.96));
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.9);
+        }
+        h1 {
+            margin: 0 0 12px;
+            font-size: 1.4rem;
+        }
+        label {
+            font-size: 0.9rem;
+        }
+        input[type="password"] {
+            width: 100%;
+            margin-top: 4px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: 1px solid #3bff3b;
+            background: #000000;
+            color: #3bff3b;
+            box-sizing: border-box;
+        }
+        .field {
+            margin-bottom: 10px;
+        }
+        .btn {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 16px;
+            border-radius: 999px;
+            border: 1px solid #3bff3b;
+            background: transparent;
+            color: #3bff3b;
+            text-decoration: none;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .btn:active {
+            transform: translateY(1px);
+        }
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 1.1em;
+            background: #3bff3b;
+            margin-left: 4px;
+            animation: blink 1s steps(1, start) infinite;
+            vertical-align: bottom;
+        }
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <main class="shell">
         <h1>Reset your password</h1>
-        <form method="POST" action="/api/auth/reset-password" style="max-width:400px;">
-            <input type="hidden" name="token" value="${String(token).replace(/"/g, '&quot;')}" />
-            <div style="margin-bottom:8px;">
+        <form method="POST" action="/api/auth/reset-password">
+            <input type="hidden" name="token" value="${safeToken}" />
+            <div class="field">
                 <label>New password<br/>
                     <input type="password" name="password" minlength="8" required />
                 </label>
             </div>
-            <div style="margin-bottom:8px;">
+            <div class="field">
                 <label>Confirm password<br/>
                     <input type="password" name="confirmPassword" minlength="8" required />
                 </label>
             </div>
-            <button type="submit">Set new password</button>
+            <button class="btn" type="submit">Set new password</button>
         </form>
-    `);
+        <div class="cursor"></div>
+    </main>
+</body>
+</html>`);
 });
 
 // POST /api/auth/reset-password
@@ -460,19 +597,127 @@ router.post('/reset-password', async (req, res) => {
     if (!token || !password) {
         return res
             .status(400)
-            .send('<h1>Password reset error</h1><p>Missing token or password.</p>');
+            .send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Password reset error – Political Party</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000000;
+            color: #3bff3b;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        .shell {
+            max-width: 480px;
+            margin: 16px;
+            padding: 20px 24px;
+            border-radius: 12px;
+            border: 1px solid #3bff3b;
+            background: radial-gradient(circle at top, rgba(0, 255, 0, 0.08), rgba(0, 0, 0, 0.96));
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.9);
+        }
+        h1 { margin: 0 0 8px; font-size: 1.4rem; }
+        p { margin: 0 0 10px; font-size: 0.95rem; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <h1>Password reset error</h1>
+        <p>Missing token or password.</p>
+    </main>
+</body>
+</html>`);
     }
 
     if (password !== confirmPassword) {
         return res
             .status(400)
-            .send('<h1>Password reset error</h1><p>Passwords do not match.</p>');
+            .send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Password reset error – Political Party</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000000;
+            color: #3bff3b;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        .shell {
+            max-width: 480px;
+            margin: 16px;
+            padding: 20px 24px;
+            border-radius: 12px;
+            border: 1px solid #3bff3b;
+            background: radial-gradient(circle at top, rgba(0, 255, 0, 0.08), rgba(0, 0, 0, 0.96));
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.9);
+        }
+        h1 { margin: 0 0 8px; font-size: 1.4rem; }
+        p { margin: 0 0 10px; font-size: 0.95rem; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <h1>Password reset error</h1>
+        <p>Passwords do not match.</p>
+    </main>
+</body>
+</html>`);
     }
 
     if (typeof password !== 'string' || password.length < 8) {
         return res
             .status(400)
-            .send('<h1>Password reset error</h1><p>Password must be at least 8 characters long.</p>');
+            .send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Password reset error – Political Party</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000000;
+            color: #3bff3b;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        .shell {
+            max-width: 480px;
+            margin: 16px;
+            padding: 20px 24px;
+            border-radius: 12px;
+            border: 1px solid #3bff3b;
+            background: radial-gradient(circle at top, rgba(0, 255, 0, 0.08), rgba(0, 0, 0, 0.96));
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.9);
+        }
+        h1 { margin: 0 0 8px; font-size: 1.4rem; }
+        p { margin: 0 0 10px; font-size: 0.95rem; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <h1>Password reset error</h1>
+        <p>Password must be at least 8 characters long.</p>
+    </main>
+</body>
+</html>`);
     }
 
     try {
@@ -480,19 +725,138 @@ router.post('/reset-password', async (req, res) => {
         if (!user) {
             return res
                 .status(400)
-                .send('<h1>Password reset error</h1><p>This reset link is invalid or has expired.</p>');
+                .send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Password reset error – Political Party</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000000;
+            color: #3bff3b;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        .shell {
+            max-width: 480px;
+            margin: 16px;
+            padding: 20px 24px;
+            border-radius: 12px;
+            border: 1px solid #3bff3b;
+            background: radial-gradient(circle at top, rgba(0, 255, 0, 0.08), rgba(0, 0, 0, 0.96));
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.9);
+        }
+        h1 { margin: 0 0 8px; font-size: 1.4rem; }
+        p { margin: 0 0 10px; font-size: 0.95rem; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <h1>Password reset error</h1>
+        <p>This reset link is invalid or has expired.</p>
+    </main>
+</body>
+</html>`);
         }
 
         const appUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
-        return res.send(
-            `<h1>Password updated</h1><p>Your password has been changed. You can now close this window and sign in at <a href="${appUrl}">${appUrl}</a>.</p>`
-        );
+        return res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Password updated – Political Party</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000000;
+            color: #3bff3b;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        .shell {
+            max-width: 480px;
+            margin: 16px;
+            padding: 20px 24px;
+            border-radius: 12px;
+            border: 1px solid #3bff3b;
+            background: radial-gradient(circle at top, rgba(0, 255, 0, 0.08), rgba(0, 0, 0, 0.96));
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.9);
+        }
+        h1 { margin: 0 0 8px; font-size: 1.4rem; }
+        p { margin: 0 0 10px; font-size: 0.95rem; line-height: 1.5; }
+        .btn {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 16px;
+            border-radius: 999px;
+            border: 1px solid #3bff3b;
+            background: transparent;
+            color: #3bff3b;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .btn:active { transform: translateY(1px); }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <h1>Password updated</h1>
+        <p>Your password has been changed successfully.</p>
+        <a class="btn" href="${appUrl}">Return to sign in</a>
+    </main>
+</body>
+</html>`);
     } catch (err) {
         // eslint-disable-next-line no-console
         console.error('[auth] reset-password error:', err);
         return res
             .status(500)
-            .send('<h1>Password reset error</h1><p>Something went wrong. Please try again later.</p>');
+            .send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Password reset error – Political Party</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000000;
+            color: #3bff3b;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        .shell {
+            max-width: 480px;
+            margin: 16px;
+            padding: 20px 24px;
+            border-radius: 12px;
+            border: 1px solid #3bff3b;
+            background: radial-gradient(circle at top, rgba(0, 255, 0, 0.08), rgba(0, 0, 0, 0.96));
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.9);
+        }
+        h1 { margin: 0 0 8px; font-size: 1.4rem; }
+        p { margin: 0 0 10px; font-size: 0.95rem; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <h1>Password reset error</h1>
+        <p>Something went wrong. Please try again later.</p>
+    </main>
+</body>
+</html>`);
     }
 });
 
