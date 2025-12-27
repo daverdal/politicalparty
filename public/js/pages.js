@@ -576,6 +576,22 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
             inner.style.transform = `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale})`;
         };
 
+        const zoomBy = (factor) => {
+            const rect = canvas.getBoundingClientRect();
+            if (!rect.width || !rect.height) return;
+            const cx = rect.width / 2;
+            const cy = rect.height / 2;
+
+            const newScale = Math.min(8, Math.max(0.2, state.scale * factor));
+            if (newScale === state.scale) return;
+
+            const scaleRatio = newScale / state.scale;
+            state.translateX = cx - (cx - state.translateX) * scaleRatio;
+            state.translateY = cy - (cy - state.translateY) * scaleRatio;
+            state.scale = newScale;
+            applyTransform();
+        };
+
         // Helper to attach touch-based pan + pinch zoom (for mobile)
         const attachTouchPanAndZoom = () => {
             canvas.addEventListener('touchstart', (e) => {
@@ -865,6 +881,22 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
 
         // Enable touch support on mobile for pan + pinch zoom
         attachTouchPanAndZoom();
+
+        // Simple +/- zoom controls for laptop users
+        const zoomControls = document.createElement('div');
+        zoomControls.className = 'map-zoom-controls';
+        zoomControls.innerHTML = `
+            <button type="button" class="map-zoom-btn" data-zoom="in">+</button>
+            <button type="button" class="map-zoom-btn" data-zoom="out">−</button>
+        `;
+        canvas.appendChild(zoomControls);
+
+        zoomControls.addEventListener('click', (e) => {
+            const btn = e.target.closest('.map-zoom-btn');
+            if (!btn) return;
+            const dir = btn.dataset.zoom === 'in' ? 1.25 : 0.8;
+            zoomBy(dir);
+        });
 
         // Initial transform
         applyTransform();
