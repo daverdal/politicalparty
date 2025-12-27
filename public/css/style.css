@@ -979,8 +979,8 @@ a:hover {
   grid-template-columns: 320px 1fr 2fr;
   gap: 1px;
   background: var(--border-color);
-  height: calc(100vh - 64px);
-  margin: -32px -40px;
+  /* Let the three-panel layout grow with content instead of clipping at viewport height. */
+  margin: -32px -40px 0;
   min-width: 1600px;
 }
 
