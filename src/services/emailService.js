@@ -86,7 +86,8 @@ async function sendVerificationEmail({ to, token }) {
             event: 'email.send.start',
             type: 'verification',
             to,
-            host: process.env.SMTP_HOST
+            host: process.env.SMTP_HOST,
+            verifyUrl
         })
     );
 

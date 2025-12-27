@@ -121,6 +121,15 @@ async function verifyEmailByToken(token) {
     const session = driver.session({ database: getDatabase() });
 
     try {
+        // Structured log for debugging verification issues
+        // eslint-disable-next-line no-console
+        console.log(
+            JSON.stringify({
+                event: 'email.verify.attempt',
+                token: token || null
+            })
+        );
+
         const result = await session.run(
             `
             MATCH (u:User {emailVerificationToken: $token})
@@ -135,7 +144,26 @@ async function verifyEmailByToken(token) {
             { token }
         );
 
-        if (!result.records.length) return null;
+        if (!result.records.length) {
+            // eslint-disable-next-line no-console
+            console.log(
+                JSON.stringify({
+                    event: 'email.verify.not_found_or_expired',
+                    token: token || null
+                })
+            );
+            return null;
+        }
+
+        // eslint-disable-next-line no-console
+        console.log(
+            JSON.stringify({
+                event: 'email.verify.success',
+                token: token || null,
+                userEmail: result.records[0].get('u').properties.email || null
+            })
+        );
+
         return mapUser(result.records[0].get('u'));
     } finally {
         await session.close();
