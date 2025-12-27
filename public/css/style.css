@@ -930,25 +930,11 @@ a:hover {
 }
 
 .spinner {
-  /* Slim horizontal loading bar to avoid bright circular flash */
-  width: 64px;
+  /* Ultra-subtle static loading bar (no motion, no flash) */
+  width: 72px;
   height: 2px;
-  border: none;
   border-radius: 0;
-  background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
-  background-size: 200% 100%;
-  animation: loading-bar 0.8s linear infinite;
-}
-
-@keyframes loading-bar {
-  from {
-    background-position: 200% 0;
-    opacity: 0.3;
-  }
-  to {
-    background-position: -200% 0;
-    opacity: 1;
-  }
+  background: var(--text-muted);
 }
 
 /* Vote results */
