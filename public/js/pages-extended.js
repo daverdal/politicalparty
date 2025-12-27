@@ -527,6 +527,10 @@ App.showChangePasswordModal = function() {
 
             setTimeout(() => {
                 close();
+                // After changing password, take the user to My Profile so they can review/update their settings.
+                if (typeof App.navigate === 'function') {
+                    App.navigate('profile');
+                }
             }, 1200);
         } catch (err) {
             feedback.textContent = err.message || 'Unable to change password.';

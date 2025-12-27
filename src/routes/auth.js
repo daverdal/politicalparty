@@ -811,7 +811,7 @@ router.post('/reset-password', async (req, res) => {
     <main class="shell">
         <h1>Password updated</h1>
         <p>Your password has been changed successfully.</p>
-        <a class="btn" href="${appUrl}">Return to sign in</a>
+        <a class="btn" href="${appUrl}#profile">Go to My Profile</a>
     </main>
 </body>
 </html>`);
