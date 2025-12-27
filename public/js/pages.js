@@ -315,7 +315,8 @@ App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = fal
                 if (Number.isFinite(idx) && App.panelState[pageId].currentItems[idx]) {
                     App.showIdeaDetailPanel(App.panelState[pageId].currentItems[idx]);
                 }
-                targetItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                // Do not auto-scroll the list into view; this preserves the initial
+                // viewport position (especially on mobile) and avoids the "jump" effect.
             }
         }
 
