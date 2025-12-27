@@ -320,8 +320,8 @@ App.showAuthModal = function(initialTab = 'login') {
             }
 
             App.setAuthUser(data.user);
-            // Reload to ensure full app picks up authenticated state and user list
-            window.location.reload();
+            // Close modal and keep SPA state without full page reload
+            close();
         } catch (err) {
             feedback.textContent = err.message;
             feedback.classList.add('error');
