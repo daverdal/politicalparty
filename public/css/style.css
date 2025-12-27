@@ -491,6 +491,23 @@ a:hover {
   opacity: 0.8;
 }
 
+/* On narrow screens (phones), hide non-essential chrome in the sidebar
+   so the main menu has more vertical space. */
+@media (max-width: 900px) {
+  .user-selector,
+  .notifications-container {
+    display: none;
+  }
+
+  .sidebar-header {
+    padding: 12px 16px;
+  }
+
+  .nav-link {
+    padding-block: 8px;
+  }
+}
+
 /* Main Content */
 .main-content {
   flex: 1;
