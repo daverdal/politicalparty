@@ -839,15 +839,15 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
         canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
             const rect = canvas.getBoundingClientRect();
-            const cx = e.clientX - rect.left;
-            const cy = e.clientY - rect.top;
+            // Zoom around the center of the canvas for a more stable feel,
+            // so the province doesn't fly off at an angle when zooming.
+            const cx = rect.width / 2;
+            const cy = rect.height / 2;
 
             const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
-            // Allow a little more zooming out than before
             const newScale = Math.min(8, Math.max(0.2, state.scale * zoomFactor));
             if (newScale === state.scale) return;
 
-            // Zoom relative to cursor position
             const scaleRatio = newScale / state.scale;
             state.translateX = cx - (cx - state.translateX) * scaleRatio;
             state.translateY = cy - (cy - state.translateY) * scaleRatio;
@@ -1659,8 +1659,9 @@ App.pages.map = async function() {
         canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
             const rect = canvas.getBoundingClientRect();
-            const cx = e.clientX - rect.left;
-            const cy = e.clientY - rect.top;
+            // Zoom around the center of the canvas for a more stable feel.
+            const cx = rect.width / 2;
+            const cy = rect.height / 2;
 
             const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
             const newScale = Math.min(8, Math.max(0.2, state.scale * zoomFactor));
