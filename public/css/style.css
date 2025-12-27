@@ -1053,7 +1053,8 @@ a:hover {
   height: 720px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
-  background: radial-gradient(circle at top, rgba(0, 168, 255, 0.12), transparent 60%), var(--bg-tertiary);
+  /* Solid dark background to avoid any bright flash or halo on load */
+  background: var(--bg-tertiary);
   position: relative;
   overflow: hidden;
   cursor: grab;
