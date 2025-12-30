@@ -492,9 +492,9 @@ a:hover {
 }
 
 /* On narrow screens (phones), hide non-essential chrome in the sidebar
-   so the main menu has more vertical space. */
+   so the main menu has more vertical space. Keep auth status visible. */
 @media (max-width: 900px) {
-  .user-selector,
+  .playing-as-wrapper,
   .notifications-container {
     display: none;
   }
