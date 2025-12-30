@@ -5,6 +5,20 @@
 
 window.App = window.App || {};
 
+// Mark that the extended pages bundle has loaded (for in-app debug)
+try {
+    if (!App.pages) {
+        App.pages = {};
+    }
+    if (typeof App.logClientEvent === 'function') {
+        App.logClientEvent('info', 'pages-extended.js loaded', {
+            existingPages: Object.keys(App.pages || {})
+        });
+    }
+} catch (e) {
+    // Never break the app because of debug logging
+}
+
 // ============================================
 // AUTH UI (Sign-in / Sign-up)
 // ============================================
