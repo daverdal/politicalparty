@@ -74,6 +74,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         App.updateAuthUi();
     }
 
+    // Initialize lightweight client debug console so errors are visible in the UI
+    if (typeof App.initClientDebugConsole === 'function') {
+        App.initClientDebugConsole();
+    }
+
     // Initialize user selector (depends on authUser to decide admin-only controls)
     if (typeof App.initUserSelector === 'function') {
         await App.initUserSelector();

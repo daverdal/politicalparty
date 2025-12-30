@@ -516,6 +516,101 @@ a:hover {
   min-height: 100vh;
 }
 
+/* Debug Console */
+.debug-console-toggle {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.8);
+  color: #7CFC00;
+  border: 1px solid #7CFC00;
+  border-radius: 4px;
+  font-size: 11px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+}
+
+.debug-console-toggle-badge {
+  margin-left: 6px;
+  background: #7CFC00;
+  color: #000;
+  border-radius: 999px;
+  padding: 0 6px;
+}
+
+.debug-console-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 40px;
+  width: 420px;
+  max-height: 320px;
+  background: rgba(0, 0, 0, 0.92);
+  border: 1px solid #7CFC00;
+  border-radius: 4px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 11px;
+}
+
+.debug-console-hidden {
+  display: none;
+}
+
+.debug-console-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  border-bottom: 1px solid #7CFC00;
+}
+
+.debug-console-header button {
+  background: transparent;
+  border: 1px solid #7CFC00;
+  color: #7CFC00;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.debug-console-body {
+  padding: 4px 8px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.debug-console-empty {
+  color: #7CFC00;
+}
+
+.debug-console-entry {
+  margin-bottom: 4px;
+}
+
+.debug-console-entry pre {
+  margin-top: 2px;
+  white-space: pre-wrap;
+}
+
+.debug-time {
+  color: #888;
+  margin-right: 4px;
+}
+
+.debug-level {
+  color: #7CFC00;
+  margin-right: 4px;
+}
+
+.debug-message {
+  color: #e8edf2;
+}
+
 /* Page Header */
 .page-header {
   margin-bottom: 32px;
