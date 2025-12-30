@@ -49,6 +49,18 @@ App.navigate = function(page) {
         }
         history.pushState({ page: targetPage }, '', `#${targetPage}`);
     } else {
+        // Fallback to map if page is unknown, but log it so we can see missing pages
+        try {
+            if (typeof App.logClientEvent === 'function') {
+                App.logClientEvent('error', 'Page function not found', {
+                    page: targetPage,
+                    availablePages: App.pages ? Object.keys(App.pages) : []
+                });
+            }
+        } catch (e) {
+            // ignore
+        }
+
         // Fallback to map if page is unknown
         if (targetPage !== 'map') {
             App.navigate('map');
@@ -64,6 +76,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize theme
     App.initTheme();
     
+    // Log basic app boot info
+    try {
+        if (typeof App.logClientEvent === 'function') {
+            App.logClientEvent('info', 'App DOMContentLoaded', {
+                hasPages: !!App.pages,
+                pages: App.pages ? Object.keys(App.pages) : [],
+                hasUpdateAuthUi: typeof App.updateAuthUi,
+                hasClientDebug: typeof App.initClientDebugConsole
+            });
+        }
+    } catch (e) {
+        // ignore
+    }
+
     // Load authenticated user (if any) and update auth UI
     if (typeof App.loadAuthUser === 'function') {
         await App.loadAuthUser();
