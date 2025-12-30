@@ -83,7 +83,7 @@ App.voting.renderRaceCard = function(race, convId) {
         statusBadge = `<span class="badge success">Winner: ${winner?.name || 'Unknown'}</span>`;
     } else if (roundNum > 0) {
         statusBadge = `<span class="badge warning">Round ${roundNum}</span>`;
-        actionButton = App.currentUser 
+        actionButton = App.authUser && App.authUser.verified
             ? `<button class="btn btn-primary btn-sm vote-btn" data-race-id="${race.race.id}">Vote</button>`
             : '';
     } else if (candidates.length > 0) {
@@ -121,11 +121,7 @@ App.voting.renderRaceCard = function(race, convId) {
  * Show voting modal for a race
  */
 App.voting.showVotingModal = async function(raceId, convId) {
-    if (!App.currentUser) {
-        alert('Please select yourself or a member first.');
-        return;
-    }
-    if (!App.requireVerifiedAuth()) {
+    if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) {
         return;
     }
     // Create modal
@@ -148,7 +144,7 @@ App.voting.showVotingModal = async function(raceId, convId) {
     
     try {
         // Check if user already voted
-        const voteStatus = await App.api(`/voting/race/${raceId}/has-voted/${App.currentUser.id}`);
+        const voteStatus = await App.api(`/voting/race/${raceId}/has-voted/${App.authUser.id}`);
         
         if (voteStatus.hasVoted) {
             modalBody.innerHTML = `
@@ -229,7 +225,7 @@ App.voting.showVotingModal = async function(raceId, convId) {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        oderId: App.currentUser.id,
+                        oderId: App.authUser.id,
                         candidateId: selectedCandidateId
                     })
                 });

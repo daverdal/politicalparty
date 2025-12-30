@@ -1095,7 +1095,7 @@ App.renderCandidatesList = function() {
 
 App.showCandidateDetail = function(candidate) {
     const detailPanel = document.getElementById('candidate-detail');
-    const canFollow = !!(App.currentUser && App.currentUser.id !== candidate.userId && candidate.userId);
+    const canFollow = !!(App.authUser && App.authUser.id !== candidate.userId && candidate.userId);
     
     detailPanel.innerHTML = `
         <div class="candidate-detail">

@@ -552,9 +552,8 @@ App.showPostIdeaModal = function() {
         return;
     }
 
-    // Require a "playing as" user so the idea has an author
-    if (!App.currentUser) {
-        alert('Please select a user in the "Playing as" dropdown first, then try again.');
+    // Require a signed-in, verified user so the idea has an author
+    if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) {
         return;
     }
 
@@ -573,7 +572,7 @@ App.showPostIdeaModal = function() {
             </div>
             <div class="modal-body">
                 <p class="auth-help" style="margin-bottom: 12px;">
-                    Posting as <strong>${App.currentUser.name}</strong> in <strong>${locName}</strong>.
+                    Posting as <strong>${App.authUser?.name || 'Member'}</strong> in <strong>${locName}</strong>.
                 </p>
                 <form id="post-idea-form" class="auth-form">
                     <label>
@@ -825,7 +824,7 @@ App.showPostIdeaModal = function() {
             description,
             tags,
             region: locName,
-            authorId: App.currentUser.id
+            authorId: App.authUser.id
         };
 
         try {
@@ -855,8 +854,8 @@ App.showPostIdeaModal = function() {
             let nameLoc = App.browseState.selectedLocationName || locName;
 
             try {
-                if (App.currentUser && App.currentUser.id) {
-                    const userDetails = await App.api(`/users/${App.currentUser.id}`);
+                if (App.authUser && App.authUser.id) {
+                    const userDetails = await App.api(`/users/${App.authUser.id}`);
                     const locations = (userDetails && userDetails.locations) || [];
                     if (locations.length) {
                         const priority = [
@@ -919,10 +918,10 @@ App.showPostIdeaModal = function() {
 App.pages.profile = async function() {
     const content = document.getElementById('content');
     
-    if (!App.currentUser) {
+    if (!App.authUser) {
         content.innerHTML = `
             <header class="page-header"><h1 class="page-title">👤 My Profile</h1></header>
-            <div class="card"><div class="card-body"><p class="empty-text">Please select a user from the dropdown above to view your profile.</p></div></div>
+            <div class="card"><div class="card-body"><p class="empty-text">Please sign in to view your profile.</p></div></div>
             <div class="card">
                 <div class="card-header"><h3 class="card-title">⚙️ Settings</h3></div>
                 <div class="card-body">
@@ -946,10 +945,10 @@ App.pages.profile = async function() {
     
     try {
         const [userDetails, conventions, provinces, badges] = await Promise.all([
-            App.api(`/users/${App.currentUser.id}`),
+            App.api(`/users/${App.authUser.id}`),
             App.api('/conventions'),
             App.api('/locations/provinces'),
-            App.api(`/users/${App.currentUser.id}/badges`)
+            App.api(`/users/${App.authUser.id}/badges`)
         ]);
         
         const activeConv = conventions.find(c => c.status !== 'completed');
@@ -958,7 +957,7 @@ App.pages.profile = async function() {
         
         if (activeConv) {
             try {
-                const nomData = await App.api(`/conventions/${activeConv.id}/nominations/${App.currentUser.id}`);
+                const nomData = await App.api(`/conventions/${activeConv.id}/nominations/${App.authUser.id}`);
                 nominations = Array.isArray(nomData) ? nomData : (nomData.nominations || []);
                 currentRace = nominations.find(n => n.hasAccepted);
             } catch (e) {}
@@ -974,21 +973,21 @@ App.pages.profile = async function() {
         content.innerHTML = `
             <header class="page-header">
                 <h1 class="page-title">👤 My Profile</h1>
-                <p class="page-subtitle">Welcome, ${App.currentUser.name}</p>
+                <p class="page-subtitle">Welcome, ${App.authUser.name}</p>
             </header>
             
             <div class="card">
                 <div class="card-header">
                     <div class="profile-header">
-                        <div class="profile-avatar">${App.getInitials(App.currentUser.name)}</div>
+                        <div class="profile-avatar">${App.getInitials(App.authUser.name)}</div>
                         <div>
-                            <h2 class="profile-name">${App.currentUser.name}</h2>
+                            <h2 class="profile-name">${App.authUser.name}</h2>
                             <p class="profile-region">${userDetails.locations?.length > 0 
                                 ? userDetails.locations.map(l => l.name).join(' • ') 
-                                : (App.currentUser.region || 'No locations set')}</p>
+                                : (App.authUser.region || 'No locations set')}</p>
                         </div>
                     </div>
-                    ${App.currentUser.candidate ? '<span class="badge success">⭐ Candidate</span>' : ''}
+                    ${App.authUser.candidate ? '<span class="badge success">⭐ Candidate</span>' : ''}
                 </div>
                 <div class="card-body">
                     <p class="profile-bio">${userDetails.bio || 'No bio provided'}</p>
@@ -1263,7 +1262,7 @@ App.pages.profile = async function() {
                 resumeSaveBtn.textContent = 'Saving...';
 
                 try {
-                    const { response, data } = await App.apiPut(`/users/${App.currentUser.id}/resume`, {
+                    const { response, data } = await App.apiPut(`/users/${App.authUser.id}/resume`, {
                         resume: resumeInput.value || '',
                         makePublic: !!(resumePublicCheckbox && resumePublicCheckbox.checked)
                     });
@@ -1416,7 +1415,7 @@ App.pages.profile = async function() {
             saveBtn.textContent = 'Saving...';
             
             try {
-                const { response, data } = await App.apiPut(`/users/${App.currentUser.id}/locations`, { locations });
+                const { response, data } = await App.apiPut(`/users/${App.authUser.id}/locations`, { locations });
                 
                 if (response.ok) {
                     feedback.innerHTML = `<span class="success">Saved ${locations.length} location(s)</span>`;
@@ -1718,23 +1717,6 @@ App.pages.convention = async function() {
 App.pages.planning = async function() {
     const content = document.getElementById('content');
 
-    // Require a "playing as" user similar to Profile page
-    if (!App.currentUser) {
-        content.innerHTML = `
-            <header class="page-header">
-                <h1 class="page-title">📋 Strategic Planning</h1>
-            </header>
-            <div class="card">
-                <div class="card-body">
-                    <p class="empty-text">
-                        Please select a user from the "Playing as" dropdown above to manage planning sessions.
-                    </p>
-                </div>
-            </div>
-        `;
-        return;
-    }
-
     // Require signed-in + verified user to actually start/archive plans
     if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) {
         content.innerHTML = `
@@ -1776,7 +1758,7 @@ App.pages.planning = async function() {
     };
 
     try {
-        const userDetails = await App.api(`/users/${App.currentUser.id}`);
+        const userDetails = await App.api(`/users/${App.authUser.id}`);
         const locations = userDetails.locations || [];
 
         if (!locations.length) {
@@ -5629,11 +5611,7 @@ App.deleteConvention = async function(convId) {
  * Anyone can run - no nominations required!
  */
 App.declareCandidacy = async function(convId) {
-    if (!App.currentUser) {
-        alert('Please select a user first');
-        return;
-    }
-    if (!App.requireVerifiedAuth()) {
+    if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) {
         return;
     }
 
@@ -5675,13 +5653,15 @@ App.acceptNomination = async function(convId, raceId) {
 };
 
 App.declineNomination = async function(convId, raceId) {
-    if (!App.currentUser || !confirm('Are you sure you want to decline this nomination?')) return;
-    if (!App.requireVerifiedAuth()) {
+    if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) {
+        return;
+    }
+    if (!confirm('Are you sure you want to decline this nomination?')) return;
         return;
     }
     
     try {
-        const { data } = await App.apiPost(`/conventions/${convId}/decline-nomination`, { userId: App.currentUser.id, raceId });
+        const { data } = await App.apiPost(`/conventions/${convId}/decline-nomination`, { userId: App.authUser.id, raceId });
         if (data.success) {
             alert('Nomination declined.');
             App.pages.profile();
@@ -5694,13 +5674,15 @@ App.declineNomination = async function(convId, raceId) {
 };
 
 App.withdrawFromRace = async function(convId, raceId) {
-    if (!App.currentUser || !confirm('Are you sure you want to withdraw from this race?')) return;
-    if (!App.requireVerifiedAuth()) {
+    if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) {
+        return;
+    }
+    if (!confirm('Are you sure you want to withdraw from this race?')) return;
         return;
     }
     
     try {
-        const { data } = await App.apiPost(`/conventions/${convId}/withdraw`, { userId: App.currentUser.id, raceId });
+        const { data } = await App.apiPost(`/conventions/${convId}/withdraw`, { userId: App.authUser.id, raceId });
         if (data.success) {
             alert('You have withdrawn from the race.');
             App.pages.profile();
@@ -5731,7 +5713,7 @@ App.showMemberDetail = async function(userId) {
         const hasLocation = user.location && user.location.id;
         
         // Nominations are PERMANENT - can be made anytime, no convention required!
-        const canNominate = hasLocation && App.currentUser && App.currentUser.id !== userId;
+        const canNominate = hasLocation && App.authUser && App.authUser.id !== userId;
         
         // Get user's nomination count
         const nominationCount = user.nominationCount || 0;
@@ -5780,8 +5762,8 @@ App.showMemberDetail = async function(userId) {
                     <div class="nominate-section">
                         <h4>📝 Nominate This Member</h4>
                         <p class="nominate-explanation">Nominations are <strong>permanent</strong> and show your support for this person to run for office.</p>
-                        ${!App.currentUser ? '<p class="nominate-hint">Select yourself from the "Playing as" dropdown to nominate this member.</p>' :
-                          App.currentUser.id === userId ? '<p class="nominate-hint">You cannot nominate yourself.</p>' :
+                        ${!App.authUser ? '<p class="nominate-hint">Sign in to nominate this member.</p>' :
+                          App.authUser.id === userId ? '<p class="nominate-hint">You cannot nominate yourself.</p>' :
                           !hasLocation ? '<p class="nominate-hint">This member hasn\'t set their riding yet.</p>' :
                           `<div class="nomination-form">
                                <textarea id="nomination-message" class="form-textarea" placeholder="Optional: Why are you nominating this person?" rows="2"></textarea>
@@ -5794,8 +5776,8 @@ App.showMemberDetail = async function(userId) {
                     <div class="endorse-section">
                         <h4>✍️ Write an Endorsement</h4>
                         <p class="nominate-explanation">Endorsements are personal recommendations. Write why you think this person would be a good representative.</p>
-                        ${!App.currentUser ? '<p class="nominate-hint">Select yourself from the "Playing as" dropdown to endorse this member.</p>' :
-                          App.currentUser.id === userId ? '<p class="nominate-hint">You cannot endorse yourself.</p>' :
+                        ${!App.authUser ? '<p class="nominate-hint">Sign in to endorse this member.</p>' :
+                          App.authUser.id === userId ? '<p class="nominate-hint">You cannot endorse yourself.</p>' :
                           `<div class="endorsement-form">
                                <textarea id="endorsement-message" class="form-textarea" placeholder="Write your endorsement... (required)" rows="3"></textarea>
                                <button class="btn btn-secondary" id="endorse-member-btn">✍️ Endorse ${user.name}</button>
@@ -5822,7 +5804,7 @@ App.showMemberDetail = async function(userId) {
                     // Use a dummy convention ID - nominations are not tied to conventions anymore
                     const convId = activeConv?.id || 'general';
                     const { response, data } = await App.apiPost(`/conventions/${convId}/nominate`, {
-                        nominatorId: App.currentUser.id,
+                        nominatorId: App.authUser.id,
                         nomineeId: userId,
                         message
                     });
@@ -5860,7 +5842,7 @@ App.showMemberDetail = async function(userId) {
                 endorseBtn.textContent = 'Endorsing...';
                 
                 try {
-                    const { response, data } = await App.apiPost(`/users/${App.currentUser.id}/endorse`, {
+                    const { response, data } = await App.apiPost(`/users/${App.authUser.id}/endorse`, {
                         targetUserId: userId,
                         message
                     });

@@ -375,8 +375,7 @@ App.showIdeaDetailPanel = function(idea) {
 
     if (likeBtn) {
         likeBtn.addEventListener('click', async () => {
-            if (!App.currentUser) {
-                alert('Please select a user in the "Playing as" dropdown first.');
+            if (!App.requireVerifiedAuth || !App.requireVerifiedAuth()) {
                 return;
             }
 
@@ -385,7 +384,7 @@ App.showIdeaDetailPanel = function(idea) {
 
             try {
                 const { response, data } = await App.apiPost(`/ideas/${encodeURIComponent(idea.id)}/support`, {
-                    userId: App.currentUser.id
+                    userId: App.authUser.id
                 });
 
                 if (!response.ok) {
@@ -1161,8 +1160,8 @@ App.renderMembersListPanel = function(autoSelectFirst = false) {
 
 App.showMemberDetailPanel = function(member) {
     const detail = document.getElementById('members-detail');
-    const canFollow = !!(App.currentUser && App.currentUser.id !== member.id);
-    const canNominate = !!(App.currentUser && App.currentUser.id !== member.id);
+    const canFollow = !!(App.authUser && App.authUser.id !== member.id);
+    const canNominate = !!(App.authUser && App.authUser.id !== member.id);
 
     detail.innerHTML = `
         <div class="detail-content">
@@ -1355,7 +1354,7 @@ App.showEventDetailPanel = function(event) {
                 <h3>Description</h3>
                 <p>${event.description || 'No description provided.'}</p>
             </div>
-            ${App.currentUser ? `
+            ${App.authUser ? `
                 <div class="detail-actions">
                     <button class="btn btn-primary" onclick="App.joinEvent('${event.id}')">Join Event</button>
                 </div>

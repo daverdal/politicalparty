@@ -74,7 +74,7 @@ App.requireVerifiedAuth = function() {
 };
 
 // ============================================
-// CURRENT USER STATE (legacy \"playing as\" selector)
+// CURRENT USER STATE
 // ============================================
 
 App.currentUser = null;
@@ -83,40 +83,38 @@ App.allUsers = [];
 App.initUserSelector = async function() {
     try {
         const selector = document.getElementById('current-user-select');
-        if (!selector) return;
-
-        // Load all users once (needed for admin "playing as" selector)
-        App.allUsers = await App.api('/users');
-
-        const wrapper = selector.closest('.user-selector');
+        const wrapper = selector ? selector.closest('.user-selector') : null;
         const isAdmin = App.authUser && App.authUser.role === 'admin';
 
+        // Sync currentUser with the authenticated user for everyone by default
+        if (App.authUser) {
+            App.currentUser = {
+                id: App.authUser.id,
+                name: App.authUser.name,
+                email: App.authUser.email,
+                candidate: App.authUser.candidate,
+                region: App.authUser.region
+            };
+            localStorage.setItem('currentUserId', App.currentUser.id);
+        } else {
+            App.currentUser = null;
+            localStorage.removeItem('currentUserId');
+        }
+
+        // Only admins see (and can use) the "Playing as" selector
         if (!isAdmin) {
-            // For non-admins, hide the "Playing as" UI and bind currentUser to their own account
             if (wrapper) {
                 wrapper.style.display = 'none';
             }
-
-            if (App.authUser) {
-                const matching = App.allUsers.find(
-                    (u) => u.email && App.authUser.email && u.email.toLowerCase() === App.authUser.email.toLowerCase()
-                );
-                if (matching) {
-                    App.currentUser = matching;
-                    localStorage.setItem('currentUserId', matching.id);
-                } else {
-                    App.currentUser = null;
-                    localStorage.removeItem('currentUserId');
-                }
-            } else {
-                App.currentUser = null;
-                localStorage.removeItem('currentUserId');
-            }
-
             return;
         }
 
+        if (!selector) return;
+
         // Admin view: full "Playing as" selector for testing/management
+        // Load all users once (needed for admin "playing as" selector)
+        App.allUsers = await App.api('/users');
+
         if (wrapper) {
             wrapper.style.display = '';
         }
@@ -131,29 +129,29 @@ App.initUserSelector = async function() {
             `).join('')}
         `;
 
-        // Restore from localStorage
+        // Restore from localStorage, but only for admins
         const savedUserId = localStorage.getItem('currentUserId');
         if (savedUserId) {
             selector.value = savedUserId;
-            App.currentUser = App.allUsers.find(u => u.id === savedUserId);
-        } else if (App.authUser) {
-            // If no saved "playing as" user, default to the signed-in account (by email)
-            const matching = App.allUsers.find(
-                (u) => u.email && App.authUser.email && u.email.toLowerCase() === App.authUser.email.toLowerCase()
-            );
-            if (matching) {
-                App.currentUser = matching;
-                selector.value = matching.id;
-                localStorage.setItem('currentUserId', matching.id);
-            }
+            const match = App.allUsers.find(u => u.id === savedUserId);
+            App.currentUser = match || App.currentUser;
         }
 
-        // Handle selection change
+        // Handle selection change (admin-only impersonation)
         selector.addEventListener('change', (e) => {
             const userId = e.target.value;
             if (userId) {
-                App.currentUser = App.allUsers.find(u => u.id === userId);
-                localStorage.setItem('currentUserId', userId);
+                App.currentUser = App.allUsers.find(u => u.id === userId) || App.currentUser;
+                localStorage.setItem('currentUserId', App.currentUser.id);
+            } else if (App.authUser) {
+                App.currentUser = {
+                    id: App.authUser.id,
+                    name: App.authUser.name,
+                    email: App.authUser.email,
+                    candidate: App.authUser.candidate,
+                    region: App.authUser.region
+                };
+                localStorage.setItem('currentUserId', App.currentUser.id);
             } else {
                 App.currentUser = null;
                 localStorage.removeItem('currentUserId');
