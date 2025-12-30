@@ -215,3 +215,57 @@ App.initClientDebugConsole = function() {
     }
 };
 
+// ============================================
+// FALLBACK AUTH UI (if pages-extended.js fails to load)
+// ============================================
+
+if (typeof App.updateAuthUi !== 'function') {
+    App.updateAuthUi = function() {
+        const container = document.getElementById('auth-status');
+        if (!container) return;
+
+        if (App.authUser) {
+            container.innerHTML = `
+                <div class="auth-summary">
+                    <div class="auth-summary-main">
+                        <span class="auth-summary-label">Signed in as</span>
+                        <span class="auth-summary-email">${App.authUser.email}</span>
+                    </div>
+                    <div class="auth-summary-meta">
+                        <button class="btn btn-secondary btn-sm" id="auth-logout-btn">Sign out</button>
+                    </div>
+                </div>
+            `;
+
+            const logoutBtn = document.getElementById('auth-logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', async () => {
+                    try {
+                        await App.apiPost('/auth/logout', {});
+                    } catch (e) {
+                        // ignore errors, we'll still clear local state
+                    }
+                    App.setAuthUser(null);
+                    window.location.reload();
+                });
+            }
+        } else {
+            container.innerHTML = `
+                <button class="btn btn-secondary btn-sm" id="auth-open-modal-btn">
+                    Sign in
+                </button>
+            `;
+            const openBtn = document.getElementById('auth-open-modal-btn');
+            if (openBtn) {
+                openBtn.addEventListener('click', () => {
+                    if (typeof App.showAuthModal === 'function') {
+                        App.showAuthModal('login');
+                    } else {
+                        alert('Sign-in dialog is not available right now.');
+                    }
+                });
+            }
+        }
+    };
+}
+
