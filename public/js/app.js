@@ -94,8 +94,10 @@ App.loadExtendedBundleIfMissing = async function() {
         const code = await resp.text();
 
         try {
-            // Evaluate the bundle in the global scope
-            (0, eval)(code);
+            // Wrap the extended bundle in an async IIFE so any top-level `await`
+            // becomes valid inside an async function, avoiding parse errors.
+            const wrapped = `(async function(){\n${code}\n})();`;
+            (0, eval)(wrapped);
         } catch (e) {
             if (typeof App.logClientEvent === 'function') {
                 App.logClientEvent('error', 'Error evaluating pages-extended.js', {
