@@ -18,18 +18,41 @@ window.App = window.App || {};
 // ============================================
 
 App.navigate = function(page) {
+    const targetPage = page || 'map';
+
     // Update active nav link
     document.querySelectorAll('.nav-link').forEach(link => {
         link.classList.remove('active');
-        if (link.dataset.page === page) {
+        if (link.dataset.page === targetPage) {
             link.classList.add('active');
         }
     });
     
-    // Load page
-    if (App.pages[page]) {
-        App.pages[page]();
-        history.pushState({ page }, '', `#${page}`);
+    // Load page with basic error shielding so navigation never silently fails
+    if (App.pages && typeof App.pages[targetPage] === 'function') {
+        try {
+            App.pages[targetPage]();
+        } catch (err) {
+            console.error('Error rendering page', targetPage, err);
+            const content = document.getElementById('content');
+            if (content) {
+                content.innerHTML = `
+                    <div class="card">
+                        <div class="card-body">
+                            <p class="empty-text">
+                                Error loading page: <strong>${targetPage}</strong> – ${err.message || err}.
+                            </p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        history.pushState({ page: targetPage }, '', `#${targetPage}`);
+    } else {
+        // Fallback to map if page is unknown
+        if (targetPage !== 'map') {
+            App.navigate('map');
+        }
     }
 };
 
