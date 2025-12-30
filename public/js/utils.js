@@ -269,3 +269,93 @@ if (typeof App.updateAuthUi !== 'function') {
     };
 }
 
+// Very simple fallback sign-in modal if the full auth UI from pages-extended.js
+// is not available. This lets you log in even when the extended bundle is not running.
+if (typeof App.showAuthModal !== 'function') {
+    App.showAuthModal = function() {
+        const existing = document.querySelector('.modal-overlay.auth-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay auth-modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Sign in</h2>
+                    <button class="modal-close" aria-label="Close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="fallback-login-form" class="auth-form">
+                        <label>
+                            <span>Email</span>
+                            <input type="email" name="email" required autocomplete="email">
+                        </label>
+                        <label>
+                            <span>Password</span>
+                            <input type="password" name="password" required autocomplete="current-password">
+                        </label>
+                        <button type="submit" class="btn btn-primary auth-submit-btn">Sign in</button>
+                        <div class="auth-feedback" id="fallback-login-feedback"></div>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const close = () => modal.remove();
+        modal.querySelector('.modal-close').addEventListener('click', close);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) close();
+        });
+
+        const form = modal.querySelector('#fallback-login-form');
+        const feedback = modal.querySelector('#fallback-login-feedback');
+        const submitBtn = form.querySelector('.auth-submit-btn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            feedback.textContent = '';
+            feedback.classList.remove('error', 'success');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Signing in...';
+
+            const formData = new FormData(form);
+            const email = (formData.get('email') || '').toString().trim();
+            const password = (formData.get('password') || '').toString();
+
+            try {
+                const { response, data } = await App.apiPost('/auth/login', {
+                    email,
+                    password
+                });
+
+                if (!response.ok) {
+                    feedback.textContent = (data && data.error) || 'Invalid email or password.';
+                    feedback.classList.add('error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Sign in';
+                    return;
+                }
+
+                if (data && data.user) {
+                    App.setAuthUser(data.user);
+                }
+
+                if (typeof App.updateAuthUi === 'function') {
+                    App.updateAuthUi();
+                }
+
+                feedback.textContent = 'Signed in.';
+                feedback.classList.add('success');
+                setTimeout(close, 500);
+            } catch (err) {
+                feedback.textContent = err.message || 'Unable to sign in.';
+                feedback.classList.add('error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Sign in';
+            }
+        });
+    };
+}
+
