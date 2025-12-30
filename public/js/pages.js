@@ -1041,6 +1041,106 @@ App.showCandidateDetailPanel = function(candidate) {
 };
 
 // ============================================
+// FALLBACK PAGES (Profile, Planning, Referendums, Convention, Documentation)
+// ============================================
+
+// If the extended bundle hasn't registered these pages yet, provide
+// simple placeholder implementations so navigation still works.
+
+if (!App.pages.profile) {
+    App.pages.profile = async function() {
+        const content = document.getElementById('content');
+        const email = App.authUser && App.authUser.email;
+        content.innerHTML = `
+            <header class="page-header">
+                <h1 class="page-title">👤 My Profile (basic)</h1>
+            </header>
+            <div class="card">
+                <div class="card-body">
+                    <p class="empty-text">
+                        This is a simplified Profile page because the extended UI bundle is not loaded.
+                        ${email ? ` You are signed in as <strong>${email}</strong>.` : ' You are not signed in.'}
+                    </p>
+                </div>
+            </div>
+        `;
+    };
+}
+
+if (!App.pages.planning) {
+    App.pages.planning = async function() {
+        const content = document.getElementById('content');
+        content.innerHTML = `
+            <header class="page-header">
+                <h1 class="page-title">📋 Strategic Planning (basic)</h1>
+            </header>
+            <div class="card">
+                <div class="card-body">
+                    <p class="empty-text">
+                        The full Strategic Planning interface is temporarily unavailable because the extended UI bundle is not running.
+                        You can still discuss priorities using Ideas and Events.
+                    </p>
+                </div>
+            </div>
+        `;
+    };
+}
+
+if (!App.pages.referendums) {
+    App.pages.referendums = async function() {
+        const content = document.getElementById('content');
+        content.innerHTML = `
+            <header class="page-header">
+                <h1 class="page-title">📑 Referendums (basic)</h1>
+            </header>
+            <div class="card">
+                <div class="card-body">
+                    <p class="empty-text">
+                        The full Referendums page is temporarily unavailable because the extended UI bundle is not running.
+                    </p>
+                </div>
+            </div>
+        `;
+    };
+}
+
+if (!App.pages.convention) {
+    App.pages.convention = async function() {
+        const content = document.getElementById('content');
+        content.innerHTML = `
+            <header class="page-header">
+                <h1 class="page-title">🏛 Convention (basic)</h1>
+            </header>
+            <div class="card">
+                <div class="card-body">
+                    <p class="empty-text">
+                        The full Convention tools are temporarily unavailable because the extended UI bundle is not running.
+                    </p>
+                </div>
+            </div>
+        `;
+    };
+}
+
+if (!App.pages.documentation) {
+    App.pages.documentation = async function() {
+        const content = document.getElementById('content');
+        content.innerHTML = `
+            <header class="page-header">
+                <h1 class="page-title">📚 Documentation (basic)</h1>
+            </header>
+            <div class="card">
+                <div class="card-body">
+                    <p class="empty-text">
+                        The detailed documentation UI is temporarily unavailable because the extended UI bundle is not running.
+                    </p>
+                </div>
+            </div>
+        `;
+    };
+}
+
+// ============================================
 // MEMBERS (Three-Panel Layout)
 // ============================================
 
