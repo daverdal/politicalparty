@@ -68,6 +68,64 @@ App.navigate = function(page) {
     }
 };
 
+// Attempt to dynamically load the extended UI bundle if key pages are missing.
+App.loadExtendedBundleIfMissing = async function() {
+    try {
+        const hasExtended =
+            (App.pages && (App.pages.profile || App.pages.planning || App.pages.referendums)) ||
+            typeof App.updateAuthUi === 'function';
+
+        if (hasExtended) {
+            return;
+        }
+
+        const url = `/js/pages-extended.js?dt=${Date.now()}`;
+        if (typeof App.logClientEvent === 'function') {
+            App.logClientEvent('info', 'Attempting dynamic load of pages-extended.js', { url });
+        }
+
+        const resp = await fetch(url);
+        if (!resp.ok) {
+            if (typeof App.logClientEvent === 'function') {
+                App.logClientEvent('error', 'Failed to fetch pages-extended.js', {
+                    status: resp.status,
+                    statusText: resp.statusText
+                });
+            }
+            return;
+        }
+
+        const code = await resp.text();
+
+        try {
+            // Evaluate the bundle in the global scope
+            (0, eval)(code);
+        } catch (e) {
+            if (typeof App.logClientEvent === 'function') {
+                App.logClientEvent('error', 'Error evaluating pages-extended.js', {
+                    message: e.message,
+                    stack: e.stack
+                });
+            }
+            return;
+        }
+
+        if (typeof App.logClientEvent === 'function') {
+            App.logClientEvent('info', 'pages-extended.js dynamically loaded', {
+                pages: App.pages ? Object.keys(App.pages) : [],
+                hasUpdateAuthUi: typeof App.updateAuthUi
+            });
+        }
+    } catch (e) {
+        if (typeof App.logClientEvent === 'function') {
+            App.logClientEvent('error', 'Unexpected error in loadExtendedBundleIfMissing', {
+                message: e.message,
+                stack: e.stack
+            });
+        }
+    }
+};
+
 // ============================================
 // INITIALIZATION
 // ============================================
@@ -98,6 +156,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Ensure auth UI is rendered once scripts are fully loaded
     if (typeof App.updateAuthUi === 'function') {
         App.updateAuthUi();
+    }
+
+    // Try to dynamically load the extended UI bundle if it hasn't wired in yet
+    if (typeof App.loadExtendedBundleIfMissing === 'function') {
+        await App.loadExtendedBundleIfMissing();
+        // After loading, try to refresh auth UI again in case it was defined by the bundle
+        if (typeof App.updateAuthUi === 'function') {
+            App.updateAuthUi();
+        }
     }
 
     // Initialize lightweight client debug console so errors are visible in the UI
