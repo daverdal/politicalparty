@@ -1758,7 +1758,26 @@ App.pages.planning = async function() {
     };
 
     try {
-        const userDetails = await App.api(`/users/${App.authUser.id}`);
+        const effectiveUserId =
+            (App.currentUser && App.currentUser.id) || (App.authUser && App.authUser.id);
+
+        if (!effectiveUserId) {
+            content.innerHTML = `
+                <header class="page-header">
+                    <h1 class="page-title">📋 Strategic Planning</h1>
+                </header>
+                <div class="card">
+                    <div class="card-body">
+                        <p class="empty-text">
+                            Please sign in and set your locations on the <strong>My Profile</strong> page before using Strategic Planning.
+                        </p>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        const userDetails = await App.api(`/users/${effectiveUserId}`);
         const locations = userDetails.locations || [];
 
         if (!locations.length) {
