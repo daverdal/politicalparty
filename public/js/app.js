@@ -69,6 +69,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         await App.loadAuthUser();
     }
 
+    // Ensure auth UI is rendered once scripts are fully loaded
+    if (typeof App.updateAuthUi === 'function') {
+        App.updateAuthUi();
+    }
+
     // Initialize user selector (depends on authUser to decide admin-only controls)
     if (typeof App.initUserSelector === 'function') {
         await App.initUserSelector();
