@@ -71,11 +71,7 @@ App.navigate = function(page) {
 // Attempt to dynamically load the extended UI bundle if key pages are missing.
 App.loadExtendedBundleIfMissing = async function() {
     try {
-        const hasExtended =
-            (App.pages && (App.pages.profile || App.pages.planning || App.pages.referendums)) ||
-            typeof App.updateAuthUi === 'function';
-
-        if (hasExtended) {
+        if (App._extendedBundleLoaded) {
             return;
         }
 
@@ -110,6 +106,7 @@ App.loadExtendedBundleIfMissing = async function() {
             return;
         }
 
+        App._extendedBundleLoaded = true;
         if (typeof App.logClientEvent === 'function') {
             App.logClientEvent('info', 'pages-extended.js dynamically loaded', {
                 pages: App.pages ? Object.keys(App.pages) : [],
