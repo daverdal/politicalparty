@@ -358,6 +358,26 @@ App.pages.profile = async function () {
             locationsSaveBtn &&
             locationsFeedback
         ) {
+            // Map of the user's existing saved locations by type so we can
+            // pre-populate the dropdowns when they return to this page.
+            const existingLocations = Array.isArray(userDetails.locations)
+                ? userDetails.locations
+                : [];
+            const existingByType = {};
+            existingLocations.forEach((loc) => {
+                if (!loc || !loc.type || !loc.id) return;
+                if (!existingByType[loc.type]) {
+                    existingByType[loc.type] = loc;
+                }
+            });
+            const existingCountry = existingByType.Country || null;
+            const existingProvince = existingByType.Province || null;
+            const existingFederal = existingByType.FederalRiding || null;
+            const existingProvincial = existingByType.ProvincialRiding || null;
+            const existingTown = existingByType.Town || null;
+            const existingFirstNation = existingByType.FirstNation || null;
+            const existingAdhoc = existingByType.AdhocGroup || null;
+
             const typeToLabel = {
                 Town: 'Town',
                 FederalRiding: 'Federal Riding',
@@ -386,13 +406,19 @@ App.pages.profile = async function () {
                     const countries = await App.api('/locations/countries');
                     fillSelect(countrySelect, countries, 'Select country');
 
-                    // For now, just auto-select the first country if none is set
-                    if (!countrySelect.value && countries.length === 1) {
+                    // Prefer the user's existing country if we know it; otherwise
+                    // fall back to auto-selecting the only available option.
+                    if (existingCountry) {
+                        const match = countries.find((c) => c.id === existingCountry.id);
+                        if (match) {
+                            countrySelect.value = match.id;
+                        }
+                    } else if (!countrySelect.value && countries.length === 1) {
                         countrySelect.value = countries[0].id;
                     }
 
                     if (countrySelect.value) {
-                        await loadProvinces(countrySelect.value);
+                        await loadProvinces(countrySelect.value, existingProvince && existingProvince.id);
                     }
                 } catch (err) {
                     locationsFeedback.textContent =
@@ -401,7 +427,7 @@ App.pages.profile = async function () {
                 }
             };
 
-            const loadProvinces = async (countryId) => {
+            const loadProvinces = async (countryId, preselectProvinceId) => {
                 if (!countryId) {
                     provinceSelect.disabled = true;
                     return;
@@ -411,13 +437,24 @@ App.pages.profile = async function () {
                         `/locations/countries/${encodeURIComponent(countryId)}/provinces`
                     );
                     fillSelect(provinceSelect, provinces, 'Select province');
+
+                    // If the user already has a province saved, preselect it and
+                    // load its children so their full location tree appears.
+                    const desiredProvinceId = preselectProvinceId || (existingProvince && existingProvince.id);
+                    if (desiredProvinceId) {
+                        const match = provinces.find((p) => p.id === desiredProvinceId);
+                        if (match) {
+                            provinceSelect.value = match.id;
+                            await loadProvinceChildren(match.id, true);
+                        }
+                    }
                 } catch (err) {
                     locationsFeedback.textContent = 'Unable to load provinces for this country.';
                     locationsFeedback.classList.add('error');
                 }
             };
 
-            const loadProvinceChildren = async (provinceId) => {
+            const loadProvinceChildren = async (provinceId, isInitialHydration = false) => {
                 if (!provinceId) {
                     [federalSelect, provincialSelect, townSelect, firstNationSelect, adhocSelect].forEach(
                         (sel) => {
@@ -453,6 +490,12 @@ App.pages.profile = async function () {
                             federal,
                             'Optional – select federal riding'
                         );
+                        if (isInitialHydration && existingFederal) {
+                            const match = federal.find((f) => f.id === existingFederal.id);
+                            if (match) {
+                                federalSelect.value = match.id;
+                            }
+                        }
                     } else {
                         federalSelect.innerHTML = '';
                         federalSelect.disabled = true;
@@ -464,6 +507,12 @@ App.pages.profile = async function () {
                             provincial,
                             'Optional – select provincial riding'
                         );
+                        if (isInitialHydration && existingProvincial) {
+                            const match = provincial.find((p) => p.id === existingProvincial.id);
+                            if (match) {
+                                provincialSelect.value = match.id;
+                            }
+                        }
                     } else {
                         provincialSelect.innerHTML = '';
                         provincialSelect.disabled = true;
@@ -471,6 +520,12 @@ App.pages.profile = async function () {
 
                     if (towns.length) {
                         fillSelect(townSelect, towns, 'Optional – select town');
+                        if (isInitialHydration && existingTown) {
+                            const match = towns.find((t) => t.id === existingTown.id);
+                            if (match) {
+                                townSelect.value = match.id;
+                            }
+                        }
                     } else {
                         townSelect.innerHTML = '';
                         townSelect.disabled = true;
@@ -482,6 +537,12 @@ App.pages.profile = async function () {
                             firstNations,
                             'Optional – select First Nation'
                         );
+                        if (isInitialHydration && existingFirstNation) {
+                            const match = firstNations.find((fn) => fn.id === existingFirstNation.id);
+                            if (match) {
+                                firstNationSelect.value = match.id;
+                            }
+                        }
                     } else {
                         firstNationSelect.innerHTML = '';
                         firstNationSelect.disabled = true;
@@ -493,6 +554,12 @@ App.pages.profile = async function () {
                             adhocGroups,
                             'Optional – select group'
                         );
+                        if (isInitialHydration && existingAdhoc) {
+                            const match = adhocGroups.find((ag) => ag.id === existingAdhoc.id);
+                            if (match) {
+                                adhocSelect.value = match.id;
+                            }
+                        }
                     } else {
                         adhocSelect.innerHTML = '';
                         adhocSelect.disabled = true;
@@ -518,7 +585,7 @@ App.pages.profile = async function () {
                 locationsFeedback.textContent = '';
                 locationsFeedback.classList.remove('error', 'success');
                 const provinceId = provinceSelect.value;
-                await loadProvinceChildren(provinceId);
+                await loadProvinceChildren(provinceId, false);
             });
 
             locationsSaveBtn.addEventListener('click', async () => {
