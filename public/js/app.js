@@ -195,7 +195,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         App.navigate(page);
     });
     
-    // Load initial page from hash or default to map
-    const initialPage = window.location.hash.slice(1) || 'map';
+    // Load initial page:
+    // - If a hash is present, respect it (e.g., #planning)
+    // - Otherwise, logged-in users start on My Profile so they see their
+    //   profile and location selectors first; guests land on the map.
+    const initialHashPage = window.location.hash.slice(1);
+    const initialPage = initialHashPage || (App.authUser ? 'profile' : 'map');
     App.navigate(initialPage);
 });

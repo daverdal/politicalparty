@@ -333,7 +333,16 @@ App.showAuthModal = function(initialTab = 'login') {
                 return;
             }
 
-            App.setAuthUser(data.user);
+            if (data && data.user) {
+                // Set auth user and route them to My Profile, starting on Locations
+                // so they configure their home locations before exploring.
+                App.setAuthUser(data.user);
+                App.profileInitialTab = 'locations';
+                if (typeof App.navigate === 'function') {
+                    App.navigate('profile');
+                }
+            }
+
             // Close modal and keep SPA state without full page reload
             close();
         } catch (err) {

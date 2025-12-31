@@ -397,7 +397,13 @@ if (typeof App.showAuthModal !== 'function') {
                 }
 
                 if (data && data.user) {
+                    // Set auth user and immediately take them to My Profile,
+                    // starting on the Locations tab so they fill out their home locations.
                     App.setAuthUser(data.user);
+                    App.profileInitialTab = 'locations';
+                    if (typeof App.navigate === 'function') {
+                        App.navigate('profile');
+                    }
                 }
 
                 if (typeof App.updateAuthUi === 'function') {

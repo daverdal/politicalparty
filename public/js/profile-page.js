@@ -55,6 +55,14 @@ App.pages.profile = async function () {
 
     content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
 
+    // Decide which tab should be active first. By default it's "resume", but
+    // login flows can set App.profileInitialTab = 'locations' to nudge new
+    // users to configure their home locations on first visit.
+    const initialTab = App.profileInitialTab || 'resume';
+    // Reset after reading so subsequent visits behave normally unless
+    // explicitly overridden again.
+    App.profileInitialTab = null;
+
     try {
         const [userDetails, badges] = await Promise.all([
             App.api(`/users/${App.authUser.id}`),
@@ -103,13 +111,13 @@ App.pages.profile = async function () {
                     </div>
 
                     <div class="profile-tabs">
-                        <button class="profile-tab-button active" data-tab="resume">Resume</button>
-                        <button class="profile-tab-button" data-tab="badges">Badges</button>
-                        <button class="profile-tab-button" data-tab="locations">Locations</button>
+                        <button class="profile-tab-button ${initialTab === 'resume' ? 'active' : ''}" data-tab="resume">Resume</button>
+                        <button class="profile-tab-button ${initialTab === 'badges' ? 'active' : ''}" data-tab="badges">Badges</button>
+                        <button class="profile-tab-button ${initialTab === 'locations' ? 'active' : ''}" data-tab="locations">Locations</button>
                     </div>
 
                     <div class="profile-tab-panels">
-                        <section class="profile-tab-panel active" data-tab="resume">
+                        <section class="profile-tab-panel ${initialTab === 'resume' ? 'active' : ''}" data-tab="resume">
                             <div class="profile-resume-section">
                                 <h4>My Resume</h4>
                                 <p class="resume-help">
@@ -135,7 +143,7 @@ App.pages.profile = async function () {
                             </div>
                         </section>
 
-                        <section class="profile-tab-panel" data-tab="badges">
+                        <section class="profile-tab-panel ${initialTab === 'badges' ? 'active' : ''}" data-tab="badges">
                             <div class="badge-shelf">
                                 <div class="badge-shelf-title">Badges</div>
                                 ${
@@ -163,7 +171,7 @@ App.pages.profile = async function () {
                             </div>
                         </section>
 
-                        <section class="profile-tab-panel" data-tab="locations">
+                        <section class="profile-tab-panel ${initialTab === 'locations' ? 'active' : ''}" data-tab="locations">
                             <div class="location-selector-section">
                                 <h4>My Locations</h4>
                                 <p class="location-help">
