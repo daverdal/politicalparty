@@ -173,6 +173,7 @@ App.pages.documentation = async function () {
                             <li>Like a few ideas you genuinely support in your area.</li>
                             <li>Join the Strategic Plan for your Riding, Town, or Group and add one issue and one goal.</li>
                             <li>Check the notifications bell to see when your plan moves stages and keep coming back to move it toward real decisions.</li>
+                            <li>Create a candidate profile and get elected in your ridings.</li>
                         </ol>
                     </li>
                 </ul>
