@@ -377,6 +377,20 @@ App.pages.planning = async function () {
 
             let timelineHtml = '';
             if (startMs && endMs && endMs > startMs && timelineEvents.length) {
+                // Ensure there is always a dot at the far right that represents
+                // the end of the Strategic Plan. If the backend did not provide
+                // an explicit cycleEnd, add a synthetic "Projected end" event
+                // pinned to the computed endMs.
+                if (!cycleEnd) {
+                    timelineEvents.push({
+                        kind: 'plan',
+                        label: 'Projected end',
+                        date: new Date(endMs).toISOString(),
+                        color: '#6c757d',
+                        _ms: endMs
+                    });
+                }
+
                 const eventsHtml = timelineEvents
                     .filter((ev) => ev._ms)
                     .map((ev) => {
