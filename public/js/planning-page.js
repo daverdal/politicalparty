@@ -41,6 +41,8 @@ App.pages.planning = async function () {
 
     content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
 
+    const isVerified = !!App.authUser.verified;
+
     // Map backend location types -> REST path segments
     const typeToPath = {
         Country: 'countries',
@@ -288,6 +290,20 @@ App.pages.planning = async function () {
             const goals = activeSession.goals || [];
             const actions = activeSession.actions || [];
 
+            // Group comments by section for display (session-level vs per-issue)
+            const commentsByIssue = {};
+            const sessionComments = [];
+            comments.forEach((c) => {
+                if (c.section === 'issue' && c.sectionItemId) {
+                    if (!commentsByIssue[c.sectionItemId]) {
+                        commentsByIssue[c.sectionItemId] = [];
+                    }
+                    commentsByIssue[c.sectionItemId].push(c);
+                } else {
+                    sessionComments.push(c);
+                }
+            });
+
             sessionContainer.innerHTML = `
                 <div class="card">
                     <div class="card-header">
@@ -329,21 +345,77 @@ App.pages.planning = async function () {
                                             ? `
                                         <ul class="simple-list">
                                             ${issues
-                                                .map(
-                                                    (i) => `
-                                                <li class="simple-list-item">
-                                                    <span class="simple-list-name">${i.title}</span>
-                                                    <span class="simple-list-meta">
-                                                        ${i.description || ''}
-                                                        ${
-                                                            typeof i.votes === 'number'
-                                                                ? ' • ' + i.votes + ' support'
-                                                                : ''
-                                                        }
-                                                    </span>
-                                                </li>
-                                            `
-                                                )
+                                                .map((i) => {
+                                                    const issueComments = commentsByIssue[i.id] || [];
+                                                    return `
+                                                        <li class="simple-list-item">
+                                                            <div class="simple-list-main">
+                                                                <span class="simple-list-name">${i.title}</span>
+                                                                <span class="simple-list-meta">
+                                                                    ${i.description || ''}
+                                                                </span>
+                                                                <div class="simple-list-meta">
+                                                                    Supporters: ${
+                                                                        typeof i.votes === 'number'
+                                                                            ? i.votes
+                                                                            : 0
+                                                                    }
+                                                                </div>
+                                                                ${
+                                                                    issueComments.length
+                                                                        ? `
+                                                                    <ul class="simple-sublist">
+                                                                        ${issueComments
+                                                                            .map(
+                                                                                (c) => `
+                                                                            <li class="simple-list-item">
+                                                                                <span class="simple-list-meta">
+                                                                                    ${c.text}
+                                                                                    ${
+                                                                                        c.createdAt
+                                                                                            ? ' • ' +
+                                                                                              App.formatDate(
+                                                                                                  c.createdAt
+                                                                                              )
+                                                                                            : ''
+                                                                                    }
+                                                                                </span>
+                                                                            </li>
+                                                                        `
+                                                                            )
+                                                                            .join('')}
+                                                                    </ul>
+                                                                `
+                                                                        : ''
+                                                                }
+                                                                <form class="auth-form planning-issue-comment-form" data-issue-id="${
+                                                                    i.id
+                                                                }" style="margin-top: 8px;">
+                                                                    <label>
+                                                                        <span>Add a comment on this issue</span>
+                                                                        <textarea class="form-textarea planning-issue-comment-text" rows="2"></textarea>
+                                                                    </label>
+                                                                    <button type="submit" class="btn btn-secondary btn-xs">
+                                                                        Comment on issue
+                                                                    </button>
+                                                                </form>
+                                                            </div>
+                                                            <div class="simple-list-actions">
+                                                                <button 
+                                                                    type="button" 
+                                                                    class="btn btn-secondary btn-xs planning-issue-support-btn"
+                                                                    data-issue-id="${i.id}"
+                                                                >
+                                                                    Support${
+                                                                        typeof i.votes === 'number'
+                                                                            ? ` (${i.votes})`
+                                                                            : ''
+                                                                    }
+                                                                </button>
+                                                            </div>
+                                                        </li>
+                                                    `;
+                                                })
                                                 .join('')}
                                         </ul>
                                     `
@@ -370,10 +442,10 @@ App.pages.planning = async function () {
                                 </div>
                                 <div class="card-body">
                                     ${
-                                        comments.length
+                                        sessionComments.length
                                             ? `
                                         <ul class="simple-list">
-                                            ${comments
+                                            ${sessionComments
                                                 .map(
                                                     (c) => `
                                                 <li class="simple-list-item">
@@ -396,7 +468,7 @@ App.pages.planning = async function () {
 
                                     <form id="planning-comment-form" class="auth-form" style="margin-top: 12px;">
                                         <label>
-                                            <span>New comment</span>
+                                            <span>New general comment about this plan</span>
                                             <textarea id="planning-comment-text" class="form-textarea" rows="2" required></textarea>
                                         </label>
                                         <button type="submit" class="btn btn-secondary btn-sm">Add comment</button>
@@ -435,6 +507,100 @@ App.pages.planning = async function () {
                     }
                 });
             }
+
+            // Wire up "Support" buttons for issues (likes)
+            const supportButtons = sessionContainer.querySelectorAll(
+                '.planning-issue-support-btn'
+            );
+            supportButtons.forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    if (!isVerified) {
+                        alert('Please verify your email to support issues in a Strategic Plan.');
+                        return;
+                    }
+
+                    const issueId = btn.getAttribute('data-issue-id');
+                    if (!issueId) return;
+
+                    btn.disabled = true;
+                    const originalText = btn.textContent;
+                    btn.textContent = 'Supporting...';
+
+                    try {
+                        const { response, data } = await App.apiPost(
+                            `/strategic-sessions/${encodeURIComponent(
+                                activeSession.id
+                            )}/issues/${encodeURIComponent(issueId)}/vote`,
+                            {}
+                        );
+                        if (!response.ok) {
+                            alert(data && data.error ? data.error : 'Could not support this issue.');
+                            return;
+                        }
+                        // Reload to refresh counts
+                        loadForCurrentSelection();
+                    } catch (err) {
+                        alert(err.message || 'Unable to support this issue.');
+                    } finally {
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                    }
+                });
+            });
+
+            // Wire up per-issue comment forms
+            const issueCommentForms = sessionContainer.querySelectorAll(
+                '.planning-issue-comment-form'
+            );
+            issueCommentForms.forEach((form) => {
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const issueId = form.getAttribute('data-issue-id');
+                    const textArea = form.querySelector('.planning-issue-comment-text');
+                    if (!issueId || !textArea) return;
+                    const text = (textArea.value || '').trim();
+                    if (!text) return;
+
+                    if (!isVerified) {
+                        alert('Please verify your email to comment on issues in a Strategic Plan.');
+                        return;
+                    }
+
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.textContent = 'Saving...';
+                    }
+
+                    try {
+                        const { response, data } = await App.apiPost(
+                            `/strategic-sessions/${encodeURIComponent(activeSession.id)}/comments`,
+                            {
+                                text,
+                                section: 'issue',
+                                sectionItemId: issueId
+                            }
+                        );
+                        if (!response.ok) {
+                            alert(
+                                data && data.error
+                                    ? data.error
+                                    : 'Could not add a comment for this issue.'
+                            );
+                            return;
+                        }
+                        textArea.value = '';
+                        loadForCurrentSelection();
+                    } catch (err) {
+                        alert(err.message || 'Unable to add a comment for this issue.');
+                    } finally {
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = 'Comment on issue';
+                        }
+                    }
+                });
+            });
 
             const commentForm = document.getElementById('planning-comment-form');
             const commentTextInput = document.getElementById('planning-comment-text');
