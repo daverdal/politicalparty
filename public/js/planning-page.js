@@ -370,6 +370,11 @@ App.pages.planning = async function () {
                 endMs = startMs + SIX_MONTHS_MS;
             }
 
+            // Precompute numeric timestamps for events (used when placing dots)
+            timelineEvents.forEach((ev) => {
+                ev._ms = toMs(ev.date);
+            });
+
             let timelineHtml = '';
             if (startMs && endMs && endMs > startMs && timelineEvents.length) {
                 const eventsHtml = timelineEvents
