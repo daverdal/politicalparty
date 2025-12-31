@@ -74,10 +74,10 @@ App.pages.profile = async function () {
                 ? userDetails.locations.map((l) => l.name).join(' • ')
                 : App.authUser.region || 'No locations set');
 
-        // If the backend reports any saved "real world" locations (federal or
-        // provincial riding, town, or First Nation), remember that this user
-        // has satisfied the basic home-location requirement. Pure adhoc groups
-        // do not count for this guard.
+        // If the backend reports any saved "real world" locations (province,
+        // federal/provincial riding, town, or First Nation), remember that this
+        // user has satisfied the basic home-location requirement. Pure adhoc
+        // groups do not count for this guard.
         if (userDetails.locations && userDetails.locations.length) {
             const hasGeographicLocation = userDetails.locations.some(
                 (loc) =>
@@ -593,6 +593,14 @@ App.pages.profile = async function () {
                 locationsFeedback.classList.remove('error', 'success');
 
                 const locations = [];
+
+                // Persist the selected province itself as a location so that
+                // when the user returns to this page (or uses features that
+                // depend on saved locations), we can reconstruct their
+                // province choice even if they didn't pick a specific riding.
+                if (provinceSelect.value) {
+                    locations.push({ id: provinceSelect.value, type: 'Province' });
+                }
 
                 if (federalSelect.value) {
                     locations.push({ id: federalSelect.value, type: 'FederalRiding' });

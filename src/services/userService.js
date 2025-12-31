@@ -141,7 +141,7 @@ async function getUserById(userId) {
  * Update a user's location
  */
 async function setUserLocation({ userId, locationId, locationType }) {
-    const validTypes = ['Town', 'FederalRiding', 'ProvincialRiding', 'FirstNation', 'AdhocGroup'];
+    const validTypes = ['Town', 'Province', 'FederalRiding', 'ProvincialRiding', 'FirstNation', 'AdhocGroup'];
     
     if (!validTypes.includes(locationType)) {
         throw new Error(`Invalid location type. Must be one of: ${validTypes.join(', ')}`);
@@ -206,7 +206,7 @@ async function removeUserLocation(userId) {
  * Set multiple locations for a user (one of each type)
  */
 async function setUserLocations({ userId, locations }) {
-    const validTypes = ['Town', 'FederalRiding', 'ProvincialRiding', 'FirstNation', 'AdhocGroup'];
+    const validTypes = ['Town', 'Province', 'FederalRiding', 'ProvincialRiding', 'FirstNation', 'AdhocGroup'];
     
     // Validate all location types
     for (const loc of locations) {
