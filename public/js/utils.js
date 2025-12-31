@@ -251,13 +251,19 @@ if (typeof App.updateAuthUi !== 'function') {
             }
         } else {
             container.innerHTML = `
-                <button class="btn btn-secondary btn-sm" id="auth-open-modal-btn">
-                    Sign in
-                </button>
+                <div class="auth-actions">
+                    <button class="btn btn-secondary btn-sm" id="auth-login-btn">
+                        Sign in
+                    </button>
+                    <button class="btn btn-primary btn-sm" id="auth-signup-btn">
+                        Sign up
+                    </button>
+                </div>
             `;
-            const openBtn = document.getElementById('auth-open-modal-btn');
-            if (openBtn) {
-                openBtn.addEventListener('click', () => {
+
+            const loginBtn = document.getElementById('auth-login-btn');
+            if (loginBtn) {
+                loginBtn.addEventListener('click', () => {
                     if (typeof App.showAuthModal === 'function') {
                         App.showAuthModal('login');
                     } else {
@@ -265,14 +271,26 @@ if (typeof App.updateAuthUi !== 'function') {
                     }
                 });
             }
+
+            const signupBtn = document.getElementById('auth-signup-btn');
+            if (signupBtn) {
+                signupBtn.addEventListener('click', () => {
+                    if (typeof App.showAuthModal === 'function') {
+                        App.showAuthModal('signup');
+                    } else {
+                        alert('Sign-up dialog is not available right now.');
+                    }
+                });
+            }
         }
     };
 }
 
-// Very simple fallback sign-in modal if the full auth UI from pages-extended.js
-// is not available. This lets you log in even when the extended bundle is not running.
+// Simple fallback auth modal (sign-in + basic sign-up) if the full auth UI
+// from pages-extended.js is not available. This lets you log in and create
+// accounts even when the extended bundle is not running.
 if (typeof App.showAuthModal !== 'function') {
-    App.showAuthModal = function() {
+    App.showAuthModal = function(initialTab = 'login') {
         const existing = document.querySelector('.modal-overlay.auth-modal');
         if (existing) existing.remove();
 
@@ -281,22 +299,49 @@ if (typeof App.showAuthModal !== 'function') {
         modal.innerHTML = `
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>Sign in</h2>
+                    <h2>Account</h2>
                     <button class="modal-close" aria-label="Close">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <form id="fallback-login-form" class="auth-form">
-                        <label>
-                            <span>Email</span>
-                            <input type="email" name="email" required autocomplete="email">
-                        </label>
-                        <label>
-                            <span>Password</span>
-                            <input type="password" name="password" required autocomplete="current-password">
-                        </label>
-                        <button type="submit" class="btn btn-primary auth-submit-btn">Sign in</button>
-                        <div class="auth-feedback" id="fallback-login-feedback"></div>
-                    </form>
+                    <div class="auth-tabs">
+                        <button class="auth-tab ${initialTab === 'login' ? 'active' : ''}" data-tab="login">Sign in</button>
+                        <button class="auth-tab ${initialTab === 'signup' ? 'active' : ''}" data-tab="signup">Create account</button>
+                    </div>
+                    <div class="auth-tab-content ${initialTab === 'login' ? 'active' : ''}" id="auth-tab-login">
+                        <form id="fallback-login-form" class="auth-form">
+                            <label>
+                                <span>Email</span>
+                                <input type="email" name="email" required autocomplete="email">
+                            </label>
+                            <label>
+                                <span>Password</span>
+                                <input type="password" name="password" required autocomplete="current-password">
+                            </label>
+                            <button type="submit" class="btn btn-primary auth-submit-btn">Sign in</button>
+                            <div class="auth-feedback" id="fallback-login-feedback"></div>
+                        </form>
+                    </div>
+                    <div class="auth-tab-content ${initialTab === 'signup' ? 'active' : ''}" id="auth-tab-signup">
+                        <form id="fallback-signup-form" class="auth-form">
+                            <label>
+                                <span>Email</span>
+                                <input type="email" name="email" required autocomplete="email">
+                            </label>
+                            <label>
+                                <span>Password</span>
+                                <input type="password" name="password" required minlength="8" autocomplete="new-password">
+                            </label>
+                            <label>
+                                <span>Display name</span>
+                                <input type="text" name="name" placeholder="Optional – how you appear to other members">
+                            </label>
+                            <p class="auth-help">
+                                You may be asked to verify your email before participating fully.
+                            </p>
+                            <button type="submit" class="btn btn-primary auth-submit-btn">Create account</button>
+                            <div class="auth-feedback" id="fallback-signup-feedback"></div>
+                        </form>
+                    </div>
                 </div>
             </div>
         `;
@@ -309,18 +354,31 @@ if (typeof App.showAuthModal !== 'function') {
             if (e.target === modal) close();
         });
 
-        const form = modal.querySelector('#fallback-login-form');
-        const feedback = modal.querySelector('#fallback-login-feedback');
-        const submitBtn = form.querySelector('.auth-submit-btn');
+        // Tab switching
+        modal.querySelectorAll('.auth-tab').forEach((tab) => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.dataset.tab;
+                modal.querySelectorAll('.auth-tab').forEach((t) => t.classList.remove('active'));
+                modal.querySelectorAll('.auth-tab-content').forEach((c) => c.classList.remove('active'));
+                tab.classList.add('active');
+                const content = modal.querySelector(`#auth-tab-${tabName}`);
+                if (content) content.classList.add('active');
+            });
+        });
 
-        form.addEventListener('submit', async (e) => {
+        // Login submit (fallback)
+        const loginForm = modal.querySelector('#fallback-login-form');
+        const loginFeedback = modal.querySelector('#fallback-login-feedback');
+        const loginSubmitBtn = loginForm.querySelector('.auth-submit-btn');
+
+        loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            feedback.textContent = '';
-            feedback.classList.remove('error', 'success');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Signing in...';
+            loginFeedback.textContent = '';
+            loginFeedback.classList.remove('error', 'success');
+            loginSubmitBtn.disabled = true;
+            loginSubmitBtn.textContent = 'Signing in...';
 
-            const formData = new FormData(form);
+            const formData = new FormData(loginForm);
             const email = (formData.get('email') || '').toString().trim();
             const password = (formData.get('password') || '').toString();
 
@@ -331,10 +389,10 @@ if (typeof App.showAuthModal !== 'function') {
                 });
 
                 if (!response.ok) {
-                    feedback.textContent = (data && data.error) || 'Invalid email or password.';
-                    feedback.classList.add('error');
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Sign in';
+                    loginFeedback.textContent = (data && data.error) || 'Invalid email or password.';
+                    loginFeedback.classList.add('error');
+                    loginSubmitBtn.disabled = false;
+                    loginSubmitBtn.textContent = 'Sign in';
                     return;
                 }
 
@@ -346,14 +404,59 @@ if (typeof App.showAuthModal !== 'function') {
                     App.updateAuthUi();
                 }
 
-                feedback.textContent = 'Signed in.';
-                feedback.classList.add('success');
+                loginFeedback.textContent = 'Signed in.';
+                loginFeedback.classList.add('success');
                 setTimeout(close, 500);
             } catch (err) {
-                feedback.textContent = err.message || 'Unable to sign in.';
-                feedback.classList.add('error');
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Sign in';
+                loginFeedback.textContent = err.message || 'Unable to sign in.';
+                loginFeedback.classList.add('error');
+                loginSubmitBtn.disabled = false;
+                loginSubmitBtn.textContent = 'Sign in';
+            }
+        });
+
+        // Signup submit (fallback)
+        const signupForm = modal.querySelector('#fallback-signup-form');
+        const signupFeedback = modal.querySelector('#fallback-signup-feedback');
+        const signupSubmitBtn = signupForm.querySelector('.auth-submit-btn');
+
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            signupFeedback.textContent = '';
+            signupFeedback.classList.remove('error', 'success');
+            signupSubmitBtn.disabled = true;
+            signupSubmitBtn.textContent = 'Creating account...';
+
+            const formData = new FormData(signupForm);
+            const email = formData.get('email');
+            const password = formData.get('password');
+            const name = formData.get('name') || undefined;
+
+            try {
+                const { response, data } = await App.apiPost('/auth/signup', {
+                    email,
+                    password,
+                    name
+                });
+
+                if (!response.ok || !data.success) {
+                    signupFeedback.textContent = (data && data.error) || 'Unable to create account.';
+                    signupFeedback.classList.add('error');
+                    signupSubmitBtn.disabled = false;
+                    signupSubmitBtn.textContent = 'Create account';
+                    return;
+                }
+
+                signupFeedback.textContent = data.message || 'Account created. Please check your email to verify your address.';
+                signupFeedback.classList.remove('error');
+                signupFeedback.classList.add('success');
+                signupSubmitBtn.disabled = true;
+                signupSubmitBtn.textContent = 'Check your email';
+            } catch (err) {
+                signupFeedback.textContent = err.message || 'Unable to create account.';
+                signupFeedback.classList.add('error');
+                signupSubmitBtn.disabled = false;
+                signupSubmitBtn.textContent = 'Create account';
             }
         });
     };
