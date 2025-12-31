@@ -33,12 +33,9 @@ async function createReferendumQuestion({ title, body, scope, locationId, opensA
                     WHEN $scope = 'riding' AND explicitLoc IS NULL THEN userLoc
                     ELSE explicitLoc
                  END AS loc
-            // If riding-scoped but no location, block creation
-            CALL apoc.util.validate(
-                sc = 'riding' AND loc IS NULL,
-                'You must set your riding in your profile before creating a riding-level referendum.',
-                []
-            )
+            // If riding-scoped but no location, do not create a question (handled in service)
+            WITH u, sc, loc
+            WHERE NOT (sc = 'riding' AND loc IS NULL)
             CREATE (q:ReferendumQuestion {
                 id: $id,
                 title: $title,
@@ -67,6 +64,20 @@ async function createReferendumQuestion({ title, body, scope, locationId, opensA
                 authorId
             }
         );
+
+        if (!result.records.length) {
+            if (finalScope === 'riding') {
+                const err = new Error(
+                    'You must set your riding in your profile before creating a riding-level referendum.'
+                );
+                err.statusCode = 400;
+                throw err;
+            }
+
+            const err = new Error('Could not create referendum question.');
+            err.statusCode = 400;
+            throw err;
+        }
 
         return result.records[0].get('q').properties;
     } finally {
@@ -229,12 +240,9 @@ async function createArgument({ referId, userId, side, body, visibility }) {
                         CASE
                             WHEN userName IS NULL OR userName = '' THEN 'Community member'
                             ELSE
-                                coalesce(
-                                    apoc.text.capitalize(split(userName, ' ')[0]) +
-                                    ' ' +
-                                    substring(split(userName, ' ')[1], 0, 1) + '.',
-                                    'Community member'
-                                )
+                                split(userName, ' ')[0] +
+                                ' ' +
+                                substring(split(userName, ' ')[1], 0, 1) + '.'
                         END
                     ELSE coalesce(userName, 'Member')
                  END as displayName
