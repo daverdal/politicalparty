@@ -336,22 +336,24 @@ App.pages.planning = async function () {
             });
 
             goals.forEach((g) => {
-                if (g.createdAt) {
+                const when = g.dueDate || g.createdAt;
+                if (when) {
                     timelineEvents.push({
                         kind: 'goal',
                         label: `Goal: ${g.title}`,
-                        date: g.createdAt,
+                        date: when,
                         color: '#fd7e14'
                     });
                 }
             });
 
             actions.forEach((a) => {
-                if (a.createdAt) {
+                const when = a.dueDate || a.createdAt;
+                if (when) {
                     timelineEvents.push({
                         kind: 'action',
                         label: `Action: ${a.description}`,
-                        date: a.createdAt,
+                        date: when,
                         color: '#20c997'
                     });
                 }
@@ -368,6 +370,18 @@ App.pages.planning = async function () {
             if (!endMs && startMs) {
                 const SIX_MONTHS_MS = 1000 * 60 * 60 * 24 * 30 * 6;
                 endMs = startMs + SIX_MONTHS_MS;
+            }
+
+            // Add a "today" marker so players can see where they are in the plan
+            const now = new Date();
+            const nowMs = now.getTime();
+            if (startMs && endMs && nowMs >= startMs && nowMs <= endMs) {
+                timelineEvents.push({
+                    kind: 'today',
+                    label: 'Today',
+                    date: now.toISOString(),
+                    color: '#dc3545'
+                });
             }
 
             // Precompute numeric timestamps for events (used when placing dots)
