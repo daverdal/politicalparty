@@ -20,6 +20,21 @@ window.App = window.App || {};
 App.navigate = function(page) {
     const targetPage = page || 'map';
 
+    // If the user is signed in but has not yet configured a basic home
+    // location / riding, gently force them to the Profile Locations tab
+    // before allowing navigation to other pages.
+    if (
+        App.authUser &&
+        typeof App.hasBasicLocationsConfigured === 'function' &&
+        !App.hasBasicLocationsConfigured() &&
+        targetPage !== 'profile'
+    ) {
+        alert('Please set your home locations first. We have opened your profile to the Locations tab.');
+        App.profileInitialTab = 'locations';
+        App.navigate('profile');
+        return;
+    }
+
     // Update active nav link
     document.querySelectorAll('.nav-link').forEach(link => {
         link.classList.remove('active');

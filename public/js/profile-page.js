@@ -74,6 +74,17 @@ App.pages.profile = async function () {
                 ? userDetails.locations.map((l) => l.name).join(' • ')
                 : App.authUser.region || 'No locations set');
 
+        // If the backend reports any saved locations, remember that this user
+        // has satisfied the basic "home location" requirement so the router
+        // won't keep forcing them back to the Locations tab.
+        if (userDetails.locations && userDetails.locations.length) {
+            try {
+                localStorage.setItem('hasBasicLocations', '1');
+            } catch (e) {
+                // ignore storage errors
+            }
+        }
+
         const baseUrl = window.location.origin;
         const existingResumeShareUrl =
             userDetails.resumePublic && userDetails.resumePublicToken
@@ -527,6 +538,16 @@ App.pages.profile = async function () {
                     } else {
                         locationsFeedback.textContent = data.message || 'Locations saved.';
                         locationsFeedback.classList.add('success');
+
+                        // Mark that this user now has at least one home location / riding
+                        // so the router will stop forcing them back to the Locations tab.
+                        try {
+                            if (locations && locations.length) {
+                                localStorage.setItem('hasBasicLocations', '1');
+                            }
+                        } catch (e) {
+                            // ignore storage errors
+                        }
                     }
                 } catch (err) {
                     locationsFeedback.textContent = err.message || 'Unable to save locations.';

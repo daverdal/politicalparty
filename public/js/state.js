@@ -58,6 +58,17 @@ App.loadAuthUser = async function() {
     }
 };
 
+// Track whether the user has configured at least one home location / riding.
+// We persist this in localStorage as a simple boolean so the router can guard
+// navigation even before we've loaded full profile details.
+App.hasBasicLocationsConfigured = function() {
+    try {
+        return localStorage.getItem('hasBasicLocations') === '1';
+    } catch (e) {
+        return false;
+    }
+};
+
 App.requireVerifiedAuth = function() {
     if (!App.authUser) {
         alert('Please sign in to perform this action.');
