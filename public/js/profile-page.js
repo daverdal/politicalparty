@@ -74,14 +74,23 @@ App.pages.profile = async function () {
                 ? userDetails.locations.map((l) => l.name).join(' • ')
                 : App.authUser.region || 'No locations set');
 
-        // If the backend reports any saved locations, remember that this user
-        // has satisfied the basic "home location" requirement so the router
-        // won't keep forcing them back to the Locations tab.
+        // If the backend reports any saved "real world" locations (federal or
+        // provincial riding, town, or First Nation), remember that this user
+        // has satisfied the basic home-location requirement. Pure adhoc groups
+        // do not count for this guard.
         if (userDetails.locations && userDetails.locations.length) {
-            try {
-                localStorage.setItem('hasBasicLocations', '1');
-            } catch (e) {
-                // ignore storage errors
+            const hasGeographicLocation = userDetails.locations.some(
+                (loc) =>
+                    loc &&
+                    loc.type &&
+                    loc.type !== 'AdhocGroup'
+            );
+            if (hasGeographicLocation) {
+                try {
+                    localStorage.setItem('hasBasicLocations', '1');
+                } catch (e) {
+                    // ignore storage errors
+                }
             }
         }
 
@@ -122,66 +131,12 @@ App.pages.profile = async function () {
                     </div>
 
                     <div class="profile-tabs">
+                        <button class="profile-tab-button ${initialTab === 'locations' ? 'active' : ''}" data-tab="locations">Locations</button>
                         <button class="profile-tab-button ${initialTab === 'resume' ? 'active' : ''}" data-tab="resume">Resume</button>
                         <button class="profile-tab-button ${initialTab === 'badges' ? 'active' : ''}" data-tab="badges">Badges</button>
-                        <button class="profile-tab-button ${initialTab === 'locations' ? 'active' : ''}" data-tab="locations">Locations</button>
                     </div>
 
                     <div class="profile-tab-panels">
-                        <section class="profile-tab-panel ${initialTab === 'resume' ? 'active' : ''}" data-tab="resume">
-                            <div class="profile-resume-section">
-                                <h4>My Resume</h4>
-                                <p class="resume-help">
-                                    Paste your resume or professional summary below. This helps members understand your background.
-                                </p>
-                                <textarea id="profile-resume-input" class="form-textarea" rows="8" placeholder="Paste your resume here...">${userDetails.resume || ''}</textarea>
-                                <label class="checkbox-inline">
-                                    <input type="checkbox" id="profile-resume-public" ${userDetails.resumePublic ? 'checked' : ''}>
-                                    <span>Make my resume visible to anyone with the link</span>
-                                </label>
-                                <div class="resume-share" id="profile-resume-share">
-                                    ${
-                                        existingResumeShareUrl
-                                            ? `<span class="resume-share-label">Public link:</span>
-                                               <a href="${existingResumeShareUrl}" target="_blank" rel="noopener">${existingResumeShareUrl}</a>`
-                                            : '<span class="resume-share-help">Turn on "Make my resume visible" and save to get a shareable link.</span>'
-                                    }
-                                </div>
-                                <button class="btn btn-primary btn-sm" id="profile-resume-save-btn" style="margin-top: 8px;">
-                                    Save resume
-                                </button>
-                                <div id="profile-resume-feedback" class="profile-resume-feedback"></div>
-                            </div>
-                        </section>
-
-                        <section class="profile-tab-panel ${initialTab === 'badges' ? 'active' : ''}" data-tab="badges">
-                            <div class="badge-shelf">
-                                <div class="badge-shelf-title">Badges</div>
-                                ${
-                                    badges && badges.length
-                                        ? `
-                                    <div class="badge-row">
-                                        ${badges
-                                            .map((b) => {
-                                                const scopeLabel = b.scope === 'local' ? 'Local' : 'Global';
-                                                const levelLabel = b.level
-                                                    ? b.level.charAt(0).toUpperCase() + b.level.slice(1)
-                                                    : '';
-                                                return `
-                                                    <span class="badge-chip ${b.scope}">
-                                                        <span class="badge-chip-level">${levelLabel}</span>
-                                                        <span class="badge-chip-scope">${scopeLabel}</span>
-                                                    </span>
-                                                `;
-                                            })
-                                            .join('')}
-                                    </div>
-                                `
-                                        : '<p class="empty-text">Earn badges by collecting support for your ideas and participation.</p>'
-                                }
-                            </div>
-                        </section>
-
                         <section class="profile-tab-panel ${initialTab === 'locations' ? 'active' : ''}" data-tab="locations">
                             <div class="location-selector-section">
                                 <h4>My Locations</h4>
@@ -238,12 +193,68 @@ App.pages.profile = async function () {
                                     </select>
                                 </div>
 
-                                <button class="btn btn-primary btn-sm" id="profile-locations-save-btn" style="margin-top: 8px;" disabled>
+                                <button class="btn btn-primary btn-lg" id="profile-locations-save-btn" style="margin-top: 12px;">
                                     Save locations
                                 </button>
                                 <div id="profile-locations-feedback" class="profile-resume-feedback"></div>
                             </div>
                         </section>
+
+                        <section class="profile-tab-panel ${initialTab === 'resume' ? 'active' : ''}" data-tab="resume">
+                            <div class="profile-resume-section">
+                                <h4>My Resume</h4>
+                                <p class="resume-help">
+                                    Paste your resume or professional summary below. This helps members understand your background.
+                                </p>
+                                <textarea id="profile-resume-input" class="form-textarea" rows="8" placeholder="Paste your resume here...">${userDetails.resume || ''}</textarea>
+                                <label class="checkbox-inline">
+                                    <input type="checkbox" id="profile-resume-public" ${userDetails.resumePublic ? 'checked' : ''}>
+                                    <span>Make my resume visible to anyone with the link</span>
+                                </label>
+                                <div class="resume-share" id="profile-resume-share">
+                                    ${
+                                        existingResumeShareUrl
+                                            ? `<span class="resume-share-label">Public link:</span>
+                                               <a href="${existingResumeShareUrl}" target="_blank" rel="noopener">${existingResumeShareUrl}</a>`
+                                            : '<span class="resume-share-help">Turn on "Make my resume visible" and save to get a shareable link.</span>'
+                                    }
+                                </div>
+                                <button class="btn btn-primary btn-lg" id="profile-resume-save-btn" style="margin-top: 12px;">
+                                    Save resume
+                                </button>
+                                <div id="profile-resume-feedback" class="profile-resume-feedback"></div>
+                            </div>
+                        </section>
+
+                        <section class="profile-tab-panel ${initialTab === 'badges' ? 'active' : ''}" data-tab="badges">
+                            <div class="badge-shelf">
+                                <div class="badge-shelf-title">Badges</div>
+                                ${
+                                    badges && badges.length
+                                        ? `
+                                    <div class="badge-row">
+                                        ${badges
+                                            .map((b) => {
+                                                const scopeLabel = b.scope === 'local' ? 'Local' : 'Global';
+                                                const levelLabel = b.level
+                                                    ? b.level.charAt(0).toUpperCase() + b.level.slice(1)
+                                                    : '';
+                                                return `
+                                                    <span class="badge-chip ${b.scope}">
+                                                        <span class="badge-chip-level">${levelLabel}</span>
+                                                        <span class="badge-chip-scope">${scopeLabel}</span>
+                                                    </span>
+                                                `;
+                                            })
+                                            .join('')}
+                                    </div>
+                                `
+                                        : '<p class="empty-text">Earn badges by collecting support for your ideas and participation.</p>'
+                                }
+                            </div>
+                        </section>
+
+                        <section class="profile-tab-panel ${initialTab === 'locations' ? 'active' : ''}" data-tab="locations">
                     </div>
                 </div>
             </div>
@@ -539,14 +550,21 @@ App.pages.profile = async function () {
                         locationsFeedback.textContent = data.message || 'Locations saved.';
                         locationsFeedback.classList.add('success');
 
-                        // Mark that this user now has at least one home location / riding
-                        // so the router will stop forcing them back to the Locations tab.
-                        try {
-                            if (locations && locations.length) {
+                        // Mark that this user now has at least one geographic home
+                        // location (not just an adhoc group) so the router will stop
+                        // forcing them back to the Locations tab.
+                        const hasGeographicLocation = locations.some(
+                            (loc) =>
+                                loc &&
+                                loc.type &&
+                                loc.type !== 'AdhocGroup'
+                        );
+                        if (hasGeographicLocation) {
+                            try {
                                 localStorage.setItem('hasBasicLocations', '1');
+                            } catch (e) {
+                                // ignore storage errors
                             }
-                        } catch (e) {
-                            // ignore storage errors
                         }
                     }
                 } catch (err) {
