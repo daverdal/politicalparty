@@ -290,6 +290,13 @@ App.pages.planning = async function () {
             const goals = activeSession.goals || [];
             const actions = activeSession.actions || [];
 
+            const status = activeSession.status || 'draft';
+            const cycleStart = activeSession.cycleStart || activeSession.createdAt || null;
+            const cycleEnd = activeSession.cycleEnd || null;
+
+            const stages = ['draft', 'discussion', 'decision', 'review', 'completed'];
+            const stageIndex = stages.indexOf(status);
+
             // Group comments by section for display (session-level vs per-issue)
             const commentsByIssue = {};
             const sessionComments = [];
@@ -310,11 +317,45 @@ App.pages.planning = async function () {
                         <div>
                             <h3 class="card-title">${activeSession.title || 'Strategic Plan'}</h3>
                             <p class="page-subtitle">
-                                For <strong>${locName}</strong> • Status: <strong>${activeSession.status || 'draft'}</strong>
+                                For <strong>${locName}</strong> • Status: <strong>${status}</strong>
                             </p>
                         </div>
                     </div>
                     <div class="card-body">
+                        <div class="planning-timeline">
+                            <div class="planning-timeline-label-row">
+                                <span class="planning-timeline-title">Plan timeline</span>
+                                ${
+                                    cycleStart && cycleEnd
+                                        ? `<span class="planning-timeline-dates">
+                                            ${App.formatDate(cycleStart)} → ${App.formatDate(cycleEnd)}
+                                           </span>`
+                                        : ''
+                                }
+                            </div>
+                            <div class="planning-timeline-track">
+                                ${stages
+                                    .map((stage, idx) => {
+                                        const isActive = idx === stageIndex;
+                                        const isPast = stageIndex !== -1 && idx < stageIndex;
+                                        const dotClasses = [
+                                            'planning-timeline-dot',
+                                            isActive ? 'active' : '',
+                                            isPast ? 'past' : ''
+                                        ]
+                                            .filter(Boolean)
+                                            .join(' ');
+                                        return `
+                                            <div class="planning-timeline-step">
+                                                <div class="${dotClasses}"></div>
+                                                <div class="planning-timeline-step-label">${stage}</div>
+                                            </div>
+                                        `;
+                                    })
+                                    .join('')}
+                            </div>
+                        </div>
+
                         <div class="profile-stats">
                             <div class="profile-stat">
                                 <span class="profile-stat-value">${issues.length}</span>
