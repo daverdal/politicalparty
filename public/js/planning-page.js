@@ -359,38 +359,48 @@ App.pages.planning = async function () {
                 }
             });
 
-            // Compute timeline bounds
-            let startMs = toMs(cycleStart || activeSession.createdAt);
-            let endMs = toMs(cycleEnd);
-
-            // If there is no explicit projected end date from the backend,
-            // assume a reasonable horizon (e.g., ~6 months) so early events
-            // stay close together near the left while the right side still
-            // represents "future" plan time.
-            if (!endMs && startMs) {
-                const SIX_MONTHS_MS = 1000 * 60 * 60 * 24 * 30 * 6;
-                endMs = startMs + SIX_MONTHS_MS;
-            }
-
-            // Add a "today" marker so players can see where they are in the plan
+            // Add a "today" marker so players can see where they are in the plan.
             const now = new Date();
-            const nowMs = now.getTime();
-            if (startMs && endMs && nowMs >= startMs && nowMs <= endMs) {
-                timelineEvents.push({
-                    kind: 'today',
-                    label: 'Today',
-                    date: now.toISOString(),
-                    color: '#dc3545'
-                });
-            }
+            timelineEvents.push({
+                kind: 'today',
+                label: 'Today',
+                date: now.toISOString(),
+                color: '#dc3545'
+            });
 
             // Precompute numeric timestamps for events (used when placing dots)
             timelineEvents.forEach((ev) => {
                 ev._ms = toMs(ev.date);
             });
 
+            // Compute timeline bounds from plan metadata and actual events
+            let startMs = toMs(cycleStart || activeSession.createdAt) || null;
+            let endMs = toMs(cycleEnd) || null;
+
+            const eventMsValues = timelineEvents
+                .map((ev) => ev._ms)
+                .filter((v) => typeof v === 'number' && !Number.isNaN(v));
+
+            if (!startMs && eventMsValues.length) {
+                startMs = Math.min(...eventMsValues);
+            }
+
+            const latestEventMs = eventMsValues.length ? Math.max(...eventMsValues) : null;
+
+            // If there is no explicit projected end date from the backend,
+            // assume a reasonable horizon (e.g., ~6 months) from the start
+            // so early events stay near the left while the right side still
+            // represents "future" plan time.
+            if (!endMs && startMs) {
+                const SIX_MONTHS_MS = 1000 * 60 * 60 * 24 * 30 * 6;
+                endMs = startMs + SIX_MONTHS_MS;
+                if (latestEventMs && latestEventMs > endMs) {
+                    endMs = latestEventMs;
+                }
+            }
+
             let timelineHtml = '';
-            if (startMs && endMs && endMs > startMs && timelineEvents.length) {
+            if (startMs && endMs && endMs > startMs && eventMsValues.length) {
                 // Ensure there is always a dot at the far right that represents
                 // the end of the Strategic Plan. If the backend did not provide
                 // an explicit cycleEnd, add a synthetic "Projected end" event
