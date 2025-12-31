@@ -423,6 +423,23 @@ App.pages.planning = async function () {
                         const leftPct = (clamped * 100).toFixed(1);
                         const safeLabel = ev.label.replace(/"/g, '&quot;');
                         const dateLabel = App.formatDate(ev.date);
+
+                        if (ev.kind === 'today') {
+                            // Emphasize the current point in time with a red dot and label
+                            return `
+                                <div class="planning-timeline-event" style="position: absolute; top: 0; left: ${leftPct}%; transform: translateX(-50%);">
+                                    <div style="position: absolute; top: -14px; left: 50%; transform: translateX(-50%); font-size: 0.7rem; color: #dc3545;">
+                                        Today
+                                    </div>
+                                    <div 
+                                        class="planning-timeline-dot"
+                                        style="width: 16px; height: 16px; border-radius: 999px; background: #dc3545; border: 2px solid #ffffff; box-shadow: 0 0 0 3px rgba(220,53,69,0.4); cursor: default;"
+                                        title="${safeLabel} • ${dateLabel}"
+                                    ></div>
+                                </div>
+                            `;
+                        }
+
                         return `
                             <div class="planning-timeline-event" style="position: absolute; top: 0; left: ${leftPct}%; transform: translateX(-50%);">
                                 <div 
