@@ -560,17 +560,19 @@ App.pages.profile = async function () {
                         locationsFeedback.textContent = data.message || 'Locations saved.';
                         locationsFeedback.classList.add('success');
 
-                        // Mark that this user now has at least one geographic home
-                        // location (not just an adhoc group) so the router will stop
-                        // forcing them back to the Locations tab.
+                        // Mark that this user now has at least a province or one
+                        // geographic home location (not just an adhoc group) so the
+                        // router will stop forcing them back to the Locations tab.
+                        const hasProvince = !!provinceSelect.value;
                         const hasGeographicLocation = locations.some(
                             (loc) =>
                                 loc &&
                                 loc.type &&
                                 loc.type !== 'AdhocGroup'
                         );
+                        const meetsRequirement = hasProvince || hasGeographicLocation;
                         try {
-                            if (hasGeographicLocation) {
+                            if (meetsRequirement) {
                                 localStorage.setItem('hasBasicLocations', '1');
                             } else {
                                 // User saved only adhoc groups / nothing – still not configured
