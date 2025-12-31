@@ -90,15 +90,20 @@ router.get('/following', async (req, res) => {
 });
 
 // GET /api/news/feed - personalized news feed
+// Optional query params:
+// - limit: max number of items (default 50)
+// - includePosts / includeIdeas / includePlans: booleans (default true)
+// - mode: 'following' (default) or 'ridings' (people who share your locations)
 router.get('/feed', async (req, res) => {
     try {
-        const { limit, includePosts, includeIdeas, includePlans } = req.query;
+        const { limit, includePosts, includeIdeas, includePlans, mode } = req.query;
         const feed = await newsService.getFeedForUser({
             userId: req.user.id,
             limit: limit ? parseInt(limit, 10) || 50 : 50,
             includePosts: includePosts !== 'false',
             includeIdeas: includeIdeas !== 'false',
-            includePlans: includePlans !== 'false'
+            includePlans: includePlans !== 'false',
+            mode: mode === 'ridings' ? 'ridings' : 'following'
         });
         res.json(feed);
     } catch (error) {

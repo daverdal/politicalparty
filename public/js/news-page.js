@@ -59,8 +59,9 @@ App.pages.news = async function () {
     content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
 
     try {
-        const [feed, following] = await Promise.all([
+        const [followingFeed, ridingsFeed, following] = await Promise.all([
             App.api('/news/feed?limit=50').catch(() => []),
+            App.api('/news/feed?limit=50&mode=ridings').catch(() => []),
             App.api('/news/following').catch(() => [])
         ]);
 
@@ -188,11 +189,32 @@ App.pages.news = async function () {
                     <h3 class="card-title">Your News Feed</h3>
                 </div>
                 <div class="card-body" id="news-feed-body">
-                    ${
-                        feed && feed.length
-                            ? feed.map((item) => renderFeedItem(item)).join('')
-                            : '<p class="empty-text">No activity yet. Follow some members and start a Strategic Plan to see updates here.</p>'
-                    }
+                    <div class="news-feed-filters" style="margin-bottom: 8px;">
+                        <label class="checkbox-inline" style="margin-right: 12px;">
+                            <input type="checkbox" id="news-feed-following-toggle" checked>
+                            <span>Timeline from people you follow</span>
+                        </label>
+                        <label class="checkbox-inline">
+                            <input type="checkbox" id="news-feed-ridings-toggle">
+                            <span>Timeline from people in your ridings</span>
+                        </label>
+                    </div>
+                    <div id="news-feed-following-section">
+                        <h4 class="card-subtitle" style="margin-bottom: 8px;">From people you follow</h4>
+                        ${
+                            followingFeed && followingFeed.length
+                                ? followingFeed.map((item) => renderFeedItem(item)).join('')
+                                : '<p class="empty-text">No activity yet from people you follow. Follow some members and start a Strategic Plan to see updates here.</p>'
+                        }
+                    </div>
+                    <div id="news-feed-ridings-section" style="display: none; margin-top: 12px;">
+                        <h4 class="card-subtitle" style="margin-bottom: 8px;">From people in your ridings</h4>
+                        ${
+                            ridingsFeed && ridingsFeed.length
+                                ? ridingsFeed.map((item) => renderFeedItem(item)).join('')
+                                : '<p class="empty-text">No activity yet from people in your ridings. As members in your locations post ideas or news, they will appear here.</p>'
+                        }
+                    </div>
                 </div>
             </div>
         `;
@@ -201,6 +223,30 @@ App.pages.news = async function () {
         const postBody = document.getElementById('news-post-body');
         const postBtn = document.getElementById('news-post-submit');
         const postFeedback = document.getElementById('news-post-feedback');
+        const followingToggle = document.getElementById('news-feed-following-toggle');
+        const ridingsToggle = document.getElementById('news-feed-ridings-toggle');
+        const followingSection = document.getElementById('news-feed-following-section');
+        const ridingsSection = document.getElementById('news-feed-ridings-section');
+
+        if (followingToggle && ridingsToggle && followingSection && ridingsSection) {
+            const applyVisibility = () => {
+                const showFollowing = !!followingToggle.checked;
+                const showRidings = !!ridingsToggle.checked;
+
+                followingSection.style.display = showFollowing ? '' : 'none';
+                ridingsSection.style.display = showRidings ? '' : 'none';
+
+                // Ensure at least one timeline is visible
+                if (!showFollowing && !showRidings) {
+                    followingToggle.checked = true;
+                    followingSection.style.display = '';
+                }
+            };
+
+            followingToggle.addEventListener('change', applyVisibility);
+            ridingsToggle.addEventListener('change', applyVisibility);
+            applyVisibility();
+        }
 
         if (postBtn && postBody && postFeedback && isVerified) {
             postBtn.addEventListener('click', async () => {

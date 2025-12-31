@@ -144,7 +144,10 @@ async function getFeedForUser({
     limit = 50,
     includePosts = true,
     includeIdeas = true,
-    includePlans = true
+    includePlans = true,
+    // mode: 'following' (default) = people you follow + you
+    //       'ridings'           = people who share your locations ("your ridings")
+    mode = 'following'
 }) {
     const driver = getDriver();
     const session = driver.session({ database: getDatabase() });
@@ -157,12 +160,24 @@ async function getFeedForUser({
             MATCH (me:User {id: $userId})
             // Collect followed users + self
             OPTIONAL MATCH (me)-[:FOLLOWS]->(f:User)
-            WITH me, collect(DISTINCT f) + me AS followedUsers
+            // Collect users who share a location ("ridings") with me
+            OPTIONAL MATCH (me)-[:LOCATED_IN]->(myLoc)<-[:LOCATED_IN]-(locUser:User)
+            WITH
+                me,
+                collect(DISTINCT f) + me        AS followedUsers,
+                collect(DISTINCT locUser) + me  AS locationUsers,
+                $mode                            AS mode
 
-            // Posts from followed users
+            WITH CASE
+                    WHEN mode = 'ridings' THEN locationUsers
+                    ELSE followedUsers
+                END AS baseUsers,
+                $userId AS uid
+
+            // Posts from selected users
             CALL {
-                WITH followedUsers
-                UNWIND (CASE WHEN $includePosts = true THEN followedUsers ELSE [] END) AS author
+                WITH baseUsers
+                UNWIND (CASE WHEN $includePosts = true THEN baseUsers ELSE [] END) AS author
                 MATCH (author)-[:POSTED_NEWS]->(p:NewsPost)
                 RETURN collect({
                     kind: 'post',
@@ -173,10 +188,10 @@ async function getFeedForUser({
                 }) AS posts
             }
 
-            // Ideas authored by followed users
+            // Ideas authored by selected users
             CALL {
-                WITH followedUsers
-                UNWIND (CASE WHEN $includeIdeas = true THEN followedUsers ELSE [] END) AS author
+                WITH baseUsers
+                UNWIND (CASE WHEN $includeIdeas = true THEN baseUsers ELSE [] END) AS author
                 MATCH (author)-[:POSTED]->(idea:Idea)
                 RETURN collect({
                     kind: 'idea',
@@ -189,10 +204,10 @@ async function getFeedForUser({
 
             // Strategic plans for my locations
             CALL {
-                WITH me
+                WITH uid
                 UNWIND (CASE WHEN $includePlans = true THEN [1] ELSE [] END) AS _
-                OPTIONAL MATCH (me)-[:LOCATED_IN]->(loc)
-                WITH me, collect(DISTINCT loc) as locs
+                MATCH (me:User {id: uid})-[:LOCATED_IN]->(loc)
+                WITH collect(DISTINCT loc) as locs
                 UNWIND locs AS l
                 MATCH (s:StrategicSession {locationId: l.id})
                 RETURN collect({
@@ -217,7 +232,8 @@ async function getFeedForUser({
                 userId,
                 includePosts: !!includePosts,
                 includeIdeas: !!includeIdeas,
-                includePlans: !!includePlans
+                includePlans: !!includePlans,
+                mode
             }
         );
 
