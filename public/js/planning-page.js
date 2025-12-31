@@ -361,22 +361,13 @@ App.pages.planning = async function () {
             let startMs = toMs(cycleStart || activeSession.createdAt);
             let endMs = toMs(cycleEnd);
 
-            let maxEventMs = startMs;
-            timelineEvents.forEach((ev) => {
-                const ms = toMs(ev.date);
-                ev._ms = ms;
-                if (ms && (!maxEventMs || ms > maxEventMs)) {
-                    maxEventMs = ms;
-                }
-            });
-
-            if (!endMs) {
-                if (startMs && maxEventMs && maxEventMs > startMs) {
-                    const span = maxEventMs - startMs;
-                    endMs = maxEventMs + span * 0.25;
-                } else if (startMs) {
-                    endMs = startMs + 1000 * 60 * 60 * 24 * 7; // +7 days fallback
-                }
+            // If there is no explicit projected end date from the backend,
+            // assume a reasonable horizon (e.g., ~6 months) so early events
+            // stay close together near the left while the right side still
+            // represents "future" plan time.
+            if (!endMs && startMs) {
+                const SIX_MONTHS_MS = 1000 * 60 * 60 * 24 * 30 * 6;
+                endMs = startMs + SIX_MONTHS_MS;
             }
 
             let timelineHtml = '';
