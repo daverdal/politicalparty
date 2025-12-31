@@ -52,6 +52,15 @@ App.loadAuthUser = async function() {
     try {
         const user = await App.api('/auth/me');
         App.setAuthUser(user);
+
+        // Clear any stale "hasBasicLocations" flag; the Profile page will
+        // recalculate and set it correctly based on the user's actual saved
+        // locations the next time it loads.
+        try {
+            localStorage.removeItem('hasBasicLocations');
+        } catch (e) {
+            // ignore storage errors
+        }
     } catch (err) {
         // Not logged in or token invalid - ignore
         App.setAuthUser(null);

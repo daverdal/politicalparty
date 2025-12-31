@@ -85,12 +85,22 @@ App.pages.profile = async function () {
                     loc.type &&
                     loc.type !== 'AdhocGroup'
             );
-            if (hasGeographicLocation) {
-                try {
+            try {
+                if (hasGeographicLocation) {
                     localStorage.setItem('hasBasicLocations', '1');
-                } catch (e) {
-                    // ignore storage errors
+                } else {
+                    // Only adhoc groups or legacy data – treat as not configured
+                    localStorage.removeItem('hasBasicLocations');
                 }
+            } catch (e) {
+                // ignore storage errors
+            }
+        } else {
+            // No saved locations at all – clear any stale flag
+            try {
+                localStorage.removeItem('hasBasicLocations');
+            } catch (e) {
+                // ignore storage errors
             }
         }
 
@@ -559,12 +569,15 @@ App.pages.profile = async function () {
                                 loc.type &&
                                 loc.type !== 'AdhocGroup'
                         );
-                        if (hasGeographicLocation) {
-                            try {
+                        try {
+                            if (hasGeographicLocation) {
                                 localStorage.setItem('hasBasicLocations', '1');
-                            } catch (e) {
-                                // ignore storage errors
+                            } else {
+                                // User saved only adhoc groups / nothing – still not configured
+                                localStorage.removeItem('hasBasicLocations');
                             }
+                        } catch (e) {
+                            // ignore storage errors
                         }
                     }
                 } catch (err) {
