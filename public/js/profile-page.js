@@ -55,10 +55,10 @@ App.pages.profile = async function () {
 
     content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
 
-    // Decide which tab should be active first. By default it's "resume", but
-    // login flows can set App.profileInitialTab = 'locations' to nudge new
-    // users to configure their home locations on first visit.
-    const initialTab = App.profileInitialTab || 'resume';
+    // Decide which tab should be active first. By default it's "locations"
+    // so users are encouraged to set their home locations. Other flows can
+    // still override this by setting App.profileInitialTab explicitly.
+    const initialTab = App.profileInitialTab || 'locations';
     // Reset after reading so subsequent visits behave normally unless
     // explicitly overridden again.
     App.profileInitialTab = null;
