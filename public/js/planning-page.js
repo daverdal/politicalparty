@@ -294,8 +294,132 @@ App.pages.planning = async function () {
             const cycleStart = activeSession.cycleStart || activeSession.createdAt || null;
             const cycleEnd = activeSession.cycleEnd || null;
 
-            const stages = ['draft', 'discussion', 'decision', 'review', 'completed'];
-            const stageIndex = stages.indexOf(status);
+            // Build a time-based timeline from start → end with milestones (plan, issues, goals, actions)
+            const toMs = (d) => (d ? new Date(d).getTime() : null);
+
+            const timelineEvents = [];
+
+            if (cycleStart) {
+                timelineEvents.push({
+                    kind: 'plan',
+                    label: 'Plan start',
+                    date: cycleStart,
+                    color: '#0d6efd'
+                });
+            } else if (activeSession.createdAt) {
+                timelineEvents.push({
+                    kind: 'plan',
+                    label: 'Plan created',
+                    date: activeSession.createdAt,
+                    color: '#0d6efd'
+                });
+            }
+
+            if (cycleEnd) {
+                timelineEvents.push({
+                    kind: 'plan',
+                    label: 'Planned end',
+                    date: cycleEnd,
+                    color: '#6c757d'
+                });
+            }
+
+            issues.forEach((i) => {
+                if (i.createdAt) {
+                    timelineEvents.push({
+                        kind: 'issue',
+                        label: `Issue: ${i.title}`,
+                        date: i.createdAt,
+                        color: '#198754'
+                    });
+                }
+            });
+
+            goals.forEach((g) => {
+                if (g.createdAt) {
+                    timelineEvents.push({
+                        kind: 'goal',
+                        label: `Goal: ${g.title}`,
+                        date: g.createdAt,
+                        color: '#fd7e14'
+                    });
+                }
+            });
+
+            actions.forEach((a) => {
+                if (a.createdAt) {
+                    timelineEvents.push({
+                        kind: 'action',
+                        label: `Action: ${a.description}`,
+                        date: a.createdAt,
+                        color: '#20c997'
+                    });
+                }
+            });
+
+            // Compute timeline bounds
+            let startMs = toMs(cycleStart || activeSession.createdAt);
+            let endMs = toMs(cycleEnd);
+
+            let maxEventMs = startMs;
+            timelineEvents.forEach((ev) => {
+                const ms = toMs(ev.date);
+                ev._ms = ms;
+                if (ms && (!maxEventMs || ms > maxEventMs)) {
+                    maxEventMs = ms;
+                }
+            });
+
+            if (!endMs) {
+                if (startMs && maxEventMs && maxEventMs > startMs) {
+                    const span = maxEventMs - startMs;
+                    endMs = maxEventMs + span * 0.25;
+                } else if (startMs) {
+                    endMs = startMs + 1000 * 60 * 60 * 24 * 7; // +7 days fallback
+                }
+            }
+
+            let timelineHtml = '';
+            if (startMs && endMs && endMs > startMs && timelineEvents.length) {
+                const eventsHtml = timelineEvents
+                    .filter((ev) => ev._ms)
+                    .map((ev) => {
+                        const ratio = (ev._ms - startMs) / (endMs - startMs);
+                        const clamped = Math.max(0, Math.min(1, ratio || 0));
+                        const leftPct = (clamped * 100).toFixed(1);
+                        const safeLabel = ev.label.replace(/"/g, '&quot;');
+                        const dateLabel = App.formatDate(ev.date);
+                        return `
+                            <div class="planning-timeline-event" style="position: absolute; top: 0; left: ${leftPct}%; transform: translateX(-50%);">
+                                <div 
+                                    class="planning-timeline-dot"
+                                    style="width: 12px; height: 12px; border-radius: 999px; background: ${ev.color}; border: 2px solid #ffffff; box-shadow: 0 0 0 2px rgba(0,0,0,0.1); cursor: default;"
+                                    title="${safeLabel} • ${dateLabel}"
+                                ></div>
+                            </div>
+                        `;
+                    })
+                    .join('');
+
+                timelineHtml = `
+                    <div class="planning-timeline" style="margin-bottom: 16px;">
+                        <div class="planning-timeline-label-row" style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+                            <span class="planning-timeline-title" style="font-weight: 500; font-size: 0.9rem;">Plan timeline</span>
+                            ${
+                                cycleStart && cycleEnd
+                                    ? `<span class="planning-timeline-dates" style="font-size: 0.8rem; color: #6c757d;">
+                                            ${App.formatDate(cycleStart)} → ${App.formatDate(cycleEnd)}
+                                       </span>`
+                                    : ''
+                            }
+                        </div>
+                        <div class="planning-timeline-track" style="position: relative; height: 26px;">
+                            <div style="position: absolute; top: 11px; left: 0; right: 0; height: 4px; border-radius: 999px; background: linear-gradient(90deg, #198754, #0d6efd); opacity: 0.3;"></div>
+                            ${eventsHtml}
+                        </div>
+                    </div>
+                `;
+            }
 
             // Group comments by section for display (session-level vs per-issue)
             const commentsByIssue = {};
@@ -322,40 +446,7 @@ App.pages.planning = async function () {
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="planning-timeline">
-                            <div class="planning-timeline-label-row">
-                                <span class="planning-timeline-title">Plan timeline</span>
-                                ${
-                                    cycleStart && cycleEnd
-                                        ? `<span class="planning-timeline-dates">
-                                            ${App.formatDate(cycleStart)} → ${App.formatDate(cycleEnd)}
-                                           </span>`
-                                        : ''
-                                }
-                            </div>
-                            <div class="planning-timeline-track">
-                                ${stages
-                                    .map((stage, idx) => {
-                                        const isActive = idx === stageIndex;
-                                        const isPast = stageIndex !== -1 && idx < stageIndex;
-                                        const dotClasses = [
-                                            'planning-timeline-dot',
-                                            isActive ? 'active' : '',
-                                            isPast ? 'past' : ''
-                                        ]
-                                            .filter(Boolean)
-                                            .join(' ');
-                                        return `
-                                            <div class="planning-timeline-step">
-                                                <div class="${dotClasses}"></div>
-                                                <div class="planning-timeline-step-label">${stage}</div>
-                                            </div>
-                                        `;
-                                    })
-                                    .join('')}
-                            </div>
-                        </div>
-
+                        ${timelineHtml}
                         <div class="profile-stats">
                             <div class="profile-stat">
                                 <span class="profile-stat-value">${issues.length}</span>
