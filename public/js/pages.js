@@ -15,12 +15,14 @@ App.pages.dashboard = async function() {
     content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     
     try {
-        const [users, ideas, events, votes] = await Promise.all([
-            App.api('/users'),
-            App.api('/ideas'),
-            App.api('/events'),
-            App.api('/votes')
-        ]);
+        // Use a lightweight summary endpoint so the dashboard does not have to
+        // load full user/idea/event/vote lists (which can be slow and heavy
+        // on small production instances).
+        const summary = await App.api('/dashboard/summary');
+        const usersCount = summary && typeof summary.users === 'number' ? summary.users : 0;
+        const ideasCount = summary && typeof summary.ideas === 'number' ? summary.ideas : 0;
+        const eventsCount = summary && typeof summary.events === 'number' ? summary.events : 0;
+        const votesCount = summary && typeof summary.votes === 'number' ? summary.votes : 0;
         
         let pointsSummary = null;
         let localLeaderboard = null;
@@ -52,10 +54,10 @@ App.pages.dashboard = async function() {
             </header>
             
             <div class="stats-row">
-                <div class="stat-card"><div class="stat-label">Members</div><div class="stat-value">${users.length}</div></div>
-                <div class="stat-card"><div class="stat-label">Ideas</div><div class="stat-value">${ideas.length}</div></div>
-                <div class="stat-card"><div class="stat-label">Events</div><div class="stat-value">${events.length}</div></div>
-                <div class="stat-card"><div class="stat-label">Votes</div><div class="stat-value">${votes.length}</div></div>
+                <div class="stat-card"><div class="stat-label">Members</div><div class="stat-value">${usersCount}</div></div>
+                <div class="stat-card"><div class="stat-label">Ideas</div><div class="stat-value">${ideasCount}</div></div>
+                <div class="stat-card"><div class="stat-label">Events</div><div class="stat-value">${eventsCount}</div></div>
+                <div class="stat-card"><div class="stat-label">Votes</div><div class="stat-value">${votesCount}</div></div>
             </div>
             
             <div class="cards-grid">
