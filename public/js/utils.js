@@ -21,7 +21,34 @@ App.apiPost = async function(endpoint, data) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     });
-    return { response, data: await response.json() };
+
+    // Be defensive: some infrastructure or unexpected errors may return
+    // an HTML error page instead of JSON, which would cause response.json()
+    // to throw "Unexpected token '<'...". We swallow that here and expose a
+    // safe fallback shape so the UI can show a friendly error instead.
+    let parsed = null;
+    let textFallback = null;
+    try {
+        parsed = await response.json();
+    } catch (err) {
+        try {
+            textFallback = await response.text();
+        } catch (_) {
+            textFallback = null;
+        }
+
+        if (typeof App.logClientEvent === 'function') {
+            App.logClientEvent('error', 'Non-JSON response from API POST', {
+                endpoint,
+                status: response.status,
+                textStartsWith: textFallback ? textFallback.slice(0, 80) : null,
+                parseError: err && err.message
+            });
+        }
+    }
+
+    const dataSafe = parsed || (textFallback ? { raw: textFallback } : {});
+    return { response, data: dataSafe };
 };
 
 App.apiPostNoBody = async function(endpoint) {
