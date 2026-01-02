@@ -1,0 +1,93 @@
+Cursor Blueprint (Updated with Phases)
+
+You can paste this over the previous blueprint or replace it.
+
+🔹 CURSOR PROJECT PROMPT — PLANNING WITH PHASES 🔹
+
+Build a simple planning module with hidden phases.
+Users should never feel like they’re in a “process”, but the system should stay organized.
+
+Planning Phases (Internal Only)
+Phase	System Status	Staff Language
+Start	draft	“Getting started”
+Check	active	“Quick check”
+Do	active	“Working on it”
+Wrap	done	“Wrapped up”
+Staff-Facing Questions (DO NOT CHANGE)
+
+What are we focusing on for the next 3 months?
+
+What are we actually going to do?
+
+Who’s involved or can help?
+
+Phase Behaviors
+Start (draft)
+
+Full editing
+
+No required fields
+
+Friendly tone
+
+No warnings
+
+Check (active)
+
+Soft validation only
+
+Visibility to leadership
+
+No rejection or scoring
+
+Comments allowed
+
+Do (active)
+
+Check off actions
+
+Optional check-ins (👍 😐 👎)
+
+No deadlines enforced
+
+Wrap (done)
+
+Lock edits (except notes)
+
+One-tap reflection
+
+Easy “Copy for next time”
+
+UX Rules
+
+Phases should feel like natural moments, not steps
+
+No “Next Phase” buttons
+
+Phase changes should feel automatic or optional
+
+Explicit Rule
+
+If a feature makes staff feel judged, rushed, or managed — remove it.
+
+Why This Is the Right Balance
+
+Leadership gets structure
+
+Staff get simplicity
+
+Ridings feel respected
+
+Planning becomes a habit, not a burden
+
+Next really useful step
+
+If you want, we can:
+
+Rename phases into cultural language (Circle / Fire / Path / Rest)
+
+Decide who can move a plan between phases
+
+Design the leadership overview screen that stays non-threatening
+
+You’re asking the right questions — this is exactly how good systems get built.

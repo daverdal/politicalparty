@@ -1042,6 +1042,19 @@ async function voteOnIssue({ sessionId, issueId, userId }) {
         throw new Error('User ID required for voting');
     }
 
+    // Suppress likes/support in the first phase (Start / draft)
+    const sessionMeta = await getSessionById(sessionId);
+    if (!sessionMeta) {
+        throw new Error('Session not found');
+    }
+    if (sessionMeta.status === 'draft') {
+        const err = new Error(
+            'Supporting issues is only available after the Start phase (once the plan leaves draft).'
+        );
+        err.statusCode = 400;
+        throw err;
+    }
+
     const driver = getDriver();
     const session = driver.session({ database: getDatabase() });
 

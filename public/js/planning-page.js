@@ -104,10 +104,12 @@ App.pages.planning = async function () {
                 .map((loc) => {
                     const label = typeToLabel[loc.type] || loc.type || 'Location';
                     const isSelected = selected && selected.id === loc.id && selected.type === loc.type;
+                    const safeName = (loc.name || '').replace(/"/g, '&quot;');
                     return `
                         <option 
                             value="${loc.id}" 
                             data-type="${loc.type}"
+                            data-name="${safeName}"
                             ${isSelected ? 'selected' : ''}
                         >
                             ${loc.name} (${label})
@@ -291,6 +293,35 @@ App.pages.planning = async function () {
             const actions = activeSession.actions || [];
 
             const status = activeSession.status || 'draft';
+
+            // Map internal status → player-visible phase & label
+            const phaseConfig = {
+                draft: { key: 'Start', label: 'Getting started' },
+                discussion: { key: 'Check', label: 'Quick check' },
+                decision: { key: 'Do', label: 'Working on it' },
+                review: { key: 'Do', label: 'Working on it' },
+                completed: { key: 'Wrap', label: 'Wrapped up' }
+            };
+            const phase = phaseConfig[status] || null;
+
+            let phaseHelpText = '';
+            if (phase) {
+                if (phase.key === 'Start') {
+                    phaseHelpText =
+                        'Phase: Start – this is a friendly drafting space to collect issues, goals, and ideas.';
+                } else if (phase.key === 'Check') {
+                    phaseHelpText =
+                        'Phase: Check – share and react. This is a quick check-in with your group or leaders.';
+                } else if (phase.key === 'Do') {
+                    phaseHelpText =
+                        'Phase: Do – focus on actions and progress. Keep moving the plan forward together.';
+                } else if (phase.key === 'Wrap') {
+                    phaseHelpText =
+                        'Phase: Wrap – the main work is finished. Capture reflections and what you learned.';
+                }
+            }
+            const isWrapPhase = !!(phase && phase.key === 'Wrap');
+
             const cycleStart = activeSession.cycleStart || activeSession.createdAt || null;
             const cycleEnd = activeSession.cycleEnd || null;
 
@@ -486,17 +517,28 @@ App.pages.planning = async function () {
                 }
             });
 
+            const phaseStatusLine = phase
+                ? `For <strong>${locName}</strong> • Phase: <strong>${phase.key}</strong> – ${
+                      phase.label
+                  } • Status: <strong>${status}</strong>`
+                : `For <strong>${locName}</strong> • Status: <strong>${status}</strong>`;
+
             sessionContainer.innerHTML = `
                 <div class="card">
                     <div class="card-header">
                         <div>
                             <h3 class="card-title">${activeSession.title || 'Strategic Plan'}</h3>
                             <p class="page-subtitle">
-                                For <strong>${locName}</strong> • Status: <strong>${status}</strong>
+                                ${phaseStatusLine}
                             </p>
                         </div>
                     </div>
                     <div class="card-body">
+                        ${
+                            phaseHelpText
+                                ? `<p class="page-subtitle" style="margin-top: 0; margin-bottom: 8px;">${phaseHelpText}</p>`
+                                : ''
+                        }
                         ${timelineHtml}
                         <div class="profile-stats">
                             <div class="profile-stat">
@@ -621,6 +663,135 @@ App.pages.planning = async function () {
 
                             <div class="card">
                                 <div class="card-header">
+                                    <h3 class="card-title">Goals & Outcomes</h3>
+                                </div>
+                                <div class="card-body">
+                                    ${
+                                        goals.length
+                                            ? `
+                                        <ul class="simple-list">
+                                            ${goals
+                                                .map(
+                                                    (g) => `
+                                                <li class="simple-list-item">
+                                                    <div class="simple-list-main">
+                                                        <span class="simple-list-name">${g.title}</span>
+                                                        <span class="simple-list-meta">
+                                                            ${g.description || ''}
+                                                        </span>
+                                                        <span class="simple-list-meta">
+                                                            ${
+                                                                g.metric
+                                                                    ? 'Metric: ' + g.metric + ' • '
+                                                                    : ''
+                                                            }Status: ${
+                                                                g.status
+                                                                    ? g.status.replace(/_/g, ' ')
+                                                                    : 'not started'
+                                                            }${
+                                                                g.dueDate
+                                                                    ? ' • Due ' +
+                                                                      App.formatDate(g.dueDate)
+                                                                    : ''
+                                                            }
+                                                        </span>
+                                                    </div>
+                                                </li>
+                                            `
+                                                )
+                                                .join('')}
+                                        </ul>
+                                    `
+                                            : '<p class="empty-text">No goals yet. Turn your priorities into a few clear goals.</p>'
+                                    }
+
+                                    ${
+                                        isWrapPhase
+                                            ? '<p class="empty-text" style="margin-top: 12px;">Goals are locked in the Wrap phase. Use comments to reflect on what worked and what should change next time.</p>'
+                                            : `
+                                    <form id="planning-goal-form" class="auth-form" style="margin-top: 12px;">
+                                        <label>
+                                            <span>New goal</span>
+                                            <input type="text" id="planning-goal-title" class="form-input" required>
+                                        </label>
+                                        <label>
+                                            <span>Goal details (optional)</span>
+                                            <textarea id="planning-goal-description" class="form-textarea" rows="2"></textarea>
+                                        </label>
+                                        <label>
+                                            <span>How will we know this is working? (metric, optional)</span>
+                                            <input type="text" id="planning-goal-metric" class="form-input">
+                                        </label>
+                                        <label>
+                                            <span>Target date (optional)</span>
+                                            <input type="date" id="planning-goal-due" class="form-input">
+                                        </label>
+                                        <button type="submit" class="btn btn-primary btn-sm">Add goal</button>
+                                    </form>
+                                    `
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">Actions & Decisions</h3>
+                                </div>
+                                <div class="card-body">
+                                    ${
+                                        actions.length
+                                            ? `
+                                        <ul class="simple-list">
+                                            ${actions
+                                                .map(
+                                                    (a) => `
+                                                <li class="simple-list-item">
+                                                    <div class="simple-list-main">
+                                                        <span class="simple-list-name">${a.description}</span>
+                                                        <span class="simple-list-meta">
+                                                            Status: ${
+                                                                a.status
+                                                                    ? a.status.replace(/_/g, ' ')
+                                                                    : 'proposed'
+                                                            }${
+                                                                a.dueDate
+                                                                    ? ' • Target ' +
+                                                                      App.formatDate(a.dueDate)
+                                                                    : ''
+                                                            }
+                                                        </span>
+                                                    </div>
+                                                </li>
+                                            `
+                                                )
+                                                .join('')}
+                                        </ul>
+                                    `
+                                            : '<p class="empty-text">No actions yet. Add a few concrete steps you can take.</p>'
+                                    }
+
+                                    ${
+                                        isWrapPhase
+                                            ? '<p class="empty-text" style="margin-top: 12px;">Actions are frozen in the Wrap phase. Look back at what was tried and capture lessons in the comments.</p>'
+                                            : `
+                                    <form id="planning-action-form" class="auth-form" style="margin-top: 12px;">
+                                        <label>
+                                            <span>New action / decision</span>
+                                            <input type="text" id="planning-action-description" class="form-input" required>
+                                        </label>
+                                        <label>
+                                            <span>Target date (optional)</span>
+                                            <input type="date" id="planning-action-due" class="form-input">
+                                        </label>
+                                        <button type="submit" class="btn btn-secondary btn-sm">Add action</button>
+                                    </form>
+                                    `
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header">
                                     <h3 class="card-title">Comments</h3>
                                 </div>
                                 <div class="card-body">
@@ -691,12 +862,86 @@ App.pages.planning = async function () {
                 });
             }
 
+            // Wire up Goals form
+            const goalForm = document.getElementById('planning-goal-form');
+            const goalTitleInput = document.getElementById('planning-goal-title');
+            const goalDescInput = document.getElementById('planning-goal-description');
+            const goalMetricInput = document.getElementById('planning-goal-metric');
+            const goalDueInput = document.getElementById('planning-goal-due');
+
+            if (goalForm && goalTitleInput) {
+                goalForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const title = (goalTitleInput.value || '').trim();
+                    const description = (goalDescInput?.value || '').trim();
+                    const metric = (goalMetricInput?.value || '').trim();
+                    const dueDate = goalDueInput && goalDueInput.value ? goalDueInput.value : null;
+                    if (!title) return;
+
+                    try {
+                        const { response, data } = await App.apiPost(
+                            `/strategic-sessions/${encodeURIComponent(activeSession.id)}/goals`,
+                            { title, description, metric, dueDate }
+                        );
+                        if (!response.ok) {
+                            alert(data && data.error ? data.error : 'Could not add goal.');
+                            return;
+                        }
+                        goalTitleInput.value = '';
+                        if (goalDescInput) goalDescInput.value = '';
+                        if (goalMetricInput) goalMetricInput.value = '';
+                        if (goalDueInput) goalDueInput.value = '';
+                        loadForCurrentSelection();
+                    } catch (err) {
+                        alert(err.message || 'Unable to add goal.');
+                    }
+                });
+            }
+
+            // Wire up Actions form
+            const actionForm = document.getElementById('planning-action-form');
+            const actionDescInput = document.getElementById('planning-action-description');
+            const actionDueInput = document.getElementById('planning-action-due');
+
+            if (actionForm && actionDescInput) {
+                actionForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const description = (actionDescInput.value || '').trim();
+                    const dueDate = actionDueInput && actionDueInput.value ? actionDueInput.value : null;
+                    if (!description) return;
+
+                    try {
+                        const { response, data } = await App.apiPost(
+                            `/strategic-sessions/${encodeURIComponent(activeSession.id)}/actions`,
+                            { description, dueDate }
+                        );
+                        if (!response.ok) {
+                            alert(data && data.error ? data.error : 'Could not add action.');
+                            return;
+                        }
+                        actionDescInput.value = '';
+                        if (actionDueInput) actionDueInput.value = '';
+                        loadForCurrentSelection();
+                    } catch (err) {
+                        alert(err.message || 'Unable to add action.');
+                    }
+                });
+            }
+
             // Wire up "Support" buttons for issues (likes)
             const supportButtons = sessionContainer.querySelectorAll(
                 '.planning-issue-support-btn'
             );
             supportButtons.forEach((btn) => {
                 btn.addEventListener('click', async () => {
+                    // Suppress likes/support in the first phase (Start / draft)
+                    if (status === 'draft') {
+                        alert(
+                            'Support voting is available after the Start phase. Move the plan into Check or Do before collecting supports.'
+                        );
+                        return;
+                    }
+
                     if (!isVerified) {
                         alert('Please verify your email to support issues in a Strategic Plan.');
                         return;
@@ -817,7 +1062,8 @@ App.pages.planning = async function () {
 
             const locId = selectedOption.value;
             const locType = selectedOption.getAttribute('data-type');
-            const locName = selectedOption.textContent.trim();
+            const locName =
+                selectedOption.getAttribute('data-name') || selectedOption.textContent.trim();
 
             App.planningState.selectedLocation = { id: locId, type: locType, name: locName };
 

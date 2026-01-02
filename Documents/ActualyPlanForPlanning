@@ -1,0 +1,88 @@
+Actual Plan for Strategic Planning Module (Visible Phases)
+
+Goal
+- Make Strategic Planning feel simple and inviting for players while giving AMC leadership enough structure to run real planning cycles.
+
+Core Concepts
+- One Strategic Plan (StrategicSession) per location per year (already implemented).
+- Everyone collaborates on Issues, Goals, Actions, Comments; identities are mostly hidden.
+- Plans move through a small number of visible phases that feel like “status”, not a rigid process.
+
+Visible Phases (player-facing)
+- Start (system status: draft)
+  - Label: “Getting started”
+  - Behavior: full editing, no required fields, friendly copy, no warnings.
+- Check (system status: discussion)
+  - Label: “Quick check”
+  - Behavior: soft validation only, plan visible to leadership, comments encouraged, no scoring.
+- Do (system status: decision)
+  - Label: “Working on it”
+  - Behavior: focus on actions and goal progress; players can check off actions; optional quick check-ins (👍 😐 👎).
+- Wrap (system status: completed)
+  - Label: “Wrapped up”
+  - Behavior: lock main edits (title/vision/issues/goals/actions); allow reflections and notes; easy “Copy for next time”.
+
+Mapping to Existing Backend Status
+- Backend PLAN_STAGES = ['draft', 'discussion', 'decision', 'review', 'completed'].
+- Player-facing phase mapping:
+  - draft      → Phase: Start – “Getting started”
+  - discussion → Phase: Check – “Quick check”
+  - decision   → Phase: Do – “Working on it”
+  - review     → Phase: Do (still “Working on it”, focused on refinement)
+  - completed  → Phase: Wrap – “Wrapped up”
+
+Data Model (StrategicSession node)
+- Existing fields we rely on:
+  - status: one of PLAN_STAGES, drives internal lifecycle and notifications.
+  - createdAt, updatedAt, stageStartedAt, cycleStart, cycleEnd.
+  - issuesJson, commentsJson, goalsJson, actionsJson, swotJson, pestJson, reviewJson.
+- Additional derived fields (no schema change required):
+  - phaseKey: derived from status using the mapping above (Start / Check / Do / Wrap).
+  - phaseLabel: derived friendly label (“Getting started”, “Quick check”, etc.).
+  - phaseSince: use stageStartedAt or createdAt for “Phase since” text in the UI.
+
+Frontend: Planning Page (planning-page.js)
+- Header
+  - Show current phase along with status:
+    - Example: “For Manitoba Policy Nerds • Phase: Start – Getting started • Status: draft”.
+  - Tooltip or small help text under the header describing what this phase means.
+- Timeline
+  - Keep using cycleStart / cycleEnd for the main line.
+  - Optionally tint background or add a small legend: “Current phase: Do – Working on it”.
+- Actions by Phase (light-touch UX only at first)
+  - Start: show suggestion text like “Add issues or goals; nothing is final yet.”
+  - Check: encourage comments and quick reactions, but no harsh validation.
+  - Do: highlight actions list; maybe emphasize due dates and completion checkboxes later.
+  - Wrap: show a small “Reflection” comment area and label that main structure is wrapped.
+
+Permissions and Transitions
+- Who can change phase?
+  - Start simple: only admins (already true because status updates go through admin-only route).
+  - Later: allow plan creators or designated “location moderators” to request/status change.
+- How phases change:
+  - No “Next Phase” wizard buttons.
+  - Use existing status changes on the backend (PUT /api/strategic-sessions/:id with status), surfaced as:
+    - A small dropdown or link for admins: “Plan phase / status”.
+    - Auto-advance logic (already present) can keep moving statuses over time; UI just reflects it.
+
+Safety and Tone Rules
+- Do not show anything that feels like scoring or “grading” ridings.
+- Avoid showing how “late” a plan is; show where we are instead (“Phase: Do – Working on it”).
+- Keep copy short, friendly, and optimistic.
+
+Implementation Plan (first slice)
+- Backend
+  - Reuse existing PLAN_STAGES and status field; no schema change.
+  - Optionally add a helper (or just embed mapping logic in the frontend) to map status → phaseKey / phaseLabel.
+- Frontend (planning-page.js)
+  - Step 1: Derive phaseKey and phaseLabel from activeSession.status.
+  - Step 2: Update the plan header to display: location, phase, and status.
+  - Step 3: Add a short line of helper text under the header based on phaseKey.
+  - Step 4 (optional): Add a small legend near the timeline showing the current phase.
+
+Future Enhancements (later)
+- Add a very small admin-only control to adjust status/phase from the UI (uses existing PUT route).
+- Add optional quick check-ins (👍 😐 👎) during Do phase and show aggregated mood.
+- Add “Copy for next time” action in Wrap phase to clone a completed plan into a new year’s plan.
+
+
