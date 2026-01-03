@@ -10,6 +10,22 @@ const locationService = require('../services/locationService');
 const { getSession } = require('../config/db');
 const { authenticate, requireAdmin, requireVerifiedUser } = require('../middleware/auth');
 const moderatorService = require('../services/moderatorService');
+const crypto = require('crypto');
+
+function generateAdhocGroupId(provinceId, name) {
+    const safeProv = String(provinceId || 'xx')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '');
+    const base = String(name || 'group')
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'group';
+    const rand = crypto.randomUUID
+        ? crypto.randomUUID().slice(0, 8)
+        : crypto.randomBytes(4).toString('hex');
+    return `ag-${safeProv}-${base}-${rand}`;
+}
 
 // GET /api/locations - Get full location hierarchy
 router.get('/', async (req, res) => {
@@ -395,8 +411,14 @@ router.post('/towns', async (req, res) => {
 // POST /api/locations/adhoc-groups - Create a new adhoc group (verified users can create)
 router.post('/adhoc-groups', authenticate, requireVerifiedUser, async (req, res) => {
     const session = getSession();
-    const { id, name, description, provinceId } = req.body;
-    
+    const { id: providedId, name, description, provinceId } = req.body || {};
+
+    if (!name || !provinceId) {
+        return res.status(400).json({ error: 'Both name and provinceId are required.' });
+    }
+
+    const id = providedId || generateAdhocGroupId(provinceId, name);
+
     try {
         await session.run(
             `
@@ -410,7 +432,7 @@ router.post('/adhoc-groups', authenticate, requireVerifiedUser, async (req, res)
         `,
             { id, name, description, createdByUserId: req.user.id }
         );
-        
+
         await session.run(
             `
             MATCH (p:Province {id: $provinceId}), (ag:AdhocGroup {id: $groupId})

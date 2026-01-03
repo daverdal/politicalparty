@@ -203,6 +203,27 @@ App.pages.profile = async function () {
                                     </select>
                                 </div>
 
+                                <div class="location-selector-row">
+                                    <button type="button" class="btn btn-secondary btn-sm" id="profile-adhoc-create-toggle">
+                                        ➕ Create a new Ad-hoc Group in this province
+                                    </button>
+                                </div>
+
+                                <div id="profile-adhoc-create-container" class="location-selector-row" style="display:none; flex-direction: column; gap: 6px;">
+                                    <label>
+                                        <span>Group name</span>
+                                        <input id="profile-adhoc-name" class="form-input" placeholder="e.g., Manitoba Policy Nerds">
+                                    </label>
+                                    <label>
+                                        <span>Description (optional)</span>
+                                        <textarea id="profile-adhoc-description" class="form-textarea" rows="3" placeholder="What is this group about?"></textarea>
+                                    </label>
+                                    <button class="btn btn-primary btn-sm" id="profile-adhoc-create-btn">
+                                        Create group
+                                    </button>
+                                    <div id="profile-adhoc-create-feedback" class="profile-resume-feedback"></div>
+                                </div>
+
                                 <button class="btn btn-primary btn-lg" id="profile-locations-save-btn" style="margin-top: 12px;">
                                     Save locations
                                 </button>
@@ -346,6 +367,12 @@ App.pages.profile = async function () {
         const adhocSelect = document.getElementById('profile-adhoc-select');
         const locationsSaveBtn = document.getElementById('profile-locations-save-btn');
         const locationsFeedback = document.getElementById('profile-locations-feedback');
+        const adhocCreateToggle = document.getElementById('profile-adhoc-create-toggle');
+        const adhocCreateContainer = document.getElementById('profile-adhoc-create-container');
+        const adhocCreateName = document.getElementById('profile-adhoc-name');
+        const adhocCreateDescription = document.getElementById('profile-adhoc-description');
+        const adhocCreateBtn = document.getElementById('profile-adhoc-create-btn');
+        const adhocCreateFeedback = document.getElementById('profile-adhoc-create-feedback');
 
         if (
             countrySelect &&
@@ -572,6 +599,91 @@ App.pages.profile = async function () {
                     locationsFeedback.classList.add('error');
                 }
             };
+
+            if (adhocCreateToggle && adhocCreateContainer && adhocCreateFeedback) {
+                adhocCreateToggle.addEventListener('click', () => {
+                    adhocCreateFeedback.textContent = '';
+                    adhocCreateFeedback.classList.remove('error', 'success');
+
+                    if (!provinceSelect.value) {
+                        adhocCreateFeedback.textContent =
+                            'Select a Province / Territory first before creating a group.';
+                        adhocCreateFeedback.classList.add('error');
+                        return;
+                    }
+
+                    const isVisible = adhocCreateContainer.style.display === 'block';
+                    adhocCreateContainer.style.display = isVisible ? 'none' : 'block';
+                });
+            }
+
+            if (
+                adhocCreateBtn &&
+                adhocCreateName &&
+                adhocCreateDescription &&
+                adhocCreateFeedback
+            ) {
+                adhocCreateBtn.addEventListener('click', async () => {
+                    adhocCreateFeedback.textContent = '';
+                    adhocCreateFeedback.classList.remove('error', 'success');
+
+                    const provinceId = provinceSelect.value;
+                    if (!provinceId) {
+                        adhocCreateFeedback.textContent =
+                            'Please select a Province / Territory before creating a group.';
+                        adhocCreateFeedback.classList.add('error');
+                        return;
+                    }
+
+                    const name = adhocCreateName.value.trim();
+                    const description = adhocCreateDescription.value.trim();
+
+                    if (!name) {
+                        adhocCreateFeedback.textContent = 'Group name is required.';
+                        adhocCreateFeedback.classList.add('error');
+                        return;
+                    }
+
+                    adhocCreateBtn.disabled = true;
+                    adhocCreateBtn.textContent = 'Creating...';
+
+                    try {
+                        const { response, data } = await App.apiPost('/locations/adhoc-groups', {
+                            name,
+                            description,
+                            provinceId
+                        });
+
+                        if (!response.ok) {
+                            const msg =
+                                (data && data.error) ||
+                                'Could not create this Ad-hoc Group right now.';
+                            adhocCreateFeedback.textContent = msg;
+                            adhocCreateFeedback.classList.add('error');
+                        } else {
+                            adhocCreateFeedback.textContent = 'Ad-hoc Group created.';
+                            adhocCreateFeedback.classList.add('success');
+
+                            // Refresh province children so the new group appears in the dropdown
+                            await loadProvinceChildren(provinceId, false);
+
+                            if (adhocSelect && data && data.id) {
+                                adhocSelect.value = data.id;
+                            }
+
+                            adhocCreateName.value = '';
+                            adhocCreateDescription.value = '';
+                        }
+                    } catch (err) {
+                        adhocCreateFeedback.textContent =
+                            err.message || 'Unable to create this Ad-hoc Group.';
+                        adhocCreateFeedback.classList.add('error');
+                    } finally {
+                        adhocCreateBtn.disabled = false;
+                        adhocCreateBtn.textContent = 'Create group';
+                    }
+                });
+            }
 
             countrySelect.addEventListener('change', async () => {
                 locationsFeedback.textContent = '';

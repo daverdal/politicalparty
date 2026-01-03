@@ -1472,10 +1472,6 @@ App.showEventDetailPanel = function(event) {
 App.pages.map = async function() {
     const content = document.getElementById('content');
     content.innerHTML = `
-        <header class="page-header">
-            <h1 class="page-title">Canada Map</h1>
-            <p class="page-subtitle">Explore First Nations across all provinces and territories</p>
-        </header>
         <div class="canada-map-layout">
             <section class="canada-map-main">
                 <div class="province-map-canvas" id="canada-map-canvas">
