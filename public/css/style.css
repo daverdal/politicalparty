@@ -1099,6 +1099,7 @@ a:hover {
 
 .admin-tab-panels {
   margin-top: 4px;
+  display: block; /* override .cards-grid so sections, not cards, are the grid items */
 }
 
 .admin-tab-panel {
@@ -1106,7 +1107,9 @@ a:hover {
 }
 
 .admin-tab-panel.active {
-  display: block;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 20px;
 }
 
 /* Mobile tweaks: keep three-panel layout but add grab space between columns on Ideas page */
