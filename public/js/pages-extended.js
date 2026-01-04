@@ -1089,7 +1089,9 @@ App.pages.profile = async function() {
                                     <label>Group</label>
                                     <div class="location-field-with-feedback">
                                         <div id="group-feedback" class="location-feedback"></div>
-                                        <select id="group-select" class="form-select" disabled><option value="">-- Select Group --</option></select>
+                                        <select id="group-select" class="form-select" multiple disabled>
+                                            <option value="">-- Select Group(s) --</option>
+                                        </select>
                                     </div>
                                 </div>
                                 
@@ -1378,9 +1380,12 @@ App.pages.profile = async function() {
             ? userDetails.locations
             : [];
         const existingByType = {};
+        const existingAdhocGroups = [];
         existingLocations.forEach((loc) => {
             if (!loc || !loc.type || !loc.id) return;
-            if (!existingByType[loc.type]) {
+            if (loc.type === 'AdhocGroup') {
+                existingAdhocGroups.push(loc);
+            } else if (!existingByType[loc.type]) {
                 existingByType[loc.type] = loc;
             }
         });
@@ -1389,7 +1394,6 @@ App.pages.profile = async function() {
         const existingProvincial = existingByType.ProvincialRiding || null;
         const existingTown = existingByType.Town || null;
         const existingFirstNation = existingByType.FirstNation || null;
-        const existingAdhoc = existingByType.AdhocGroup || null;
 
         // Location selector handlers
         const countrySelect = document.getElementById('country-select');
@@ -1449,9 +1453,13 @@ App.pages.profile = async function() {
         
         // Check if any dropdown has a selection
         const hasAnySelection = () => {
-            return [provinceSelect, federalSelect, provincialSelect, townSelect, firstNationSelect, groupSelect].some(sel => 
-                sel && sel.value
-            );
+            return [provinceSelect, federalSelect, provincialSelect, townSelect, firstNationSelect, groupSelect].some((sel) => {
+                if (!sel) return false;
+                if (sel === groupSelect && sel.multiple) {
+                    return Array.from(sel.selectedOptions || []).some((opt) => opt.value);
+                }
+                return !!sel.value;
+            });
         };
 
         let currentAdhocGroups = [];
@@ -1648,7 +1656,7 @@ App.pages.profile = async function() {
                 populateDropdown(provincialSelect, [], '-- Select Provincial Riding --', 'ProvincialRiding');
                 populateDropdown(townSelect, [], '-- Select Town --', 'Town');
                 populateDropdown(firstNationSelect, [], '-- Select First Nation --', 'FirstNation');
-                populateDropdown(groupSelect, [], '-- Select Group --', 'AdhocGroup');
+                populateDropdown(groupSelect, [], '-- Select Group(s) --', 'AdhocGroup');
                 populateDropdown(adhocGroupSelect, [], '-- Select Group --', 'AdhocGroup');
                 currentAdhocGroups = [];
                 if (adhocDomainContainer) {
@@ -1710,23 +1718,30 @@ App.pages.profile = async function() {
                         firstNationSelect.value = match.id;
                     }
                 }
-                populateDropdown(groupSelect, groups, '-- Select Group --', 'AdhocGroup');
+                populateDropdown(groupSelect, groups, '-- Select Group(s) --', 'AdhocGroup');
                 populateDropdown(adhocGroupSelect, groups, '-- Select Group --', 'AdhocGroup');
                 currentAdhocGroups = Array.isArray(groups) ? groups : [];
 
-                // Preselect the user's existing Ad-hoc Group (if any) in both
-                // the Locations tab and the My Ad-hoc Groups tab.
-                if (existingAdhoc && existingAdhoc.id) {
-                    const match = Array.isArray(groups)
-                        ? groups.find((g) => g.id === existingAdhoc.id)
-                        : null;
-                    if (match) {
-                        if (groupSelect && !groupSelect.value) {
-                            groupSelect.value = match.id;
-                        }
-                        if (adhocGroupSelect && !adhocGroupSelect.value) {
-                            adhocGroupSelect.value = match.id;
-                        }
+                // Preselect the user's existing Ad-hoc Group memberships:
+                // - Locations tab: allow multiple selections in the Group <select>.
+                // - My Ad-hoc Groups tab: select the first matching group, if any.
+                if (Array.isArray(existingAdhocGroups) && existingAdhocGroups.length > 0) {
+                    const matchingGroups = Array.isArray(groups)
+                        ? groups.filter((g) =>
+                              existingAdhocGroups.some((loc) => loc.id === g.id)
+                          )
+                        : [];
+
+                    if (groupSelect && matchingGroups.length > 0) {
+                        const ids = new Set(matchingGroups.map((g) => g.id));
+                        Array.from(groupSelect.options || []).forEach((opt) => {
+                            if (!opt.value) return;
+                            opt.selected = ids.has(opt.value);
+                        });
+                    }
+
+                    if (adhocGroupSelect && !adhocGroupSelect.value && matchingGroups[0]) {
+                        adhocGroupSelect.value = matchingGroups[0].id;
                     }
                 }
                 updateAdhocSecurityControls();
@@ -1767,7 +1782,12 @@ App.pages.profile = async function() {
             if (firstNationSelect?.value) {
                 locations.push({ id: firstNationSelect.value, type: 'FirstNation' });
             }
-            if (groupSelect?.value) {
+            if (groupSelect && groupSelect.multiple) {
+                Array.from(groupSelect.selectedOptions || []).forEach((opt) => {
+                    if (!opt.value) return;
+                    locations.push({ id: opt.value, type: 'AdhocGroup' });
+                });
+            } else if (groupSelect?.value) {
                 locations.push({ id: groupSelect.value, type: 'AdhocGroup' });
             }
             
