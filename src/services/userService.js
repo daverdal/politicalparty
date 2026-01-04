@@ -20,22 +20,18 @@ async function getAllUsers() {
             OPTIONAL MATCH (u)-[:POSTED]->(idea:Idea)<-[:SUPPORTED]-(supporter:User)
             WITH u,
                  collect(DISTINCT {node: loc, labels: labels(loc)}) as locations,
-                 count(DISTINCT supporter) as points
-                        OPTIONAL MATCH (u)-[:POSTED]->(idea:Idea)<-[:SUPPORTED]-(supporter:User)
-                        WITH u,
-                             locations,
-                             count(DISTINCT supporter) as ideaPoints,
-                             coalesce(u.strategicPoints, 0) as strategicPoints
-                        RETURN u, locations, ideaPoints, strategicPoints
+                 count(DISTINCT supporter) as ideaPoints,
+                 coalesce(u.strategicPoints, 0) as strategicPoints
+            RETURN u, locations, ideaPoints, strategicPoints
             ORDER BY coalesce(u.name, u.email) ASC
         `);
 
         return result.records.map(record => {
             const userNode = record.get('u');
             const rawLocations = record.get('locations') || [];
-                    const ideaPoints = toNumber(record.get('ideaPoints'));
-                    const strategicPoints = Number(record.get('strategicPoints') || 0);
-                    const points = ideaPoints + strategicPoints;
+            const ideaPoints = toNumber(record.get('ideaPoints'));
+            const strategicPoints = Number(record.get('strategicPoints') || 0);
+            const points = ideaPoints + strategicPoints;
 
             const user = userNode.properties;
 
@@ -51,7 +47,16 @@ async function getAllUsers() {
                         ...loc.node.properties,
                         type
                     };
-                });
+                })
+                // Deduplicate by (type, id) for safety in case bad data created duplicates.
+                .reduce((acc, loc) => {
+                    const key = `${loc.type || ''}:${loc.id || ''}`;
+                    if (!acc.map[key]) {
+                        acc.map[key] = loc;
+                        acc.list.push(loc);
+                    }
+                    return acc;
+                }, { list: [], map: {} }).list;
 
             const primaryLocation = locations[0] || null;
 
@@ -116,7 +121,17 @@ async function getUserById(userId) {
                     ...loc.node.properties,
                     type
                 };
-            });
+            })
+            // Deduplicate by (type, id) so the same Province/Country doesn't appear twice
+            // even if it was gathered via both direct and derived matches.
+            .reduce((acc, loc) => {
+                const key = `${loc.type || ''}:${loc.id || ''}`;
+                if (!acc.map[key]) {
+                    acc.map[key] = loc;
+                    acc.list.push(loc);
+                }
+                return acc;
+            }, { list: [], map: {} }).list;
         
         // Keep backward compatibility with single location
         const primaryLocation = locations[0] || null;

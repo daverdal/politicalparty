@@ -69,7 +69,19 @@ App.pages.planning = async function () {
         const userDetails = await App.api(`/users/${encodeURIComponent(userId)}`);
         const locations = userDetails.locations || [];
 
-        if (!locations.length) {
+        // De-duplicate locations by (type, id) in case the same Province / location
+        // has been stored twice in the profile. This keeps the dropdown clean.
+        const seenKeys = new Set();
+        const uniqueLocations = [];
+        for (const loc of locations) {
+            const key = `${loc.type || ''}:${loc.id || ''}`;
+            if (!key) continue;
+            if (seenKeys.has(key)) continue;
+            seenKeys.add(key);
+            uniqueLocations.push(loc);
+        }
+
+        if (!uniqueLocations.length) {
             content.innerHTML = `
                 <header class="page-header">
                     <h1 class="page-title">📋 Strategic Planning</h1>
@@ -89,7 +101,7 @@ App.pages.planning = async function () {
         // Remember last-selected location while navigating
         App.planningState = App.planningState || {};
         if (!App.planningState.selectedLocation) {
-            const first = locations[0];
+            const first = uniqueLocations[0];
             App.planningState.selectedLocation = {
                 id: first.id,
                 type: first.type,
@@ -100,7 +112,7 @@ App.pages.planning = async function () {
         const selected = App.planningState.selectedLocation;
 
         const buildLocationOptions = () =>
-            locations
+            uniqueLocations
                 .map((loc) => {
                     const label = typeToLabel[loc.type] || loc.type || 'Location';
                     const isSelected = selected && selected.id === loc.id && selected.type === loc.type;
