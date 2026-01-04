@@ -1086,7 +1086,7 @@ App.pages.profile = async function() {
 
                                 <!-- Ad-hoc Group (AMC, etc.) -->
                                 <div class="location-selector-row">
-                                    <label>Group</label>
+                                    <label>Ad-hoc Groups</label>
                                     <div class="location-field-with-feedback">
                                         <div id="group-feedback" class="location-feedback"></div>
                                         <select id="group-select" class="form-select" multiple disabled>
