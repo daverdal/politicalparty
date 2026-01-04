@@ -36,7 +36,8 @@ module.exports = {
         "The Kings Head Pub",
         "Second Cup on Graham",
         "WannaBees Diner",
-        "Manitoba Policy Nerds"
+        "Manitoba Policy Nerds",
+        "Assembly of Manitoba Chiefs"
     ],
     
     towns: [
@@ -82,7 +83,6 @@ module.exports = {
     ],
     
     firstNations: [
-        { name: "Assembly of Manitoba Chiefs" }, // no specific location in chiefs CSV
         { name: "Barren Lands", lat: 57.88737057399999, lon: -101.6638679 },
         { name: "Berens River", lat: 52.343128623999974, lon: -96.96748281 },
         { name: "Birdtail Sioux", lat: 50.26621875699999, lon: -101.1492468 },
