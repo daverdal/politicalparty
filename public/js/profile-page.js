@@ -409,29 +409,45 @@ App.pages.profile = async function () {
                 selectEl.disabled = false;
             };
 
-            const loadCountriesAndMaybeInitProvince = async () => {
+            // Cache of full location hierarchy (Planet → Country → Provinces)
+            let locationHierarchy = null;
+
+            const loadLocationHierarchy = async () => {
+                if (locationHierarchy) return locationHierarchy;
                 try {
-                    const countries = await App.api('/locations/countries');
-                    fillSelect(countrySelect, countries, 'Select country');
-
-                    // Prefer the user's existing country if we know it; otherwise
-                    // fall back to auto-selecting the only available option.
-                    if (existingCountry) {
-                        const match = countries.find((c) => c.id === existingCountry.id);
-                        if (match) {
-                            countrySelect.value = match.id;
-                        }
-                    } else if (!countrySelect.value && countries.length === 1) {
-                        countrySelect.value = countries[0].id;
-                    }
-
-                    if (countrySelect.value) {
-                        await loadProvinces(countrySelect.value, existingProvince && existingProvince.id);
-                    }
+                    const data = await App.api('/locations');
+                    locationHierarchy = Array.isArray(data) ? data : [];
+                    return locationHierarchy;
                 } catch (err) {
                     locationsFeedback.textContent =
-                        'Unable to load countries. Locations may not be editable right now.';
+                        'Unable to load location hierarchy. Locations may not be editable right now.';
                     locationsFeedback.classList.add('error');
+                    locationHierarchy = [];
+                    return locationHierarchy;
+                }
+            };
+
+            const loadCountriesAndMaybeInitProvince = async () => {
+                const hierarchy = await loadLocationHierarchy();
+                const countries = hierarchy
+                    .map((entry) => entry.country)
+                    .filter((c) => c && c.id && c.name);
+
+                fillSelect(countrySelect, countries, 'Select country');
+
+                // Prefer the user's existing country if we know it; otherwise
+                // fall back to auto-selecting the only available option.
+                if (existingCountry) {
+                    const match = countries.find((c) => c.id === existingCountry.id);
+                    if (match) {
+                        countrySelect.value = match.id;
+                    }
+                } else if (!countrySelect.value && countries.length === 1) {
+                    countrySelect.value = countries[0].id;
+                }
+
+                if (countrySelect.value) {
+                    await loadProvinces(countrySelect.value, existingProvince && existingProvince.id);
                 }
             };
 
@@ -440,25 +456,23 @@ App.pages.profile = async function () {
                     provinceSelect.disabled = true;
                     return;
                 }
-                try {
-                    const provinces = await App.api(
-                        `/locations/countries/${encodeURIComponent(countryId)}/provinces`
-                    );
-                    fillSelect(provinceSelect, provinces, 'Select province');
+                const hierarchy = await loadLocationHierarchy();
+                const entry = hierarchy.find(
+                    (row) => row.country && row.country.id === countryId
+                );
+                const provinces = entry && Array.isArray(entry.provinces) ? entry.provinces : [];
 
-                    // If the user already has a province saved, preselect it and
-                    // load its children so their full location tree appears.
-                    const desiredProvinceId = preselectProvinceId || (existingProvince && existingProvince.id);
-                    if (desiredProvinceId) {
-                        const match = provinces.find((p) => p.id === desiredProvinceId);
-                        if (match) {
-                            provinceSelect.value = match.id;
-                            await loadProvinceChildren(match.id, true);
-                        }
+                fillSelect(provinceSelect, provinces, 'Select province');
+
+                // If the user already has a province saved, preselect it and
+                // load its children so their full location tree appears.
+                const desiredProvinceId = preselectProvinceId || (existingProvince && existingProvince.id);
+                if (desiredProvinceId) {
+                    const match = provinces.find((p) => p.id === desiredProvinceId);
+                    if (match) {
+                        provinceSelect.value = match.id;
+                        await loadProvinceChildren(match.id, true);
                     }
-                } catch (err) {
-                    locationsFeedback.textContent = 'Unable to load provinces for this country.';
-                    locationsFeedback.classList.add('error');
                 }
             };
 
