@@ -988,6 +988,12 @@ App.pages.profile = async function() {
         
         const pendingNominations = nominations.filter(n => !n.hasAccepted);
 
+        // Decide which tab should be active first. By default it's "locations"
+        // so users are encouraged to set their home locations. Other flows can
+        // still override this by setting App.profileInitialTab explicitly.
+        const initialTab = App.profileInitialTab || 'locations';
+        App.profileInitialTab = null;
+
         const baseUrl = window.location.origin;
         const existingResumeShareUrl = userDetails.resumePublic && userDetails.resumePublicToken
             ? `${baseUrl.replace(/\/$/, '')}/resumes/${userDetails.resumePublicToken}`
@@ -1020,85 +1026,15 @@ App.pages.profile = async function() {
                     </div>
 
                     <div class="profile-tabs">
-                        <button class="profile-tab-button active" data-tab="resume">Resume</button>
-                        <button class="profile-tab-button" data-tab="nominations">Nominations & Badges</button>
-                        <button class="profile-tab-button" data-tab="locations">Locations</button>
-                        <button class="profile-tab-button" data-tab="adhoc-groups">My Ad-hoc Groups</button>
-                        <button class="profile-tab-button" data-tab="display">Display</button>
+                        <button class="profile-tab-button ${initialTab === 'locations' ? 'active' : ''}" data-tab="locations">Locations</button>
+                        <button class="profile-tab-button ${initialTab === 'nominations' ? 'active' : ''}" data-tab="nominations">Nominations & Badges</button>
+                        <button class="profile-tab-button ${initialTab === 'resume' ? 'active' : ''}" data-tab="resume">Resume</button>
+                        <button class="profile-tab-button ${initialTab === 'adhoc-groups' ? 'active' : ''}" data-tab="adhoc-groups">My Ad-hoc Groups</button>
+                        <button class="profile-tab-button ${initialTab === 'display' ? 'active' : ''}" data-tab="display">Display</button>
                     </div>
 
                     <div class="profile-tab-panels">
-                        <section class="profile-tab-panel active" data-tab="resume">
-                            <div class="profile-resume-section">
-                                <h4>My Resume</h4>
-                                <p class="resume-help">
-                                    Paste your resume or professional summary below. This helps members understand your background when viewing your profile.
-                                </p>
-                                <textarea id="profile-resume-input" class="form-textarea" rows="8" placeholder="Paste your resume here...">${userDetails.resume || ''}</textarea>
-                                <label class="checkbox-inline">
-                                    <input type="checkbox" id="profile-resume-public" ${userDetails.resumePublic ? 'checked' : ''}>
-                                    <span>Make my resume visible to anyone with the link</span>
-                                </label>
-                                <div class="resume-share" id="profile-resume-share">
-                                    ${
-                                        existingResumeShareUrl
-                                            ? `<span class="resume-share-label">Public link:</span> <a href="${existingResumeShareUrl}" target="_blank" rel="noopener">${existingResumeShareUrl}</a>`
-                                            : '<span class="resume-share-help">Turn on "Make my resume visible" and save to get a shareable link.</span>'
-                                    }
-                                </div>
-                                <button class="btn btn-primary btn-sm" id="profile-resume-save-btn" style="margin-top: 8px;">Save resume</button>
-                                <div id="profile-resume-feedback" class="profile-resume-feedback"></div>
-                            </div>
-                        </section>
-
-                        <section class="profile-tab-panel" data-tab="nominations">
-                            <div class="badge-shelf">
-                                <div class="badge-shelf-title">Badges</div>
-                                ${
-                                    badges && badges.length
-                                        ? `
-                                    <div class="badge-row">
-                                        ${badges
-                                            .map((b) => {
-                                                const scopeLabel = b.scope === 'local' ? 'Local' : 'Global';
-                                                const levelLabel = b.level ? b.level.charAt(0).toUpperCase() + b.level.slice(1) : '';
-                                                return `
-                                                    <span class="badge-chip ${b.scope}">
-                                                        <span class="badge-chip-level">${levelLabel}</span>
-                                                        <span class="badge-chip-scope">${scopeLabel}</span>
-                                                    </span>
-                                                `;
-                                            })
-                                            .join('')}
-                                    </div>
-                                `
-                                        : '<p class="empty-text">Earn badges by collecting local and global support for your ideas.</p>'
-                                }
-                            </div>
-                            ${
-                                pendingNominations && pendingNominations.length
-                                    ? `
-                            <div class="pending-nominations">
-                                <h4>Pending Nominations</h4>
-                                <ul class="simple-list">
-                                    ${pendingNominations
-                                        .map(
-                                            (n) => `
-                                        <li class="simple-list-item">
-                                            <span class="simple-list-name">${n.nominatorName || 'Member'}</span>
-                                            <span class="simple-list-meta">${n.message || ''}</span>
-                                        </li>
-                                    `
-                                        )
-                                        .join('')}
-                                </ul>
-                            </div>
-                            `
-                                    : ''
-                            }
-                        </section>
-
-                        <section class="profile-tab-panel" data-tab="locations">
+                        <section class="profile-tab-panel ${initialTab === 'locations' ? 'active' : ''}" data-tab="locations">
                             <div class="location-selector-section">
                                 <h4>My Location</h4>
                                 <p class="location-help">Set your location to appear in local candidates list and receive nominations for your area.</p>
@@ -1173,6 +1109,76 @@ App.pages.profile = async function() {
                                 `
                                         : ''
                                 }
+                            </div>
+                        </section>
+
+                        <section class="profile-tab-panel ${initialTab === 'nominations' ? 'active' : ''}" data-tab="nominations">
+                            <div class="badge-shelf">
+                                <div class="badge-shelf-title">Badges</div>
+                                ${
+                                    badges && badges.length
+                                        ? `
+                                    <div class="badge-row">
+                                        ${badges
+                                            .map((b) => {
+                                                const scopeLabel = b.scope === 'local' ? 'Local' : 'Global';
+                                                const levelLabel = b.level ? b.level.charAt(0).toUpperCase() + b.level.slice(1) : '';
+                                                return `
+                                                    <span class="badge-chip ${b.scope}">
+                                                        <span class="badge-chip-level">${levelLabel}</span>
+                                                        <span class="badge-chip-scope">${scopeLabel}</span>
+                                                    </span>
+                                                `;
+                                            })
+                                            .join('')}
+                                    </div>
+                                `
+                                        : '<p class="empty-text">Earn badges by collecting local and global support for your ideas.</p>'
+                                }
+                            </div>
+                            ${
+                                pendingNominations && pendingNominations.length
+                                    ? `
+                            <div class="pending-nominations">
+                                <h4>Pending Nominations</h4>
+                                <ul class="simple-list">
+                                    ${pendingNominations
+                                        .map(
+                                            (n) => `
+                                        <li class="simple-list-item">
+                                            <span class="simple-list-name">${n.nominatorName || 'Member'}</span>
+                                            <span class="simple-list-meta">${n.message || ''}</span>
+                                        </li>
+                                    `
+                                        )
+                                        .join('')}
+                                </ul>
+                            </div>
+                            `
+                                    : ''
+                            }
+                        </section>
+
+                        <section class="profile-tab-panel ${initialTab === 'resume' ? 'active' : ''}" data-tab="resume">
+                            <div class="profile-resume-section">
+                                <h4>My Resume</h4>
+                                <p class="resume-help">
+                                    Paste your resume or professional summary below. This helps members understand your background when viewing your profile.
+                                </p>
+                                <textarea id="profile-resume-input" class="form-textarea" rows="8" placeholder="Paste your resume here...">${userDetails.resume || ''}</textarea>
+                                <label class="checkbox-inline">
+                                    <input type="checkbox" id="profile-resume-public" ${userDetails.resumePublic ? 'checked' : ''}>
+                                    <span>Make my resume visible to anyone with the link</span>
+                                </label>
+                                <div class="resume-share" id="profile-resume-share">
+                                    ${
+                                        existingResumeShareUrl
+                                            ? `<span class="resume-share-label">Public link:</span> <a href="${existingResumeShareUrl}" target="_blank" rel="noopener">${existingResumeShareUrl}</a>`
+                                            : '<span class="resume-share-help">Turn on "Make my resume visible" and save to get a shareable link.</span>'
+                                    }
+                                </div>
+                                <button class="btn btn-primary btn-sm" id="profile-resume-save-btn" style="margin-top: 8px;">Save resume</button>
+                                <div id="profile-resume-feedback" class="profile-resume-feedback"></div>
                             </div>
                         </section>
 
@@ -1351,6 +1357,25 @@ App.pages.profile = async function() {
             });
         }
 
+        // Map of the user's existing saved locations by type so we can
+        // pre-populate the dropdowns when they return to this page.
+        const existingLocations = Array.isArray(userDetails.locations)
+            ? userDetails.locations
+            : [];
+        const existingByType = {};
+        existingLocations.forEach((loc) => {
+            if (!loc || !loc.type || !loc.id) return;
+            if (!existingByType[loc.type]) {
+                existingByType[loc.type] = loc;
+            }
+        });
+        const existingProvince = existingByType.Province || null;
+        const existingFederal = existingByType.FederalRiding || null;
+        const existingProvincial = existingByType.ProvincialRiding || null;
+        const existingTown = existingByType.Town || null;
+        const existingFirstNation = existingByType.FirstNation || null;
+        const existingAdhoc = existingByType.AdhocGroup || null;
+
         // Location selector handlers
         const countrySelect = document.getElementById('country-select');
         const provinceSelect = document.getElementById('province-select');
@@ -1471,10 +1496,25 @@ App.pages.profile = async function() {
                 .map((row) => row.country)
                 .filter((c) => c && c.id && c.name);
 
+            // Try to infer the user's country from their saved province (if any)
+            let inferredCountryId = null;
+            if (existingProvince && existingProvince.id) {
+                const rowForProvince = hierarchy.find((row) =>
+                    Array.isArray(row.provinces) &&
+                    row.provinces.some((p) => p && p.id === existingProvince.id)
+                );
+                if (rowForProvince && rowForProvince.country && rowForProvince.country.id) {
+                    inferredCountryId = rowForProvince.country.id;
+                }
+            }
+
             populateDropdown(countrySelect, countries, '-- Select Country --', 'Country');
 
-            // If there is only one country, preselect it and load its provinces
-            if (countries.length === 1) {
+            // Prefer inferred country from existing province; otherwise if there
+            // is only one country, preselect it.
+            if (inferredCountryId) {
+                countrySelect.value = inferredCountryId;
+            } else if (countries.length === 1) {
                 countrySelect.value = countries[0].id;
             }
 
@@ -1485,6 +1525,17 @@ App.pages.profile = async function() {
                 );
                 const provinces = row && Array.isArray(row.provinces) ? row.provinces : [];
                 populateDropdown(provinceSelect, provinces, '-- Select Province --', 'Province');
+
+                // Preselect the user's existing province (if any) and trigger
+                // a change so the child dropdowns hydrate as well.
+                if (existingProvince && existingProvince.id) {
+                    const match = provinces.find((p) => p.id === existingProvince.id);
+                    if (match) {
+                        provinceSelect.value = match.id;
+                        // Trigger change to load ridings/towns/groups and hydrate them
+                        provinceSelect.dispatchEvent(new Event('change'));
+                    }
+                }
             } else {
                 populateDropdown(provinceSelect, [], '-- Select Province --', 'Province');
             }
@@ -1614,12 +1665,54 @@ App.pages.profile = async function() {
                 ]);
                 
                 populateDropdown(federalSelect, federal, '-- Select Federal Riding --', 'FederalRiding');
+                // If the user already has a federal riding saved and it belongs
+                // to this province, preselect it.
+                if (existingFederal && existingFederal.id && !federalSelect.value) {
+                    const match = federal.find((f) => f.id === existingFederal.id);
+                    if (match) {
+                        federalSelect.value = match.id;
+                    }
+                }
                 populateDropdown(provincialSelect, provincial, '-- Select Provincial Riding --', 'ProvincialRiding');
+                if (existingProvincial && existingProvincial.id && !provincialSelect.value) {
+                    const match = provincial.find((p) => p.id === existingProvincial.id);
+                    if (match) {
+                        provincialSelect.value = match.id;
+                    }
+                }
                 populateDropdown(townSelect, towns, '-- Select Town --', 'Town');
+                if (existingTown && existingTown.id && !townSelect.value) {
+                    const match = towns.find((t) => t.id === existingTown.id);
+                    if (match) {
+                        townSelect.value = match.id;
+                    }
+                }
                 populateDropdown(firstNationSelect, firstNations, '-- Select First Nation --', 'FirstNation');
+                if (existingFirstNation && existingFirstNation.id && !firstNationSelect.value) {
+                    const match = firstNations.find((fn) => fn.id === existingFirstNation.id);
+                    if (match) {
+                        firstNationSelect.value = match.id;
+                    }
+                }
                 populateDropdown(groupSelect, groups, '-- Select Group --', 'AdhocGroup');
                 populateDropdown(adhocGroupSelect, groups, '-- Select Group --', 'AdhocGroup');
                 currentAdhocGroups = Array.isArray(groups) ? groups : [];
+
+                // Preselect the user's existing Ad-hoc Group (if any) in both
+                // the Locations tab and the My Ad-hoc Groups tab.
+                if (existingAdhoc && existingAdhoc.id) {
+                    const match = Array.isArray(groups)
+                        ? groups.find((g) => g.id === existingAdhoc.id)
+                        : null;
+                    if (match) {
+                        if (groupSelect && !groupSelect.value) {
+                            groupSelect.value = match.id;
+                        }
+                        if (adhocGroupSelect && !adhocGroupSelect.value) {
+                            adhocGroupSelect.value = match.id;
+                        }
+                    }
+                }
                 updateAdhocSecurityControls();
                 if (saveBtn) {
                     saveBtn.disabled = !hasAnySelection();
