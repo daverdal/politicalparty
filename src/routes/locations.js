@@ -45,22 +45,29 @@ function normalizeEmailDomain(raw) {
 }
 
 // GET /api/locations - Get full location hierarchy
+// Note: We do NOT require a Planet -> Country relationship here so that
+// existing databases that only have Country/Province nodes still work.
 router.get('/', async (req, res) => {
     const session = getSession();
     try {
         const result = await session.run(`
-            MATCH (p:Planet)-[:HAS_COUNTRY]->(c:Country)
+            MATCH (c:Country)
+            OPTIONAL MATCH (p:Planet)-[:HAS_COUNTRY]->(c)
             OPTIONAL MATCH (c)-[:HAS_PROVINCE]->(prov:Province)
-            RETURN p, c, collect(DISTINCT prov) as provinces
+            WITH p, c, collect(DISTINCT prov) AS provinces
+            RETURN p, c, provinces
             ORDER BY c.name
         `);
-        
-        const data = result.records.map(record => ({
-            planet: record.get('p')?.properties,
+
+        const data = result.records.map((record) => ({
+            planet: record.get('p') ? record.get('p').properties : null,
             country: record.get('c').properties,
-            provinces: record.get('provinces').map(p => p.properties).sort((a, b) => a.name.localeCompare(b.name))
+            provinces: record
+                .get('provinces')
+                .map((p) => p.properties)
+                .sort((a, b) => a.name.localeCompare(b.name))
         }));
-        
+
         res.json(data);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -587,31 +594,39 @@ router.post('/adhoc-groups', authenticate, requireVerifiedUser, async (req, res)
     }
 });
 
-// DELETE /api/locations/adhoc-groups/:id - Delete an adhoc group (only by its creator)
+// DELETE /api/locations/adhoc-groups/:id - Delete an adhoc group (creator or admin)
 router.delete('/adhoc-groups/:id', authenticate, requireVerifiedUser, async (req, res) => {
     const session = getSession();
     const { id } = req.params;
     const userId = req.user.id;
+    const isAdmin = req.user.role === 'admin';
 
     try {
-        // Ensure this group exists, was created by the current user, and
-        // is not currently used as the location for a Strategic Plan.
+        // Ensure this group exists and is not currently used as the location for a Strategic Plan.
         const checkResult = await session.run(
             `
-            MATCH (ag:AdhocGroup {id: $id, createdByUserId: $userId})
+            MATCH (ag:AdhocGroup {id: $id})
             OPTIONAL MATCH (s:StrategicSession {locationId: $id, locationType: 'AdhocGroup'})
-            RETURN ag, CASE WHEN count(s) > 0 THEN true ELSE false END AS hasSessions
+            RETURN ag, ag.createdByUserId AS createdByUserId,
+                   CASE WHEN count(s) > 0 THEN true ELSE false END AS hasSessions
         `,
-            { id, userId }
+            { id }
         );
 
         if (!checkResult.records.length) {
+            return res.status(404).json({ error: 'Ad-hoc Group not found.' });
+        }
+
+        const record = checkResult.records[0];
+        const createdByUserId = record.get('createdByUserId');
+        const hasSessions = record.get('hasSessions');
+
+        if (!isAdmin && createdByUserId !== userId) {
             return res
                 .status(403)
                 .json({ error: 'You can only delete Ad-hoc Groups that you created.' });
         }
 
-        const hasSessions = checkResult.records[0].get('hasSessions');
         if (hasSessions) {
             return res.status(400).json({
                 error:
@@ -621,10 +636,10 @@ router.delete('/adhoc-groups/:id', authenticate, requireVerifiedUser, async (req
 
         await session.run(
             `
-            MATCH (ag:AdhocGroup {id: $id, createdByUserId: $userId})
+            MATCH (ag:AdhocGroup {id: $id})
             DETACH DELETE ag
         `,
-            { id, userId }
+            { id }
         );
 
         return res.json({ success: true, message: 'Ad-hoc Group deleted.' });
