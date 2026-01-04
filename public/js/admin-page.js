@@ -317,6 +317,14 @@ App.pages.admin = async function () {
                                 </select>
                             </label>
                         </div>
+                        <div class="form-group" style="margin-bottom: 8px;">
+                            <label>
+                                <span>Existing Ad-hoc Group in this province</span>
+                                <select id="admin-adhoc-existing-select" class="form-select" disabled>
+                                    <option value="">-- No groups yet --</option>
+                                </select>
+                            </label>
+                        </div>
                         <label>
                             <span>Group name</span>
                             <input id="admin-adhoc-name" class="form-input" placeholder="e.g., Manitoba Policy Nerds">
@@ -333,9 +341,17 @@ App.pages.admin = async function () {
                             Only admins or province moderators can create Ad-hoc Groups. In production, access to the
                             group’s Strategic Plan is limited to members whose email ends with the configured domain.
                         </p>
-                        <button class="btn btn-secondary btn-sm" id="admin-adhoc-create-btn" style="margin-top: 8px;">
-                            ➕ Create Ad-hoc Group
-                        </button>
+                        <div style="display:flex; flex-wrap:wrap; gap: 8px; margin-top: 8px;">
+                            <button class="btn btn-secondary btn-sm" id="admin-adhoc-create-btn">
+                                ➕ Create Ad-hoc Group
+                            </button>
+                            <button class="btn btn-secondary btn-sm" id="admin-adhoc-save-domain-btn" disabled>
+                                💾 Save domain for selected group
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" id="admin-adhoc-delete-btn" disabled>
+                                🗑 Delete selected Ad-hoc Group
+                            </button>
+                        </div>
                         <div id="admin-adhoc-feedback" class="profile-resume-feedback" style="margin-top: 8px;"></div>
                     </div>
                 </div>
@@ -832,11 +848,16 @@ App.pages.admin = async function () {
 
         const adhocCountrySelect = document.getElementById('admin-adhoc-country-select');
         const adhocProvinceSelect = document.getElementById('admin-adhoc-province-select');
+        const adhocExistingSelect = document.getElementById('admin-adhoc-existing-select');
         const adhocNameInput = document.getElementById('admin-adhoc-name');
         const adhocDescriptionInput = document.getElementById('admin-adhoc-description');
         const adhocDomainInput = document.getElementById('admin-adhoc-domain');
         const adhocCreateBtn = document.getElementById('admin-adhoc-create-btn');
+        const adhocSaveDomainBtn = document.getElementById('admin-adhoc-save-domain-btn');
+        const adhocDeleteBtn = document.getElementById('admin-adhoc-delete-btn');
         const adhocFeedback = document.getElementById('admin-adhoc-feedback');
+
+        let adhocGroupsForProvince = [];
         if (
             countrySaveBtn &&
             countryIdInput &&
@@ -891,10 +912,13 @@ App.pages.admin = async function () {
         if (
             adhocCountrySelect &&
             adhocProvinceSelect &&
+            adhocExistingSelect &&
             adhocNameInput &&
             adhocDescriptionInput &&
             adhocDomainInput &&
             adhocCreateBtn &&
+            adhocSaveDomainBtn &&
+            adhocDeleteBtn &&
             adhocFeedback
         ) {
             try {
@@ -917,6 +941,13 @@ App.pages.admin = async function () {
                 adhocProvinceSelect.innerHTML =
                     '<option value="">-- Select province --</option>';
                 adhocProvinceSelect.disabled = true;
+                adhocExistingSelect.innerHTML =
+                    '<option value="">-- No groups yet --</option>';
+                adhocExistingSelect.disabled = true;
+                adhocGroupsForProvince = [];
+                adhocDomainInput.value = '';
+                adhocSaveDomainBtn.disabled = true;
+                adhocDeleteBtn.disabled = true;
 
                 if (!countryId) return;
 
@@ -935,6 +966,75 @@ App.pages.admin = async function () {
                         err.message || 'Unable to load provinces for that country.';
                     adhocFeedback.classList.add('error');
                 }
+            });
+
+            adhocProvinceSelect.addEventListener('change', async () => {
+                adhocFeedback.textContent = '';
+                adhocFeedback.classList.remove('error', 'success');
+                const provinceId = adhocProvinceSelect.value;
+                adhocExistingSelect.innerHTML =
+                    '<option value="">-- Loading groups... --</option>';
+                adhocExistingSelect.disabled = true;
+                adhocGroupsForProvince = [];
+                adhocDomainInput.value = '';
+                adhocSaveDomainBtn.disabled = true;
+                adhocDeleteBtn.disabled = true;
+
+                if (!provinceId) {
+                    adhocExistingSelect.innerHTML =
+                        '<option value="">-- No groups yet --</option>';
+                    return;
+                }
+
+                try {
+                    const groups = await App.api(
+                        `/locations/provinces/${encodeURIComponent(provinceId)}/adhoc-groups`
+                    );
+                    adhocGroupsForProvince = Array.isArray(groups) ? groups : [];
+                    if (!adhocGroupsForProvince.length) {
+                        adhocExistingSelect.innerHTML =
+                            '<option value="">-- No groups yet --</option>';
+                        return;
+                    }
+                    adhocExistingSelect.innerHTML =
+                        '<option value="">-- Select group --</option>' +
+                        adhocGroupsForProvince
+                            .map((g) => `<option value="${g.id}">${g.name}</option>`)
+                            .join('');
+                    adhocExistingSelect.disabled = false;
+                } catch (err) {
+                    adhocFeedback.textContent =
+                        err.message || 'Unable to load Ad-hoc Groups for that province.';
+                    adhocFeedback.classList.add('error');
+                    adhocExistingSelect.innerHTML =
+                        '<option value="">-- Error loading groups --</option>';
+                }
+            });
+
+            adhocExistingSelect.addEventListener('change', () => {
+                adhocFeedback.textContent = '';
+                adhocFeedback.classList.remove('error', 'success');
+                const groupId = adhocExistingSelect.value;
+                const selected =
+                    groupId && adhocGroupsForProvince
+                        ? adhocGroupsForProvince.find((g) => g.id === groupId)
+                        : null;
+
+                if (!selected) {
+                    adhocDomainInput.value = '';
+                    adhocSaveDomainBtn.disabled = true;
+                    adhocDeleteBtn.disabled = true;
+                    return;
+                }
+
+                if (selected.allowedEmailDomain) {
+                    adhocDomainInput.value = `@${selected.allowedEmailDomain}`;
+                } else {
+                    adhocDomainInput.value = '';
+                }
+
+                adhocSaveDomainBtn.disabled = false;
+                adhocDeleteBtn.disabled = false;
             });
 
             adhocCreateBtn.addEventListener('click', async () => {
@@ -981,6 +1081,9 @@ App.pages.admin = async function () {
                         adhocNameInput.value = '';
                         adhocDescriptionInput.value = '';
                         // Leave domain in place so admin can see what was used
+
+                        // Refresh the existing-groups list for this province
+                        adhocProvinceSelect.dispatchEvent(new Event('change'));
                     }
                 } catch (err) {
                     adhocFeedback.textContent =
@@ -990,6 +1093,115 @@ App.pages.admin = async function () {
                 } finally {
                     adhocCreateBtn.disabled = false;
                     adhocCreateBtn.textContent = '➕ Create Ad-hoc Group';
+                }
+            });
+        }
+
+        if (adhocSaveDomainBtn) {
+            adhocSaveDomainBtn.addEventListener('click', async () => {
+                adhocFeedback.textContent = '';
+                adhocFeedback.classList.remove('error', 'success');
+
+                const groupId = adhocExistingSelect.value;
+                if (!groupId) {
+                    adhocFeedback.textContent = 'Select a group first.';
+                    adhocFeedback.classList.add('error');
+                    return;
+                }
+
+                const raw = adhocDomainInput.value.trim();
+
+                adhocSaveDomainBtn.disabled = true;
+                adhocSaveDomainBtn.textContent = 'Saving...';
+
+                try {
+                    const { response, data } = await App.apiPut(
+                        `/locations/adhoc-groups/${encodeURIComponent(groupId)}/domain`,
+                        { allowedEmailDomain: raw }
+                    );
+
+                    if (!response.ok) {
+                        adhocFeedback.textContent =
+                            (data && data.error) ||
+                            'Could not save the email domain rule for this group.';
+                        adhocFeedback.classList.add('error');
+                    } else {
+                        adhocFeedback.textContent = 'Email domain rule saved.';
+                        adhocFeedback.classList.add('success');
+
+                        // Update local cache
+                        const updatedGroup = data || {};
+                        adhocGroupsForProvince = adhocGroupsForProvince.map((g) =>
+                            g.id === updatedGroup.id ? updatedGroup : g
+                        );
+                    }
+                } catch (err) {
+                    adhocFeedback.textContent =
+                        err.message || 'Unable to save the email domain rule.';
+                    adhocFeedback.classList.add('error');
+                } finally {
+                    adhocSaveDomainBtn.disabled = false;
+                    adhocSaveDomainBtn.textContent = '💾 Save domain for selected group';
+                }
+            });
+        }
+
+        if (adhocDeleteBtn) {
+            adhocDeleteBtn.addEventListener('click', async () => {
+                adhocFeedback.textContent = '';
+                adhocFeedback.classList.remove('error', 'success');
+
+                const groupId = adhocExistingSelect.value;
+                if (!groupId) {
+                    adhocFeedback.textContent = 'Select a group first.';
+                    adhocFeedback.classList.add('error');
+                    return;
+                }
+
+                if (
+                    !window.confirm(
+                        'Are you sure you want to delete this Ad-hoc Group? This cannot be undone.'
+                    )
+                ) {
+                    return;
+                }
+
+                adhocDeleteBtn.disabled = true;
+                adhocDeleteBtn.textContent = 'Deleting...';
+
+                try {
+                    const response = await fetch(
+                        `/api/locations/adhoc-groups/${encodeURIComponent(groupId)}`,
+                        {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' }
+                        }
+                    );
+                    const data = await response.json().catch(() => ({}));
+
+                    if (!response.ok) {
+                        adhocFeedback.textContent =
+                            (data && data.error) ||
+                            'Could not delete this Ad-hoc Group right now.';
+                        adhocFeedback.classList.add('error');
+                    } else {
+                        adhocFeedback.textContent = 'Ad-hoc Group deleted.';
+                        adhocFeedback.classList.add('success');
+
+                        // Refresh list for this province
+                        adhocProvinceSelect.dispatchEvent(new Event('change'));
+                        adhocExistingSelect.value = '';
+                        adhocDomainInput.value = '';
+                        adhocSaveDomainBtn.disabled = true;
+                        adhocDeleteBtn.disabled = true;
+                    }
+                } catch (err) {
+                    adhocFeedback.textContent =
+                        err.message || 'Unable to delete this Ad-hoc Group.';
+                    adhocFeedback.classList.add('error');
+                } finally {
+                    adhocDeleteBtn.disabled = false;
+                    adhocDeleteBtn.textContent = '🗑 Delete selected Ad-hoc Group';
                 }
             });
         }
