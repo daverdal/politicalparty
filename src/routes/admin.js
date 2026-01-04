@@ -184,12 +184,10 @@ router.delete('/convention/:id', async (req, res) => {
     }
 });
 
-// POST /api/admin/reset-db - Nuke Neo4j data and re-seed using test_neo4j.js (development only)
+// POST /api/admin/reset-db - Nuke Neo4j data and re-seed using test_neo4j.js
+// IMPORTANT: This is destructive. It is exposed via the Admin UI and should
+// only be used when you are certain it's safe to wipe the current database.
 router.post('/reset-db', (req, res) => {
-    if (process.env.NODE_ENV === 'production') {
-        return res.status(403).json({ error: 'Database reset is disabled in production.' });
-    }
-
     const projectRoot = path.join(__dirname, '..', '..');
     const scriptPath = path.join(projectRoot, 'test_neo4j.js');
 
