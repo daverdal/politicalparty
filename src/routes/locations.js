@@ -435,11 +435,15 @@ router.post('/adhoc-groups', authenticate, requireVerifiedUser, async (req, res)
         return res.status(400).json({ error: 'Both name and provinceId are required.' });
     }
 
-    try {
-        const userId = req.user.id;
-        const isAdmin = req.user.role === 'admin';
+    let allowedEmailDomain = null;
+    let userId = null;
+    let isAdmin = false;
 
-        const allowedEmailDomain = normalizeEmailDomain(rawDomain);
+    try {
+        userId = req.user.id;
+        isAdmin = req.user.role === 'admin';
+
+        allowedEmailDomain = normalizeEmailDomain(rawDomain);
         if (rawDomain && !allowedEmailDomain) {
             await session.close();
             return res
