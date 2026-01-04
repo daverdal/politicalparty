@@ -1104,10 +1104,16 @@ App.pages.profile = async function() {
                                 <p class="location-help">Set your location to appear in local candidates list and receive nominations for your area.</p>
                                 
                                 <div class="location-selector-row">
-                                    <label>Province</label>
-                                    <select id="province-select" class="form-select">
+                                    <label>Country</label>
+                                    <select id="country-select" class="form-select">
+                                        <option value="">-- Select Country --</option>
+                                    </select>
+                                </div>
+
+                                <div class="location-selector-row">
+                                    <label>Province / Territory</label>
+                                    <select id="province-select" class="form-select" disabled>
                                         <option value="">-- Select Province --</option>
-                                        ${provinces.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
                                     </select>
                                 </div>
                                 
@@ -1346,6 +1352,7 @@ App.pages.profile = async function() {
         }
 
         // Location selector handlers
+        const countrySelect = document.getElementById('country-select');
         const provinceSelect = document.getElementById('province-select');
         const federalSelect = document.getElementById('federal-riding-select');
         const provincialSelect = document.getElementById('provincial-riding-select');
@@ -1368,6 +1375,25 @@ App.pages.profile = async function() {
         const adhocDomainFeedback = document.getElementById('adhoc-domain-feedback');
         const adhocDeleteBtn = document.getElementById('adhoc-delete-btn');
         const adhocDeleteFeedback = document.getElementById('adhoc-delete-feedback');
+
+        // Cache of full location hierarchy (Planet -> Country -> Provinces)
+        let locationHierarchy = null;
+
+        const loadLocationHierarchy = async () => {
+            if (locationHierarchy) return locationHierarchy;
+            try {
+                const data = await App.api('/locations');
+                locationHierarchy = Array.isArray(data) ? data : [];
+                return locationHierarchy;
+            } catch (err) {
+                if (feedback) {
+                    feedback.innerHTML =
+                        '<span class="error">Unable to load locations right now. Please try again later.</span>';
+                }
+                locationHierarchy = [];
+                return locationHierarchy;
+            }
+        };
         
         // Helper to populate a dropdown
         const populateDropdown = (select, items, placeholder, type) => {
@@ -1382,7 +1408,7 @@ App.pages.profile = async function() {
         
         // Check if any dropdown has a selection
         const hasAnySelection = () => {
-            return [federalSelect, provincialSelect, townSelect, firstNationSelect, groupSelect].some(sel => 
+            return [provinceSelect, federalSelect, provincialSelect, townSelect, firstNationSelect, groupSelect].some(sel => 
                 sel && sel.value
             );
         };
@@ -1436,6 +1462,88 @@ App.pages.profile = async function() {
             }
         };
 
+        // Initialize Country and Province dropdowns from the full hierarchy
+        const initCountriesAndProvince = async () => {
+            if (!countrySelect || !provinceSelect) return;
+
+            const hierarchy = await loadLocationHierarchy();
+            const countries = hierarchy
+                .map((row) => row.country)
+                .filter((c) => c && c.id && c.name);
+
+            populateDropdown(countrySelect, countries, '-- Select Country --', 'Country');
+
+            // If there is only one country, preselect it and load its provinces
+            if (countries.length === 1) {
+                countrySelect.value = countries[0].id;
+            }
+
+            if (countrySelect.value) {
+                const selectedCountryId = countrySelect.value;
+                const row = hierarchy.find(
+                    (r) => r.country && r.country.id === selectedCountryId
+                );
+                const provinces = row && Array.isArray(row.provinces) ? row.provinces : [];
+                populateDropdown(provinceSelect, provinces, '-- Select Province --', 'Province');
+            } else {
+                populateDropdown(provinceSelect, [], '-- Select Province --', 'Province');
+            }
+
+            // After initialisation, ensure save button state is correct
+            if (saveBtn) {
+                saveBtn.disabled = !hasAnySelection();
+            }
+        };
+
+        // Country change - load provinces for that country and reset deeper levels
+        countrySelect?.addEventListener('change', async (e) => {
+            const countryId = e.target.value;
+
+            // Reset province and deeper selects
+            populateDropdown(provinceSelect, [], '-- Select Province --', 'Province');
+            [federalSelect, provincialSelect, townSelect, firstNationSelect, groupSelect].forEach((sel) => {
+                if (sel) {
+                    sel.innerHTML = '<option value="">--</option>';
+                    sel.disabled = true;
+                }
+            });
+
+            if (!countryId) {
+                if (adhocGroupSelect) {
+                    populateDropdown(adhocGroupSelect, [], '-- Select Group --', 'AdhocGroup');
+                }
+                currentAdhocGroups = [];
+                if (adhocDomainContainer) {
+                    adhocDomainContainer.style.display = 'none';
+                }
+                if (adhocDomainInput) {
+                    adhocDomainInput.value = '';
+                    adhocDomainInput.disabled = true;
+                }
+                if (adhocDomainSaveBtn) {
+                    adhocDomainSaveBtn.disabled = true;
+                }
+                if (adhocDeleteBtn) {
+                    adhocDeleteBtn.disabled = true;
+                }
+                if (saveBtn) {
+                    saveBtn.disabled = !hasAnySelection();
+                }
+                return;
+            }
+
+            const hierarchy = await loadLocationHierarchy();
+            const row = hierarchy.find(
+                (r) => r.country && r.country.id === countryId
+            );
+            const provinces = row && Array.isArray(row.provinces) ? row.provinces : [];
+            populateDropdown(provinceSelect, provinces, '-- Select Province --', 'Province');
+
+            if (saveBtn) {
+                saveBtn.disabled = !hasAnySelection();
+            }
+        });
+
         // Wire "Plan" buttons to open the Planning page for a specific location
         document.querySelectorAll('.open-planning-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -1451,6 +1559,9 @@ App.pages.profile = async function() {
                 App.navigate('planning');
             });
         });
+
+        // Kick off initial load of countries/provinces for the Locations tab
+        initCountriesAndProvince();
         
         // Province change - load all location types
         provinceSelect?.addEventListener('change', async (e) => {
@@ -1486,6 +1597,9 @@ App.pages.profile = async function() {
                 if (adhocDeleteBtn) {
                     adhocDeleteBtn.disabled = true;
                 }
+                if (saveBtn) {
+                    saveBtn.disabled = !hasAnySelection();
+                }
                 return;
             }
             
@@ -1507,13 +1621,19 @@ App.pages.profile = async function() {
                 populateDropdown(adhocGroupSelect, groups, '-- Select Group --', 'AdhocGroup');
                 currentAdhocGroups = Array.isArray(groups) ? groups : [];
                 updateAdhocSecurityControls();
+                if (saveBtn) {
+                    saveBtn.disabled = !hasAnySelection();
+                }
             } catch (err) {
                 feedback.innerHTML = `<span class="error">Error loading locations</span>`;
+                if (saveBtn) {
+                    saveBtn.disabled = !hasAnySelection();
+                }
             }
         });
         
         // Enable save button when any dropdown changes
-        [federalSelect, provincialSelect, townSelect, firstNationSelect, groupSelect].forEach(sel => {
+        [provinceSelect, federalSelect, provincialSelect, townSelect, firstNationSelect, groupSelect].forEach(sel => {
             sel?.addEventListener('change', () => {
                 saveBtn.disabled = !hasAnySelection();
             });
@@ -1523,6 +1643,9 @@ App.pages.profile = async function() {
         saveBtn?.addEventListener('click', async () => {
             const locations = [];
             
+            if (provinceSelect?.value) {
+                locations.push({ id: provinceSelect.value, type: 'Province' });
+            }
             if (federalSelect?.value) {
                 locations.push({ id: federalSelect.value, type: 'FederalRiding' });
             }
