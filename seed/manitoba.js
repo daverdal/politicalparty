@@ -36,8 +36,7 @@ module.exports = {
         "The Kings Head Pub",
         "Second Cup on Graham",
         "WannaBees Diner",
-        "Manitoba Policy Nerds",
-        "Assembly of Manitoba Chiefs"
+        "Manitoba Policy Nerds"
     ],
     
     towns: [
