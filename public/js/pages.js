@@ -458,7 +458,7 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
     controls.className = 'province-map-controls';
     const recenterBtn = document.createElement('button');
     recenterBtn.type = 'button';
-    recenterBtn.className = 'btn btn-secondary btn-xs';
+    recenterBtn.className = 'btn btn-secondary btn-sm';
     recenterBtn.textContent = 'Re-center map';
     controls.appendChild(recenterBtn);
 
@@ -582,10 +582,10 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
             scale: 0.3,
             translateX: 0,
             translateY: 0,
-            // Remember the "home" view so we can re-center later
-            initialScale: 0.3,
-            initialTranslateX: 0,
-            initialTranslateY: 0,
+            // Remember the logical center of the province in percent space so we
+            // can re-center later without changing the zoom level.
+            centerXPercent: 50,
+            centerYPercent: 50,
             panning: false,
             startX: 0,
             startY: 0,
@@ -842,26 +842,26 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
         if (pointCount > 0) {
             const avgXPercent = sumXPercent / pointCount;
             const avgYPercent = sumYPercent / pointCount;
-        
+
+            // Remember the logical center in percent coords for future re-centering
+            state.centerXPercent = avgXPercent;
+            state.centerYPercent = avgYPercent;
+
             requestAnimationFrame(() => {
                 const rect = canvas.getBoundingClientRect();
                 if (!rect.width || !rect.height) return;
-        
+
                 // Base translation to bring the average point near the canvas center (50%, 50%)
                 let translateX = ((50 - avgXPercent) / 100) * rect.width;
                 let translateY = ((50 - avgYPercent) / 100) * rect.height;
-        
+
                 // Gentle nudge: shift a bit left and up so the main body of the province
                 // tends to land in a nicer spot (this worked well for Manitoba).
                 translateX -= rect.width * 0.3;    // 30% extra to the left
-                translateY -= rect.height * 0.175; // 17.5% extra upward
-        
+                translateY -= rect.height * 0.175; // 17.5% extra upward;
+
                 state.translateX = translateX;
                 state.translateY = translateY;
-                // Capture this as our "home" view for the Re-center button.
-                state.initialTranslateX = translateX;
-                state.initialTranslateY = translateY;
-                state.initialScale = state.scale;
                 applyTransform();
             });
         }
@@ -893,11 +893,29 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
         window.addEventListener('mousemove', handleMove);
         window.addEventListener('mouseup', handleUp);
 
-        // Wire up "Re-center map" button to return to the initial province view
+        // Wire up "Re-center map" button to bring the province center back into view
         recenterBtn.addEventListener('click', () => {
-            state.scale = state.initialScale;
-            state.translateX = state.initialTranslateX;
-            state.translateY = state.initialTranslateY;
+            const rect = canvas.getBoundingClientRect();
+            if (!rect.width || !rect.height) return;
+
+            const avgXPercent = state.centerXPercent ?? 50;
+            const avgYPercent = state.centerYPercent ?? 50;
+
+            // Compute a translation that moves the logical province center back
+            // toward the visual center of the canvas, at the current zoom level.
+            const scale = state.scale || 1;
+            const centerPixelX = (avgXPercent / 100) * rect.width;
+            const centerPixelY = (avgYPercent / 100) * rect.height;
+
+            let translateX = (rect.width / 2) - centerPixelX * scale;
+            let translateY = (rect.height / 2) - centerPixelY * scale;
+
+            // Re-apply the gentle nudge so Manitoba-style provinces look pleasing.
+            translateX -= rect.width * 0.3;
+            translateY -= rect.height * 0.175;
+
+            state.translateX = translateX;
+            state.translateY = translateY;
             applyTransform();
         });
 
