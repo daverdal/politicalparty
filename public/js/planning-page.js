@@ -114,7 +114,6 @@ App.pages.planning = async function () {
         const buildLocationOptions = () =>
             uniqueLocations
                 .map((loc) => {
-                    const label = typeToLabel[loc.type] || loc.type || 'Location';
                     const isSelected = selected && selected.id === loc.id && selected.type === loc.type;
                     const safeName = (loc.name || '').replace(/"/g, '&quot;');
                     return `
@@ -124,7 +123,7 @@ App.pages.planning = async function () {
                             data-name="${safeName}"
                             ${isSelected ? 'selected' : ''}
                         >
-                            ${loc.name} (${label})
+                            ${safeName}
                         </option>
                     `;
                 })
