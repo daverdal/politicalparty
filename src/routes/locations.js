@@ -436,67 +436,100 @@ router.post('/adhoc-groups', authenticate, requireVerifiedUser, async (req, res)
     }
 
     const userId = req.user.id;
-
-    const allowedEmailDomain = normalizeEmailDomain(rawDomain);
-    if (rawDomain && !allowedEmailDomain) {
-        await session.close();
-        return res
-            .status(400)
-            .json({ error: 'Invalid email domain. Use a value like "@example.org" or "example.org".' });
-    }
+    const isAdmin = req.user.role === 'admin';
 
     try {
-        // Require the user to be LOCATED_IN this province (or one of its child locations)
-        // for at least MIN_ADHOC_GROUP_MEMBERSHIP_DAYS before creating a group.
-        const membershipResult = await session.run(
-            `
-            MATCH (u:User {id: $userId})-[rel:LOCATED_IN]->(loc)
-            MATCH (p:Province {id: $provinceId})
-            WHERE
-                (loc:Province AND loc.id = p.id) OR
-                (loc:FederalRiding AND (p)-[:HAS_FEDERAL_RIDING]->(loc)) OR
-                (loc:ProvincialRiding AND (p)-[:HAS_PROVINCIAL_RIDING]->(loc)) OR
-                (loc:Town AND (p)-[:HAS_TOWN]->(loc)) OR
-                (loc:FirstNation AND (p)-[:HAS_FIRST_NATION]->(loc)) OR
-                (loc:AdhocGroup AND (p)-[:HAS_ADHOC_GROUP]->(loc))
-            WITH collect(rel) AS rels
-            RETURN
-                size(rels) > 0 AS isMemberOfProvince,
-                any(r IN rels WHERE r.createdAt IS NULL OR duration.between(r.createdAt, datetime()).days >= $minDays)
-                    AS hasEnoughTenure
-        `,
-            { userId, provinceId, minDays: MIN_ADHOC_GROUP_MEMBERSHIP_DAYS }
-        );
+        const allowedEmailDomain = normalizeEmailDomain(rawDomain);
+        if (rawDomain && !allowedEmailDomain) {
+            await session.close();
+            return res
+                .status(400)
+                .json({
+                    error: 'Invalid email domain. Use a value like "@example.org" or "example.org".'
+                });
+        }
 
-        if (!membershipResult.records.length || !membershipResult.records[0].get('isMemberOfProvince')) {
+        // In production, only admins or province moderators can create Ad-hoc Groups.
+        let isProvinceModerator = false;
+        if (!isAdmin) {
+            const modResult = await session.run(
+                `
+                MATCH (u:User {id: $userId})-[:MODERATES]->(p:Province {id: $provinceId})
+                RETURN count(p) AS cnt
+            `,
+                { userId, provinceId }
+            );
+            const cntVal = modResult.records[0]?.get('cnt');
+            const cnt =
+                cntVal && typeof cntVal.toNumber === 'function' ? cntVal.toNumber() : Number(cntVal) || 0;
+            isProvinceModerator = cnt > 0;
+        }
+
+        if (process.env.NODE_ENV === 'production' && !isAdmin && !isProvinceModerator) {
+            await session.close();
             return res.status(403).json({
-                error:
-                    'You need to have this province (or a riding/town/First Nation in it) set as a home location before creating a group.'
+                error: 'Only admins or province moderators can create Ad-hoc Groups for this province.'
             });
         }
 
-        const hasEnoughTenure = membershipResult.records[0].get('hasEnoughTenure');
-        if (!hasEnoughTenure) {
-            return res.status(403).json({
-                error: `You must have been a member of this province for at least ${MIN_ADHOC_GROUP_MEMBERSHIP_DAYS} days before creating an Ad-hoc Group.`
-            });
-        }
+        // For non-admin creators, keep the membership + tenure + per-province limit rules.
+        if (!isAdmin) {
+            // Require the user to be LOCATED_IN this province (or one of its child locations)
+            // for at least MIN_ADHOC_GROUP_MEMBERSHIP_DAYS before creating a group.
+            const membershipResult = await session.run(
+                `
+                MATCH (u:User {id: $userId})-[rel:LOCATED_IN]->(loc)
+                MATCH (p:Province {id: $provinceId})
+                WHERE
+                    (loc:Province AND loc.id = p.id) OR
+                    (loc:FederalRiding AND (p)-[:HAS_FEDERAL_RIDING]->(loc)) OR
+                    (loc:ProvincialRiding AND (p)-[:HAS_PROVINCIAL_RIDING]->(loc)) OR
+                    (loc:Town AND (p)-[:HAS_TOWN]->(loc)) OR
+                    (loc:FirstNation AND (p)-[:HAS_FIRST_NATION]->(loc)) OR
+                    (loc:AdhocGroup AND (p)-[:HAS_ADHOC_GROUP]->(loc))
+                WITH collect(rel) AS rels
+                RETURN
+                    size(rels) > 0 AS isMemberOfProvince,
+                    any(r IN rels WHERE r.createdAt IS NULL OR duration.between(r.createdAt, datetime()).days >= $minDays)
+                        AS hasEnoughTenure
+            `,
+                { userId, provinceId, minDays: MIN_ADHOC_GROUP_MEMBERSHIP_DAYS }
+            );
 
-        // Limit: one Ad-hoc Group per province per creator
-        const existingResult = await session.run(
-            `
-            MATCH (p:Province {id: $provinceId})-[:HAS_ADHOC_GROUP]->(ag:AdhocGroup)
-            WHERE ag.createdByUserId = $userId
-            RETURN ag
-            LIMIT $limit
-        `,
-            { provinceId, userId, limit: MAX_ADHOC_GROUPS_PER_PROVINCE_PER_USER }
-        );
+            if (
+                !membershipResult.records.length ||
+                !membershipResult.records[0].get('isMemberOfProvince')
+            ) {
+                return res.status(403).json({
+                    error:
+                        'You need to have this province (or a riding/town/First Nation in it) set as a home location before creating a group.'
+                });
+            }
 
-        if (existingResult.records.length >= MAX_ADHOC_GROUPS_PER_PROVINCE_PER_USER) {
-            return res.status(400).json({
-                error: 'You already created an Ad-hoc Group in this province. Delete it before creating another.'
-            });
+            const hasEnoughTenure = membershipResult.records[0].get('hasEnoughTenure');
+            if (!hasEnoughTenure) {
+                return res.status(403).json({
+                    error: `You must have been a member of this province for at least ${MIN_ADHOC_GROUP_MEMBERSHIP_DAYS} days before creating an Ad-hoc Group.`
+                });
+            }
+
+            // Limit: one Ad-hoc Group per province per creator (for non-admin creators)
+            const existingResult = await session.run(
+                `
+                MATCH (p:Province {id: $provinceId})-[:HAS_ADHOC_GROUP]->(ag:AdhocGroup)
+                WHERE ag.createdByUserId = $userId
+                RETURN ag
+                LIMIT $limit
+            `,
+                { provinceId, userId, limit: MAX_ADHOC_GROUPS_PER_PROVINCE_PER_USER }
+            );
+
+            if (existingResult.records.length >= MAX_ADHOC_GROUPS_PER_PROVINCE_PER_USER) {
+                return res.status(400).json({
+                    error:
+                        'You already created an Ad-hoc Group in this province. Delete it before creating another.'
+                });
+            }
         }
     } catch (error) {
         await session.close();
