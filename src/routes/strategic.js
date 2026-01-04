@@ -30,12 +30,14 @@ function resolveLocationType(type) {
 }
 
 // GET /api/strategic-sessions/location/:type/:id/active
-router.get('/location/:type/:id/active', async (req, res) => {
+// Requires authentication so we can enforce Ad-hoc Group email-domain rules.
+router.get('/location/:type/:id/active', authenticate, async (req, res) => {
     try {
         const locationType = resolveLocationType(req.params.type);
         const session = await strategicService.getActiveSessionForLocation({
             locationId: req.params.id,
-            locationType
+            locationType,
+            userId: req.user && req.user.id
         });
         res.json(session || null);
     } catch (error) {
@@ -44,14 +46,16 @@ router.get('/location/:type/:id/active', async (req, res) => {
 });
 
 // GET /api/strategic-sessions/location/:type/:id/history
-router.get('/location/:type/:id/history', async (req, res) => {
+// Requires authentication so we can enforce Ad-hoc Group email-domain rules.
+router.get('/location/:type/:id/history', authenticate, async (req, res) => {
     try {
         const locationType = resolveLocationType(req.params.type);
         const limit = req.query.limit ? parseInt(req.query.limit, 10) || 20 : 20;
         const sessions = await strategicService.getSessionHistoryForLocation({
             locationId: req.params.id,
             locationType,
-            limit
+            limit,
+            userId: req.user && req.user.id
         });
         res.json(sessions);
     } catch (error) {

@@ -39,6 +39,62 @@ function escapeRegExp(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+async function assertAdhocGroupDomainAccess({ userId, locationId }) {
+    if (!userId) {
+        const err = new Error('Sign in to access this Ad-hoc Group.');
+        err.statusCode = 401;
+        throw err;
+    }
+
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+
+    try {
+        const result = await session.run(
+            `
+            MATCH (ag:AdhocGroup {id: $locationId})
+            OPTIONAL MATCH (u:User {id: $userId})
+            RETURN ag.allowedEmailDomain AS domain, u.email AS email
+        `,
+            { locationId, userId }
+        );
+
+        if (!result.records.length) {
+            // No such group – let callers handle missing sessions/locations separately.
+            return;
+        }
+
+        const domainVal = result.records[0].get('domain');
+        if (!domainVal) {
+            // No restriction set
+            return;
+        }
+
+        const domain = String(domainVal).toLowerCase();
+        const emailVal = result.records[0].get('email');
+        const email = emailVal ? String(emailVal).toLowerCase() : '';
+
+        if (!email || !email.includes('@')) {
+            const err = new Error(
+                `This Ad-hoc Group is restricted to members with email addresses ending in @${domain}.`
+            );
+            err.statusCode = 403;
+            throw err;
+        }
+
+        const emailDomain = email.split('@').pop();
+        if (emailDomain !== domain) {
+            const err = new Error(
+                `This Ad-hoc Group is restricted to members with email addresses ending in @${domain}.`
+            );
+            err.statusCode = 403;
+            throw err;
+        }
+    } finally {
+        await session.close();
+    }
+}
+
 /**
  * Load all member display names from Neo4j (lightweight summary).
  */
@@ -272,8 +328,9 @@ async function getSessionById(sessionId) {
 
 /**
  * Get the currently active strategic session for a location (if any).
+ * For Ad-hoc Groups, enforces email-domain access rules.
  */
-async function getActiveSessionForLocation({ locationId, locationType }) {
+async function getActiveSessionForLocation({ locationId, locationType, userId }) {
     if (!ALLOWED_LOCATION_TYPES.includes(locationType)) {
         throw new Error('Invalid location type');
     }
@@ -283,6 +340,10 @@ async function getActiveSessionForLocation({ locationId, locationType }) {
 
     try {
         const isAdhoc = locationType === 'AdhocGroup';
+
+        if (isAdhoc) {
+            await assertAdhocGroupDomainAccess({ userId, locationId });
+        }
         const now = new Date();
         const currentYear = now.getFullYear();
 
@@ -400,8 +461,14 @@ async function getActiveSessionForLocation({ locationId, locationType }) {
 
 /**
  * Get archived sessions for a location (history), newest first.
+ * For Ad-hoc Groups, enforces email-domain access rules.
  */
-async function getSessionHistoryForLocation({ locationId, locationType, limit = 20 }) {
+async function getSessionHistoryForLocation({
+    locationId,
+    locationType,
+    limit = 20,
+    userId
+}) {
     if (!ALLOWED_LOCATION_TYPES.includes(locationType)) {
         throw new Error('Invalid location type');
     }
@@ -410,6 +477,10 @@ async function getSessionHistoryForLocation({ locationId, locationType, limit = 
     const session = driver.session({ database: getDatabase() });
 
     try {
+        if (locationType === 'AdhocGroup') {
+            await assertAdhocGroupDomainAccess({ userId, locationId });
+        }
+
         const result = await session.run(
             `
             MATCH (s:StrategicSession {locationId: $locationId, locationType: $locationType})
@@ -455,6 +526,11 @@ async function createSessionForLocation({
     const session = driver.session({ database: getDatabase() });
 
     try {
+        // For Ad-hoc Groups, enforce email-domain access rule for the creator.
+        if (locationType === 'AdhocGroup' && createdByUserId) {
+            await assertAdhocGroupDomainAccess({ userId: createdByUserId, locationId });
+        }
+
         // Check for existing active session
         const existingResult = await session.run(
             `
@@ -973,6 +1049,10 @@ async function addIssue({ sessionId, title, description, userId }) {
         throw new Error('Session not found');
     }
 
+    if (existing.locationType === 'AdhocGroup') {
+        await assertAdhocGroupDomainAccess({ userId, locationId: existing.locationId });
+    }
+
     // Enforce anonymity-friendly rule: no member names in issue text
     await assertNoMemberNames(`${title || ''} ${description || ''}`);
 
@@ -1046,6 +1126,10 @@ async function voteOnIssue({ sessionId, issueId, userId }) {
     const sessionMeta = await getSessionById(sessionId);
     if (!sessionMeta) {
         throw new Error('Session not found');
+    }
+
+    if (sessionMeta.locationType === 'AdhocGroup') {
+        await assertAdhocGroupDomainAccess({ userId, locationId: sessionMeta.locationId });
     }
     if (sessionMeta.status === 'draft') {
         const err = new Error(
@@ -1126,6 +1210,10 @@ async function addComment({ sessionId, text, section = 'session', sectionItemId 
         throw new Error('Session not found');
     }
 
+    if (existing.locationType === 'AdhocGroup') {
+        await assertAdhocGroupDomainAccess({ userId, locationId: existing.locationId });
+    }
+
     // Enforce anonymity-friendly rule: no member names in comment text
     await assertNoMemberNames(text);
 
@@ -1186,6 +1274,10 @@ async function addAction({ sessionId, description, dueDate, userId }) {
         throw new Error('Session not found');
     }
 
+    if (existing.locationType === 'AdhocGroup') {
+        await assertAdhocGroupDomainAccess({ userId, locationId: existing.locationId });
+    }
+
     const driver = getDriver();
     const session = driver.session({ database: getDatabase() });
 
@@ -1242,6 +1334,10 @@ async function addGoal({ sessionId, title, description, metric, dueDate, userId 
     const existing = await getSessionById(sessionId);
     if (!existing) {
         throw new Error('Session not found');
+    }
+
+    if (existing.locationType === 'AdhocGroup') {
+        await assertAdhocGroupDomainAccess({ userId, locationId: existing.locationId });
     }
 
     const driver = getDriver();

@@ -120,7 +120,9 @@ router.post('/login', loginLimiter, async (req, res) => {
             return res.status(401).json({ error: 'Invalid email or password.' });
         }
 
-        if (!user.verifiedAt) {
+        // In production, require a verified email before login.
+        // In development, allow login without verification to simplify local testing.
+        if (!user.verifiedAt && isProduction) {
             return res.status(403).json({
                 error:
                     'Please verify your email address before signing in. Check your inbox for the verification link or request a new one.'

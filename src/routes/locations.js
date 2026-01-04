@@ -12,6 +12,9 @@ const { authenticate, requireAdmin, requireVerifiedUser } = require('../middlewa
 const moderatorService = require('../services/moderatorService');
 const crypto = require('crypto');
 
+const MIN_ADHOC_GROUP_MEMBERSHIP_DAYS = 7;
+const MAX_ADHOC_GROUPS_PER_PROVINCE_PER_USER = 1;
+
 function generateAdhocGroupId(provinceId, name) {
     const safeProv = String(provinceId || 'xx')
         .toLowerCase()
@@ -25,6 +28,20 @@ function generateAdhocGroupId(provinceId, name) {
         ? crypto.randomUUID().slice(0, 8)
         : crypto.randomBytes(4).toString('hex');
     return `ag-${safeProv}-${base}-${rand}`;
+}
+
+function normalizeEmailDomain(raw) {
+    if (!raw) return null;
+    let domain = String(raw).trim().toLowerCase();
+    if (!domain) return null;
+    if (domain.startsWith('@')) {
+        domain = domain.slice(1);
+    }
+    // Very lightweight validation: must contain a dot and at least 3 chars.
+    if (domain.length < 3 || !domain.includes('.')) {
+        return null;
+    }
+    return domain;
 }
 
 // GET /api/locations - Get full location hierarchy
@@ -411,10 +428,79 @@ router.post('/towns', async (req, res) => {
 // POST /api/locations/adhoc-groups - Create a new adhoc group (verified users can create)
 router.post('/adhoc-groups', authenticate, requireVerifiedUser, async (req, res) => {
     const session = getSession();
-    const { id: providedId, name, description, provinceId } = req.body || {};
+    const { id: providedId, name, description, provinceId, allowedEmailDomain: rawDomain } =
+        req.body || {};
 
     if (!name || !provinceId) {
         return res.status(400).json({ error: 'Both name and provinceId are required.' });
+    }
+
+    const userId = req.user.id;
+
+    const allowedEmailDomain = normalizeEmailDomain(rawDomain);
+    if (rawDomain && !allowedEmailDomain) {
+        await session.close();
+        return res
+            .status(400)
+            .json({ error: 'Invalid email domain. Use a value like "@example.org" or "example.org".' });
+    }
+
+    try {
+        // Require the user to be LOCATED_IN this province (or one of its child locations)
+        // for at least MIN_ADHOC_GROUP_MEMBERSHIP_DAYS before creating a group.
+        const membershipResult = await session.run(
+            `
+            MATCH (u:User {id: $userId})-[rel:LOCATED_IN]->(loc)
+            MATCH (p:Province {id: $provinceId})
+            WHERE
+                (loc:Province AND loc.id = p.id) OR
+                (loc:FederalRiding AND (p)-[:HAS_FEDERAL_RIDING]->(loc)) OR
+                (loc:ProvincialRiding AND (p)-[:HAS_PROVINCIAL_RIDING]->(loc)) OR
+                (loc:Town AND (p)-[:HAS_TOWN]->(loc)) OR
+                (loc:FirstNation AND (p)-[:HAS_FIRST_NATION]->(loc)) OR
+                (loc:AdhocGroup AND (p)-[:HAS_ADHOC_GROUP]->(loc))
+            WITH collect(rel) AS rels
+            RETURN
+                size(rels) > 0 AS isMemberOfProvince,
+                any(r IN rels WHERE r.createdAt IS NULL OR duration.between(r.createdAt, datetime()).days >= $minDays)
+                    AS hasEnoughTenure
+        `,
+            { userId, provinceId, minDays: MIN_ADHOC_GROUP_MEMBERSHIP_DAYS }
+        );
+
+        if (!membershipResult.records.length || !membershipResult.records[0].get('isMemberOfProvince')) {
+            return res.status(403).json({
+                error:
+                    'You need to have this province (or a riding/town/First Nation in it) set as a home location before creating a group.'
+            });
+        }
+
+        const hasEnoughTenure = membershipResult.records[0].get('hasEnoughTenure');
+        if (!hasEnoughTenure) {
+            return res.status(403).json({
+                error: `You must have been a member of this province for at least ${MIN_ADHOC_GROUP_MEMBERSHIP_DAYS} days before creating an Ad-hoc Group.`
+            });
+        }
+
+        // Limit: one Ad-hoc Group per province per creator
+        const existingResult = await session.run(
+            `
+            MATCH (p:Province {id: $provinceId})-[:HAS_ADHOC_GROUP]->(ag:AdhocGroup)
+            WHERE ag.createdByUserId = $userId
+            RETURN ag
+            LIMIT $limit
+        `,
+            { provinceId, userId, limit: MAX_ADHOC_GROUPS_PER_PROVINCE_PER_USER }
+        );
+
+        if (existingResult.records.length >= MAX_ADHOC_GROUPS_PER_PROVINCE_PER_USER) {
+            return res.status(400).json({
+                error: 'You already created an Ad-hoc Group in this province. Delete it before creating another.'
+            });
+        }
+    } catch (error) {
+        await session.close();
+        return res.status(500).json({ error: error.message });
     }
 
     const id = providedId || generateAdhocGroupId(provinceId, name);
@@ -426,11 +512,12 @@ router.post('/adhoc-groups', authenticate, requireVerifiedUser, async (req, res)
                 id: $id,
                 name: $name,
                 description: $description,
+                allowedEmailDomain: $allowedEmailDomain,
                 createdAt: datetime(),
                 createdByUserId: $createdByUserId
             })
         `,
-            { id, name, description, createdByUserId: req.user.id }
+            { id, name, description, allowedEmailDomain, createdByUserId: userId }
         );
 
         await session.run(
@@ -440,11 +527,11 @@ router.post('/adhoc-groups', authenticate, requireVerifiedUser, async (req, res)
         `,
             { provinceId, groupId: id }
         );
-        
+
         // Automatically make the creator a moderator of this adhoc group (via service)
         try {
             await moderatorService.assignModerator({
-                userId: req.user.id,
+                userId,
                 locationId: id,
                 locationType: 'AdhocGroup'
             });
@@ -453,7 +540,7 @@ router.post('/adhoc-groups', authenticate, requireVerifiedUser, async (req, res)
             // eslint-disable-next-line no-console
             console.warn('[locations] Failed to assign moderator for adhoc group:', e.message || e);
         }
-        
+
         const result = await session.run('MATCH (ag:AdhocGroup {id: $id}) RETURN ag', { id });
         res.status(201).json(result.records[0].get('ag').properties);
     } catch (error) {
@@ -462,6 +549,115 @@ router.post('/adhoc-groups', authenticate, requireVerifiedUser, async (req, res)
         await session.close();
     }
 });
+
+// DELETE /api/locations/adhoc-groups/:id - Delete an adhoc group (only by its creator)
+router.delete('/adhoc-groups/:id', authenticate, requireVerifiedUser, async (req, res) => {
+    const session = getSession();
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    try {
+        // Ensure this group exists, was created by the current user, and
+        // is not currently used as the location for a Strategic Plan.
+        const checkResult = await session.run(
+            `
+            MATCH (ag:AdhocGroup {id: $id, createdByUserId: $userId})
+            OPTIONAL MATCH (s:StrategicSession {locationId: $id, locationType: 'AdhocGroup'})
+            RETURN ag, CASE WHEN count(s) > 0 THEN true ELSE false END AS hasSessions
+        `,
+            { id, userId }
+        );
+
+        if (!checkResult.records.length) {
+            return res
+                .status(403)
+                .json({ error: 'You can only delete Ad-hoc Groups that you created.' });
+        }
+
+        const hasSessions = checkResult.records[0].get('hasSessions');
+        if (hasSessions) {
+            return res.status(400).json({
+                error:
+                    'This Ad-hoc Group is used in a Strategic Plan and cannot be deleted. Archive or move the plan first.'
+            });
+        }
+
+        await session.run(
+            `
+            MATCH (ag:AdhocGroup {id: $id, createdByUserId: $userId})
+            DETACH DELETE ag
+        `,
+            { id, userId }
+        );
+
+        return res.json({ success: true, message: 'Ad-hoc Group deleted.' });
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    } finally {
+        await session.close();
+    }
+});
+
+// PUT /api/locations/adhoc-groups/:id/domain - Update email domain restriction (creator or admin)
+router.put(
+    '/adhoc-groups/:id/domain',
+    authenticate,
+    requireVerifiedUser,
+    async (req, res) => {
+        const session = getSession();
+        const { id } = req.params;
+        const userId = req.user.id;
+        const rawDomain = (req.body && req.body.allowedEmailDomain) || '';
+
+        const allowedEmailDomain = normalizeEmailDomain(rawDomain);
+        if (rawDomain && !allowedEmailDomain) {
+            await session.close();
+            return res.status(400).json({
+                error: 'Invalid email domain. Use a value like "@example.org" or "example.org".'
+            });
+        }
+
+        try {
+            const checkResult = await session.run(
+                `
+                MATCH (ag:AdhocGroup {id: $id})
+                RETURN ag.createdByUserId AS createdByUserId
+            `,
+                { id }
+            );
+
+            if (!checkResult.records.length) {
+                await session.close();
+                return res.status(404).json({ error: 'Ad-hoc Group not found.' });
+            }
+
+            const createdByUserId = checkResult.records[0].get('createdByUserId');
+
+            if (createdByUserId !== userId && req.user.role !== 'admin') {
+                await session.close();
+                return res
+                    .status(403)
+                    .json({ error: 'Only the creator or an admin can update this group.' });
+            }
+
+            await session.run(
+                `
+                MATCH (ag:AdhocGroup {id: $id})
+                SET ag.allowedEmailDomain = $allowedEmailDomain
+                RETURN ag
+            `,
+                { id, allowedEmailDomain }
+            );
+
+            const result = await session.run('MATCH (ag:AdhocGroup {id: $id}) RETURN ag', { id });
+            return res.json(result.records[0].get('ag').properties);
+        } catch (error) {
+            return res.status(500).json({ error: error.message });
+        } finally {
+            await session.close();
+        }
+    }
+);
 
 // ============================================
 // Moderator management (admin only)

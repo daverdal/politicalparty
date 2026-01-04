@@ -304,22 +304,23 @@ App.pages.planning = async function () {
             };
             const phase = phaseConfig[status] || null;
 
-            let phaseHelpText = '';
-            if (phase) {
-                if (phase.key === 'Start') {
-                    phaseHelpText =
-                        'Phase: Start – this is a friendly drafting space to collect issues, goals, and ideas.';
-                } else if (phase.key === 'Check') {
-                    phaseHelpText =
-                        'Phase: Check – share and react. This is a quick check-in with your group or leaders.';
-                } else if (phase.key === 'Do') {
-                    phaseHelpText =
-                        'Phase: Do – focus on actions and progress. Keep moving the plan forward together.';
-                } else if (phase.key === 'Wrap') {
-                    phaseHelpText =
-                        'Phase: Wrap – the main work is finished. Capture reflections and what you learned.';
-                }
-            }
+            const phaseOrder = ['Start', 'Check', 'Do', 'Wrap'];
+            const phaseListHtml = `
+                <div class="planning-phase-list" style="margin-top: 0; margin-bottom: 8px; font-size: 0.85rem;">
+                    <span style="margin-right: 4px; font-weight: 500;">Phases:</span>
+                    ${phaseOrder
+                        .map((key) => {
+                            const isCurrent = phase && phase.key === key;
+                            const baseStyle =
+                                'display:inline-block; padding:2px 10px; border-radius:999px; margin-right:4px; border:1px solid ';
+                            const colorStyle = isCurrent
+                                ? 'var(--accent-primary, #00d4aa); background: rgba(0,212,170,0.12); font-weight:600;'
+                                : '#ccc; background: transparent; font-weight:400;';
+                            return `<span style="${baseStyle}${colorStyle}">${key}</span>`;
+                        })
+                        .join('')}
+                </div>
+            `;
             const isWrapPhase = !!(phase && phase.key === 'Wrap');
 
             const cycleStart = activeSession.cycleStart || activeSession.createdAt || null;
@@ -534,11 +535,7 @@ App.pages.planning = async function () {
                         </div>
                     </div>
                     <div class="card-body">
-                        ${
-                            phaseHelpText
-                                ? `<p class="page-subtitle" style="margin-top: 0; margin-bottom: 8px;">${phaseHelpText}</p>`
-                                : ''
-                        }
+                        ${phaseListHtml}
                         ${timelineHtml}
                         <div class="profile-stats">
                             <div class="profile-stat">
