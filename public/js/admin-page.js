@@ -56,10 +56,16 @@ App.pages.admin = async function () {
                 <p class="page-subtitle">Convention management and development utilities</p>
             </header>
 
+            <div class="profile-tabs admin-tabs" style="margin-bottom: 12px;">
+                <button class="profile-tab-button active" data-admin-tab="conventions">Conventions</button>
+                <button class="profile-tab-button" data-admin-tab="adhoc">Ad-hoc Group Admin</button>
+                <button class="profile-tab-button" data-admin-tab="dev">Dev & Locations</button>
+            </div>
+
             <div id="admin-result" class="profile-resume-feedback" style="margin-bottom: 12px;"></div>
 
             <div class="cards-grid">
-                <div class="card">
+                <div class="card" id="admin-conventions-card">
                     <div class="card-header">
                         <h3 class="card-title">📋 Conventions</h3>
                     </div>
@@ -139,7 +145,7 @@ App.pages.admin = async function () {
                 ${
                     activeConv
                         ? `
-                <div class="card">
+                <div class="card" id="admin-dev-card">
                     <div class="card-header">
                         <h3 class="card-title">🎛 Active Convention Controls</h3>
                         <p class="card-subtitle">Managing: ${activeConv.name}</p>
@@ -288,6 +294,52 @@ App.pages.admin = async function () {
                     </div>
                 </div>
 
+                <div class="card" id="admin-adhoc-card">
+                    <div class="card-header">
+                        <h3 class="card-title">👥 Ad-hoc Group Admin</h3>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-subtitle" style="margin-bottom: 8px;">
+                            Create Ad-hoc Groups for a province (for example, "Manitoba Policy Nerds") and optionally
+                            restrict access by email domain (e.g., <code>@manitobachiefs.com</code>).
+                        </p>
+                        <div class="form-group" style="display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; margin-bottom: 8px;">
+                            <label>
+                                <span>Country</span>
+                                <select id="admin-adhoc-country-select" class="form-select">
+                                    <option value="">-- Select country --</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span>Province / Territory</span>
+                                <select id="admin-adhoc-province-select" class="form-select">
+                                    <option value="">-- Select province --</option>
+                                </select>
+                            </label>
+                        </div>
+                        <label>
+                            <span>Group name</span>
+                            <input id="admin-adhoc-name" class="form-input" placeholder="e.g., Manitoba Policy Nerds">
+                        </label>
+                        <label>
+                            <span>Description (optional)</span>
+                            <textarea id="admin-adhoc-description" class="form-textarea" rows="3" placeholder="What is this group about?"></textarea>
+                        </label>
+                        <label>
+                            <span>Email domain (optional)</span>
+                            <input id="admin-adhoc-domain" class="form-input" placeholder="@example.org">
+                        </label>
+                        <p class="form-help">
+                            Only admins or province moderators can create Ad-hoc Groups. In production, access to the
+                            group’s Strategic Plan is limited to members whose email ends with the configured domain.
+                        </p>
+                        <button class="btn btn-secondary btn-sm" id="admin-adhoc-create-btn" style="margin-top: 8px;">
+                            ➕ Create Ad-hoc Group
+                        </button>
+                        <div id="admin-adhoc-feedback" class="profile-resume-feedback" style="margin-top: 8px;"></div>
+                    </div>
+                </div>
+
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">👥 Location Moderators (Admin)</h3>
@@ -367,6 +419,25 @@ App.pages.admin = async function () {
             resultEl.classList.remove('error', 'success');
             resultEl.classList.add(isError ? 'error' : 'success');
         };
+
+        // Admin horizontal tabs – scroll to relevant section
+        const adminTabButtons = content.querySelectorAll('.admin-tabs .profile-tab-button');
+        const scrollTargets = {
+            conventions: document.getElementById('admin-conventions-card'),
+            adhoc: document.getElementById('admin-adhoc-card'),
+            dev: document.getElementById('admin-dev-card')
+        };
+
+        adminTabButtons.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const tab = btn.getAttribute('data-admin-tab');
+                adminTabButtons.forEach((b) => b.classList.toggle('active', b === btn));
+                const target = scrollTargets[tab];
+                if (target && typeof target.scrollIntoView === 'function') {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
 
         // Allow selecting a convention for management
         document.querySelectorAll('.admin-conv-manage[data-conv-id]').forEach((btn) => {
@@ -758,6 +829,14 @@ App.pages.admin = async function () {
         const countryNameInput = document.getElementById('admin-country-name');
         const countryCodeInput = document.getElementById('admin-country-code');
         const countryFeedback = document.getElementById('admin-country-feedback');
+
+        const adhocCountrySelect = document.getElementById('admin-adhoc-country-select');
+        const adhocProvinceSelect = document.getElementById('admin-adhoc-province-select');
+        const adhocNameInput = document.getElementById('admin-adhoc-name');
+        const adhocDescriptionInput = document.getElementById('admin-adhoc-description');
+        const adhocDomainInput = document.getElementById('admin-adhoc-domain');
+        const adhocCreateBtn = document.getElementById('admin-adhoc-create-btn');
+        const adhocFeedback = document.getElementById('admin-adhoc-feedback');
         if (
             countrySaveBtn &&
             countryIdInput &&
@@ -804,6 +883,113 @@ App.pages.admin = async function () {
                     countryFeedback.textContent =
                         err.message || 'Error saving country. Check server logs.';
                     countryFeedback.classList.add('error');
+                }
+            });
+        }
+
+        // Ad-hoc Group Admin logic (admin or province moderators)
+        if (
+            adhocCountrySelect &&
+            adhocProvinceSelect &&
+            adhocNameInput &&
+            adhocDescriptionInput &&
+            adhocDomainInput &&
+            adhocCreateBtn &&
+            adhocFeedback
+        ) {
+            try {
+                const countries = await App.api('/locations/countries');
+                adhocCountrySelect.innerHTML =
+                    '<option value="">-- Select country --</option>' +
+                    countries
+                        .map((c) => `<option value="${c.id}">${c.name}</option>`)
+                        .join('');
+            } catch (err) {
+                adhocFeedback.textContent =
+                    err.message || 'Unable to load countries for Ad-hoc Group Admin.';
+                adhocFeedback.classList.add('error');
+            }
+
+            adhocCountrySelect.addEventListener('change', async () => {
+                adhocFeedback.textContent = '';
+                adhocFeedback.classList.remove('error', 'success');
+                const countryId = adhocCountrySelect.value;
+                adhocProvinceSelect.innerHTML =
+                    '<option value="">-- Select province --</option>';
+                adhocProvinceSelect.disabled = true;
+
+                if (!countryId) return;
+
+                try {
+                    const provinces = await App.api(
+                        `/locations/countries/${encodeURIComponent(countryId)}/provinces`
+                    );
+                    adhocProvinceSelect.innerHTML =
+                        '<option value="">-- Select province --</option>' +
+                        provinces
+                            .map((p) => `<option value="${p.id}">${p.name}</option>`)
+                            .join('');
+                    adhocProvinceSelect.disabled = false;
+                } catch (err) {
+                    adhocFeedback.textContent =
+                        err.message || 'Unable to load provinces for that country.';
+                    adhocFeedback.classList.add('error');
+                }
+            });
+
+            adhocCreateBtn.addEventListener('click', async () => {
+                adhocFeedback.textContent = '';
+                adhocFeedback.classList.remove('error', 'success');
+
+                const provinceId = adhocProvinceSelect.value;
+                const name = adhocNameInput.value.trim();
+                const description = adhocDescriptionInput.value.trim();
+                const domainRaw = adhocDomainInput.value.trim();
+
+                if (!provinceId) {
+                    adhocFeedback.textContent = 'Please select a province first.';
+                    adhocFeedback.classList.add('error');
+                    return;
+                }
+
+                if (!name) {
+                    adhocFeedback.textContent = 'Group name is required.';
+                    adhocFeedback.classList.add('error');
+                    return;
+                }
+
+                adhocCreateBtn.disabled = true;
+                adhocCreateBtn.textContent = 'Creating...';
+
+                try {
+                    const { response, data } = await App.apiPost('/locations/adhoc-groups', {
+                        name,
+                        description,
+                        provinceId,
+                        allowedEmailDomain: domainRaw
+                    });
+
+                    if (!response.ok) {
+                        adhocFeedback.textContent =
+                            (data && data.error) ||
+                            'Could not create this Ad-hoc Group. Make sure you are an admin or a moderator for this province.';
+                        adhocFeedback.classList.add('error');
+                    } else {
+                        adhocFeedback.textContent = 'Ad-hoc Group created.';
+                        adhocFeedback.classList.add('success');
+
+                        adhocNameInput.value = '';
+                        adhocDescriptionInput.value = '';
+                        // Leave domain in place so admin can see what was used
+                    }
+                } catch (err) {
+                    adhocFeedback.textContent =
+                        err.message ||
+                        'Unable to create this Ad-hoc Group. Check your permissions or server logs.';
+                    adhocFeedback.classList.add('error');
+                } finally {
+                    adhocCreateBtn.disabled = false;
+                    adhocCreateBtn.textContent = '➕ Create Ad-hoc Group';
                 }
             });
         }
