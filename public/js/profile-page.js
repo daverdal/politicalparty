@@ -142,6 +142,7 @@ App.pages.profile = async function () {
 
                     <div class="profile-tabs">
                         <button class="profile-tab-button ${initialTab === 'locations' ? 'active' : ''}" data-tab="locations">Locations</button>
+                        <button class="profile-tab-button ${initialTab === 'adhoc' ? 'active' : ''}" data-tab="adhoc">My Ad-hoc Groups</button>
                         <button class="profile-tab-button ${initialTab === 'resume' ? 'active' : ''}" data-tab="resume">Resume</button>
                         <button class="profile-tab-button ${initialTab === 'badges' ? 'active' : ''}" data-tab="badges">Badges</button>
                     </div>
@@ -189,12 +190,20 @@ App.pages.profile = async function () {
                                     </select>
                                 </div>
 
-                                <div class="location-selector-row">
-                                    <label>First Nation</label>
-                                    <select id="profile-firstnation-select" class="form-select" disabled>
-                                        <option value="">Optional – select First Nation</option>
-                                    </select>
-                                </div>
+                                <button class="btn btn-primary btn-lg" id="profile-locations-save-btn" style="margin-top: 12px;">
+                                    Save locations
+                                </button>
+                                <div id="profile-locations-feedback" class="profile-resume-feedback"></div>
+                            </div>
+                        </section>
+
+                        <section class="profile-tab-panel ${initialTab === 'adhoc' ? 'active' : ''}" data-tab="adhoc">
+                            <div class="location-selector-section">
+                                <h4>My Ad-hoc Groups</h4>
+                                <p class="location-help">
+                                    Create and manage Ad-hoc Groups for your province, and control who can access them
+                                    using an email domain rule (for example: <code>@manitobachiefs.com</code>).
+                                </p>
 
                                 <div class="location-selector-row">
                                     <label>Ad-hoc Group</label>
@@ -224,16 +233,18 @@ App.pages.profile = async function () {
                                     <div id="profile-adhoc-create-feedback" class="profile-resume-feedback"></div>
                                 </div>
 
-                                <div class="location-selector-row">
-                                    <label style="flex: 1 1 auto;">
-                                        <span>Email domain for this group (optional)</span>
-                                        <input id="profile-adhoc-domain" class="form-input" placeholder="@example.org">
-                                    </label>
-                                    <button type="button" class="btn btn-secondary btn-sm" id="profile-adhoc-domain-save-btn" disabled>
-                                        Save domain rule
-                                    </button>
+                                <div id="profile-adhoc-domain-container" style="display:none;">
+                                    <div class="location-selector-row">
+                                        <label style="flex: 1 1 auto;">
+                                            <span>Email domain for this group (optional)</span>
+                                            <input id="profile-adhoc-domain" class="form-input" placeholder="@example.org">
+                                        </label>
+                                        <button type="button" class="btn btn-secondary btn-sm" id="profile-adhoc-domain-save-btn" disabled>
+                                            Save domain rule
+                                        </button>
+                                    </div>
+                                    <div id="profile-adhoc-domain-feedback" class="profile-resume-feedback"></div>
                                 </div>
-                                <div id="profile-adhoc-domain-feedback" class="profile-resume-feedback"></div>
 
                                 <div class="location-selector-row">
                                     <button type="button" class="btn btn-outline-danger btn-sm" id="profile-adhoc-delete-btn" disabled>
@@ -242,11 +253,6 @@ App.pages.profile = async function () {
                                     <span class="form-help">Only available for groups you created.</span>
                                 </div>
                                 <div id="profile-adhoc-delete-feedback" class="profile-resume-feedback"></div>
-
-                                <button class="btn btn-primary btn-lg" id="profile-locations-save-btn" style="margin-top: 12px;">
-                                    Save locations
-                                </button>
-                                <div id="profile-locations-feedback" class="profile-resume-feedback"></div>
                             </div>
                         </section>
 
@@ -392,6 +398,7 @@ App.pages.profile = async function () {
         const adhocCreateDescription = document.getElementById('profile-adhoc-description');
         const adhocCreateBtn = document.getElementById('profile-adhoc-create-btn');
         const adhocCreateFeedback = document.getElementById('profile-adhoc-create-feedback');
+        const adhocDomainContainer = document.getElementById('profile-adhoc-domain-container');
         const adhocDomainInput = document.getElementById('profile-adhoc-domain');
         const adhocDomainSaveBtn = document.getElementById('profile-adhoc-domain-save-btn');
         const adhocDomainFeedback = document.getElementById('profile-adhoc-domain-feedback');
@@ -522,6 +529,8 @@ App.pages.profile = async function () {
                     App.authUser &&
                     selected.createdByUserId === App.authUser.id;
 
+                const shouldShowDomainControls = !!selected && isCreator;
+
                 // Reset feedback messages
                 if (adhocDeleteFeedback) {
                     adhocDeleteFeedback.textContent = '';
@@ -530,6 +539,12 @@ App.pages.profile = async function () {
                 if (adhocDomainFeedback) {
                     adhocDomainFeedback.textContent = '';
                     adhocDomainFeedback.classList.remove('error', 'success');
+                }
+
+                if (adhocDomainContainer) {
+                    adhocDomainContainer.style.display = shouldShowDomainControls
+                        ? 'block'
+                        : 'none';
                 }
 
                 // Delete button
@@ -668,6 +683,9 @@ App.pages.profile = async function () {
                         }
                         if (adhocDeleteBtn) {
                             adhocDeleteBtn.disabled = true;
+                        }
+                        if (adhocDomainContainer) {
+                            adhocDomainContainer.style.display = 'none';
                         }
                     }
 
