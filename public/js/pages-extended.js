@@ -988,6 +988,17 @@ App.pages.profile = async function() {
         
         const pendingNominations = nominations.filter(n => !n.hasAccepted);
 
+        // If the user already has one or more locations on their profile,
+        // mark basic locations as configured so navigation guards allow
+        // access to #members and #ideas without re-blocking.
+        try {
+            if (Array.isArray(userDetails.locations) && userDetails.locations.length > 0) {
+                localStorage.setItem('hasBasicLocations', '1');
+            }
+        } catch (e) {
+            // ignore localStorage issues
+        }
+
         // Decide which tab should be active first. By default it's "locations"
         // so users are encouraged to set their home locations. Other flows can
         // still override this by setting App.profileInitialTab explicitly.
@@ -1072,10 +1083,14 @@ App.pages.profile = async function() {
                                     <label>First Nation</label>
                                     <select id="first-nation-select" class="form-select" disabled><option value="">-- Select First Nation --</option></select>
                                 </div>
-                                
+
+                                <!-- Ad-hoc Group (AMC, etc.) -->
                                 <div class="location-selector-row">
                                     <label>Group</label>
-                                    <select id="group-select" class="form-select" disabled><option value="">-- Select Group --</option></select>
+                                    <div class="location-field-with-feedback">
+                                        <div id="group-feedback" class="location-feedback"></div>
+                                        <select id="group-select" class="form-select" disabled><option value="">-- Select Group --</option></select>
+                                    </div>
                                 </div>
                                 
                                 <button class="btn btn-primary" id="save-location-btn" disabled style="margin-top: 12px;">Save Locations</button>
@@ -1386,6 +1401,7 @@ App.pages.profile = async function() {
         const groupSelect = document.getElementById('group-select');
         const saveBtn = document.getElementById('save-location-btn');
         const feedback = document.getElementById('location-feedback');
+        const groupFeedback = document.getElementById('group-feedback');
 
         const adhocGroupSelect = document.getElementById('adhoc-group-select');
         const adhocCreateToggle = document.getElementById('adhoc-create-toggle');
@@ -1763,18 +1779,41 @@ App.pages.profile = async function() {
             try {
                 const { response, data } = await App.apiPut(`/users/${App.authUser.id}/locations`, { locations });
                 
+                // Clear any previous messages
+                if (feedback) feedback.innerHTML = '';
+                if (groupFeedback) groupFeedback.innerHTML = '';
+
                 if (response.ok) {
-                    feedback.innerHTML = `<span class="success">Saved ${locations.length} location(s)</span>`;
+                    if (feedback) {
+                        feedback.innerHTML = `<span class="success">Saved ${locations.length} location(s)</span>`;
+                    }
                     setTimeout(() => App.pages.profile(), 1500);
                 } else {
-                    feedback.innerHTML = `<span class="error">${data.error}</span>`;
+                    const message = (data && data.error) || 'Unable to save locations.';
+                    // If this is an Ad-hoc Group domain restriction, show it
+                    // immediately above the Group field instead of at the bottom.
+                    const isAdhocDomainError =
+                        typeof message === 'string' &&
+                        message.includes('Ad-hoc Group can only be joined with an approved work email address');
+
+                    if (isAdhocDomainError && groupFeedback) {
+                        groupFeedback.innerHTML = `<span class="error">${message}</span>`;
+                        groupFeedback.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    } else if (feedback) {
+                        feedback.innerHTML = `<span class="error">${message}</span>`;
+                        feedback.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+
                     saveBtn.disabled = false;
-                    saveBtn.textContent = 'Save Location';
+                    saveBtn.textContent = 'Save Locations';
                 }
             } catch (err) {
-                feedback.innerHTML = `<span class="error">Error: ${err.message}</span>`;
+                if (feedback) {
+                    feedback.innerHTML = `<span class="error">Error: ${err.message}</span>`;
+                    feedback.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
                 saveBtn.disabled = false;
-                saveBtn.textContent = 'Save Location';
+                saveBtn.textContent = 'Save Locations';
             }
         });
 

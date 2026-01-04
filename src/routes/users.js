@@ -154,18 +154,18 @@ router.post('/admin/cleanup-duplicates', authenticate, requireAdmin, async (req,
     try {
         const result = await session.run(
             `
-            // Find emails with more than one user
+            // Find emails with more than one user (normalize by trimming + lowercasing)
             MATCH (u:User)
-            WITH toLower(u.email) as email, collect(u) as users
+            WITH toLower(trim(u.email)) AS email, collect(u) AS users
             WHERE email IS NOT NULL AND email <> '' AND size(users) > 1
             // Keep the first user in the collection, delete the rest
-            WITH email, head(users) as primary, tail(users) as duplicates
-            UNWIND duplicates as dupe
-            WITH email, collect(dupe) as dupesToDelete
-            UNWIND dupesToDelete as d
-            WITH email, collect(d) as allDupes
+            WITH email, head(users) AS primary, tail(users) AS duplicates
+            UNWIND duplicates AS dupe
+            WITH email, collect(dupe) AS dupesToDelete
+            UNWIND dupesToDelete AS d
+            WITH email, collect(d) AS allDupes
             FOREACH (x IN allDupes | DETACH DELETE x)
-            RETURN email, size(allDupes) as removedCount
+            RETURN email, size(allDupes) AS removedCount
             `
         );
 
