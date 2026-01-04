@@ -254,6 +254,7 @@ App.showAuthModal = function(initialTab = 'login') {
                         </p>
                         <button type="submit" class="btn btn-primary auth-submit-btn">Sign in</button>
                         <div class="auth-feedback" id="auth-login-feedback"></div>
+                        <pre class="auth-debug" id="auth-login-debug" aria-live="polite"></pre>
                     </form>
                 </div>
                 <div class="auth-tab-content ${initialTab === 'signup' ? 'active' : ''}" id="auth-tab-signup">
@@ -278,6 +279,7 @@ App.showAuthModal = function(initialTab = 'login') {
                         </p>
                         <button type="submit" class="btn btn-primary auth-submit-btn">Create account</button>
                         <div class="auth-feedback" id="auth-signup-feedback"></div>
+                        <pre class="auth-debug" id="auth-signup-debug" aria-live="polite"></pre>
                     </form>
                 </div>
             </div>
@@ -314,8 +316,13 @@ App.showAuthModal = function(initialTab = 'login') {
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const feedback = modal.querySelector('#auth-login-feedback');
+        const debugEl = modal.querySelector('#auth-login-debug');
         const submitBtn = loginForm.querySelector('.auth-submit-btn');
         feedback.textContent = '';
+        feedback.classList.remove('error', 'success');
+        if (debugEl) {
+            debugEl.textContent = '';
+        }
         submitBtn.disabled = true;
         submitBtn.textContent = 'Signing in...';
 
@@ -326,8 +333,21 @@ App.showAuthModal = function(initialTab = 'login') {
         try {
             const { response, data } = await App.apiPost('/auth/login', { email, password });
             if (!response.ok || !data.success) {
-                feedback.textContent = data.error || 'Unable to sign in.';
+                const message = data && data.error ? data.error : 'Unable to sign in.';
+                feedback.textContent = message;
                 feedback.classList.add('error');
+                if (debugEl) {
+                    debugEl.textContent = JSON.stringify(
+                        {
+                            status: response.status,
+                            statusText: response.statusText,
+                            message,
+                            email: String(email || '').toLowerCase()
+                        },
+                        null,
+                        2
+                    );
+                }
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Sign in';
                 return;
@@ -348,6 +368,16 @@ App.showAuthModal = function(initialTab = 'login') {
         } catch (err) {
             feedback.textContent = err.message;
             feedback.classList.add('error');
+            if (debugEl) {
+                debugEl.textContent = JSON.stringify(
+                    {
+                        message: err.message,
+                        stack: err.stack
+                    },
+                    null,
+                    2
+                );
+            }
             submitBtn.disabled = false;
             submitBtn.textContent = 'Sign in';
         }
@@ -392,8 +422,13 @@ App.showAuthModal = function(initialTab = 'login') {
     signupForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const feedback = modal.querySelector('#auth-signup-feedback');
+        const debugEl = modal.querySelector('#auth-signup-debug');
         const submitBtn = signupForm.querySelector('.auth-submit-btn');
         feedback.textContent = '';
+        feedback.classList.remove('error', 'success');
+        if (debugEl) {
+            debugEl.textContent = '';
+        }
         submitBtn.disabled = true;
         submitBtn.textContent = 'Creating account...';
 
@@ -417,21 +452,59 @@ App.showAuthModal = function(initialTab = 'login') {
             });
 
             if (!response.ok || !data.success) {
-                feedback.textContent = data.error || 'Unable to create account.';
+                const message = data && data.error ? data.error : 'Unable to create account.';
+                feedback.textContent = message;
                 feedback.classList.add('error');
+                if (debugEl) {
+                    debugEl.textContent = JSON.stringify(
+                        {
+                            status: response.status,
+                            statusText: response.statusText,
+                            message,
+                            email: String(email || '').toLowerCase()
+                        },
+                        null,
+                        2
+                    );
+                }
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Create account';
                 return;
             }
 
-            feedback.textContent = data.message || 'Account created. Please check your email to verify your address.';
+            const okMessage =
+                (data && data.message) ||
+                'Account created. Please check your email to verify your address.';
+            feedback.textContent = okMessage;
             feedback.classList.remove('error');
             feedback.classList.add('success');
+            if (debugEl) {
+                debugEl.textContent = JSON.stringify(
+                    {
+                        status: response.status,
+                        statusText: response.statusText,
+                        message: okMessage,
+                        email: String(email || '').toLowerCase()
+                    },
+                    null,
+                    2
+                );
+            }
             submitBtn.disabled = true;
             submitBtn.textContent = 'Check your email';
         } catch (err) {
             feedback.textContent = err.message;
             feedback.classList.add('error');
+            if (debugEl) {
+                debugEl.textContent = JSON.stringify(
+                    {
+                        message: err.message,
+                        stack: err.stack
+                    },
+                    null,
+                    2
+                );
+            }
             submitBtn.disabled = false;
             submitBtn.textContent = 'Create account';
         }

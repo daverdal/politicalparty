@@ -3594,6 +3594,85 @@ a:hover {
   margin: 20px 0;
 }
 
+/* Auth forms (login / signup) */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 0.95rem;
+}
+
+.auth-form label > span {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.auth-form input[type="email"],
+.auth-form input[type="password"],
+.auth-form input[type="text"] {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.auth-form input[type="email"]:focus,
+.auth-form input[type="password"]:focus,
+.auth-form input[type="text"]:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.auth-form .password-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-form .password-field input[type="password"] {
+  width: 100%;
+}
+
+.auth-form .password-toggle {
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.auth-form .password-toggle:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.auth-help {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.auth-feedback {
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+.auth-feedback.error {
+  color: var(--danger);
+}
+
+.auth-feedback.success {
+  color: var(--success);
+}
+
 /* Nomination Section */
 .nomination-section {
   background: var(--bg-tertiary);
