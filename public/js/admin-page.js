@@ -65,383 +65,395 @@ App.pages.admin = async function () {
 
             <div id="admin-result" class="profile-resume-feedback" style="margin-bottom: 12px;"></div>
 
-            <div class="cards-grid">
-                <div class="card" id="admin-conventions-card">
-                    <div class="card-header">
-                        <h3 class="card-title">📋 Conventions</h3>
+            <div class="cards-grid admin-tab-panels">
+                <!-- Conventions tab -->
+                <section class="admin-tab-panel active" data-admin-tab-panel="conventions">
+                    <div class="card" id="admin-conventions-card">
+                        <div class="card-header">
+                            <h3 class="card-title">📋 Conventions</h3>
+                        </div>
+                        <div class="card-body">
+                            ${
+                                conventions.length === 0
+                                    ? '<p class="empty-text">No conventions yet. Create one below.</p>'
+                                    : `
+                                <p class="card-subtitle" style="margin-bottom: 8px;">
+                                    Click <strong>Manage</strong> on a convention below to control it.
+                                </p>
+                                <ul class="simple-list">
+                                    ${conventions
+                                        .map(
+                                            (c) => `
+                                        <li class="simple-list-item admin-conv-item ${
+                                            c.id === (activeConv && activeConv.id) ? 'selected' : ''
+                                        }" data-conv-id="${c.id}">
+                                            <div>
+                                                <span class="simple-list-name">${c.name}</span>
+                                                <span class="simple-list-meta">
+                                                    Year ${c.year} • ${c.status} • ${
+                                                c.totalRaces || 0
+                                            } races
+                                                </span>
+                                            </div>
+                                            <button 
+                                                type="button" 
+                                                class="btn btn-secondary btn-xs admin-conv-manage" 
+                                                data-conv-id="${c.id}">
+                                                ${
+                                                    c.id === (activeConv && activeConv.id)
+                                                        ? 'Managing'
+                                                        : c.status === 'completed'
+                                                        ? 'Completed'
+                                                        : 'Manage'
+                                                }
+                                            </button>
+                                        </li>
+                                    `
+                                        )
+                                        .join('')}
+                                </ul>
+                            `
+                            }
+                        </div>
                     </div>
-                    <div class="card-body">
-                        ${
-                            conventions.length === 0
-                                ? '<p class="empty-text">No conventions yet. Create one below.</p>'
-                                : `
-                            <p class="card-subtitle" style="margin-bottom: 8px;">
-                                Click <strong>Manage</strong> on a convention below to control it.
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">➕ Create Convention</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="admin-create-conv-form" class="auth-form">
+                                <label>
+                                    <span>Name</span>
+                                    <input type="text" id="admin-new-conv-name" class="form-input"
+                                        value="${currentYear + 1} National Convention" required>
+                                </label>
+                                <label>
+                                    <span>Year</span>
+                                    <input type="number" id="admin-new-conv-year" class="form-input"
+                                        value="${currentYear + 1}" min="2020" max="2100" required>
+                                </label>
+                                <label>
+                                    <span>Start date (Wave 1 nominations)</span>
+                                    <input type="date" id="admin-new-conv-start" class="form-input"
+                                        value="${currentYear + 1}-01-15">
+                                </label>
+                                <button type="submit" class="btn btn-primary btn-sm" style="margin-top: 8px;">
+                                    Create convention
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    ${
+                        activeConv
+                            ? `
+                    <div class="card" id="admin-dev-card">
+                        <div class="card-header">
+                            <h3 class="card-title">🎛 Active Convention Controls</h3>
+                            <p class="card-subtitle">Managing: ${activeConv.name}</p>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-subtitle">Auto-mode: ${
+                                autoMode.enabled ? '🤖 Enabled' : '⏸ Disabled'
+                            }</p>
+                            <button class="btn btn-secondary btn-sm" id="admin-auto-toggle">
+                                ${autoMode.enabled ? 'Disable auto-mode' : 'Enable auto-mode'}
+                            </button>
+                            <hr style="margin: 12px 0;">
+                            <button class="btn btn-secondary btn-sm" id="admin-advance-phase">
+                                Advance to next phase
+                            </button>
+                            <button class="btn btn-secondary btn-sm" id="admin-create-wave-races" style="margin-left: 4px;">
+                                Create races for current wave
+                            </button>
+                            ${
+                                activeConv.status && activeConv.status.includes('-voting')
+                                    ? `
+                            <button class="btn btn-secondary btn-sm" id="admin-start-all-voting" style="margin-left: 4px;">
+                                ▶️ Start all voting
+                            </button>
+                            <button class="btn btn-secondary btn-sm" id="admin-close-all-rounds" style="margin-left: 4px;">
+                                ⏭️ Close all rounds
+                            </button>
+                            `
+                                    : ''
+                            }
+                            <button class="btn btn-secondary btn-sm" id="admin-reset-conv" style="margin-left: 4px;">
+                                Reset convention
+                            </button>
+                            ${
+                                activeConv.status === 'completed'
+                                    ? `
+                            <hr style="margin: 12px 0;">
+                            <button class="btn btn-secondary btn-sm" id="admin-view-results">
+                                View results
+                            </button>
+                            `
+                                    : ''
+                            }
+                        </div>
+                    </div>
+
+                    ${
+                        stats
+                            ? `
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">📊 Convention Overview</h3>
+                            <p class="card-subtitle">
+                                ${activeConv.name} (Year ${activeConv.year}) – status: ${stats.status} (wave ${
+                                stats.currentWave || 0
+                            })
                             </p>
+                        </div>
+                        <div class="card-body">
                             <ul class="simple-list">
-                                ${conventions
-                                    .map(
-                                        (c) => `
-                                    <li class="simple-list-item admin-conv-item ${
-                                        c.id === (activeConv && activeConv.id) ? 'selected' : ''
-                                    }" data-conv-id="${c.id}">
-                                        <div>
-                                            <span class="simple-list-name">${c.name}</span>
-                                            <span class="simple-list-meta">
-                                                Year ${c.year} • ${c.status} • ${
-                                            c.totalRaces || 0
-                                        } races
-                                            </span>
-                                        </div>
-                                        <button 
-                                            type="button" 
-                                            class="btn btn-secondary btn-xs admin-conv-manage" 
-                                            data-conv-id="${c.id}">
-                                            ${
-                                                c.id === (activeConv && activeConv.id)
-                                                    ? 'Managing'
-                                                    : c.status === 'completed'
-                                                    ? 'Completed'
-                                                    : 'Manage'
-                                            }
-                                        </button>
-                                    </li>
-                                `
-                                    )
-                                    .join('')}
+                                <li class="simple-list-item">
+                                    <span class="simple-list-name">Status</span>
+                                    <span class="simple-list-meta">${stats.status} (wave ${
+                                stats.currentWave || 0
+                            })</span>
+                                </li>
+                                <li class="simple-list-item">
+                                    <span class="simple-list-name">Races</span>
+                                    <span class="simple-list-meta">
+                                        ${stats.totalRaces} total • ${stats.openRaces} open • ${
+                                stats.votingRaces
+                            } voting • ${stats.closedRaces} closed
+                                    </span>
+                                </li>
+                                <li class="simple-list-item">
+                                    <span class="simple-list-name">Candidates</span>
+                                    <span class="simple-list-meta">${stats.totalCandidates}</span>
+                                </li>
+                                <li class="simple-list-item">
+                                    <span class="simple-list-name">Nominations</span>
+                                    <span class="simple-list-meta">${stats.totalNominations}</span>
+                                </li>
+                                <li class="simple-list-item">
+                                    <span class="simple-list-name">Votes</span>
+                                    <span class="simple-list-meta">${stats.totalVotes}</span>
+                                </li>
                             </ul>
-                        `
-                        }
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">➕ Create Convention</h3>
-                    </div>
-                    <div class="card-body">
-                        <form id="admin-create-conv-form" class="auth-form">
-                            <label>
-                                <span>Name</span>
-                                <input type="text" id="admin-new-conv-name" class="form-input"
-                                    value="${currentYear + 1} National Convention" required>
-                            </label>
-                            <label>
-                                <span>Year</span>
-                                <input type="number" id="admin-new-conv-year" class="form-input"
-                                    value="${currentYear + 1}" min="2020" max="2100" required>
-                            </label>
-                            <label>
-                                <span>Start date (Wave 1 nominations)</span>
-                                <input type="date" id="admin-new-conv-start" class="form-input"
-                                    value="${currentYear + 1}-01-15">
-                            </label>
-                            <button type="submit" class="btn btn-primary btn-sm" style="margin-top: 8px;">
-                                Create convention
-                            </button>
-                        </form>
-                    </div>
-                </div>
-
-                ${
-                    activeConv
-                        ? `
-                <div class="card" id="admin-dev-card">
-                    <div class="card-header">
-                        <h3 class="card-title">🎛 Active Convention Controls</h3>
-                        <p class="card-subtitle">Managing: ${activeConv.name}</p>
-                    </div>
-                    <div class="card-body">
-                        <p class="card-subtitle">Auto-mode: ${
-                            autoMode.enabled ? '🤖 Enabled' : '⏸ Disabled'
-                        }</p>
-                        <button class="btn btn-secondary btn-sm" id="admin-auto-toggle">
-                            ${autoMode.enabled ? 'Disable auto-mode' : 'Enable auto-mode'}
-                        </button>
-                        <hr style="margin: 12px 0;">
-                        <button class="btn btn-secondary btn-sm" id="admin-advance-phase">
-                            Advance to next phase
-                        </button>
-                        <button class="btn btn-secondary btn-sm" id="admin-create-wave-races" style="margin-left: 4px;">
-                            Create races for current wave
-                        </button>
-                        ${
-                            activeConv.status && activeConv.status.includes('-voting')
-                                ? `
-                        <button class="btn btn-secondary btn-sm" id="admin-start-all-voting" style="margin-left: 4px;">
-                            ▶️ Start all voting
-                        </button>
-                        <button class="btn btn-secondary btn-sm" id="admin-close-all-rounds" style="margin-left: 4px;">
-                            ⏭️ Close all rounds
-                        </button>
-                        `
-                                : ''
-                        }
-                        <button class="btn btn-secondary btn-sm" id="admin-reset-conv" style="margin-left: 4px;">
-                            Reset convention
-                        </button>
-                        ${
-                            activeConv.status === 'completed'
-                                ? `
-                        <hr style="margin: 12px 0;">
-                        <button class="btn btn-secondary btn-sm" id="admin-view-results">
-                            View results
-                        </button>
-                        `
-                                : ''
-                        }
-                    </div>
-                </div>
-
-                ${
-                    stats
-                        ? `
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">📊 Convention Overview</h3>
-                        <p class="card-subtitle">
-                            ${activeConv.name} (Year ${activeConv.year}) – status: ${stats.status} (wave ${
-                            stats.currentWave || 0
-                        })
-                        </p>
-                    </div>
-                    <div class="card-body">
-                        <ul class="simple-list">
-                            <li class="simple-list-item">
-                                <span class="simple-list-name">Status</span>
-                                <span class="simple-list-meta">${stats.status} (wave ${
-                            stats.currentWave || 0
-                        })</span>
-                            </li>
-                            <li class="simple-list-item">
-                                <span class="simple-list-name">Races</span>
-                                <span class="simple-list-meta">
-                                    ${stats.totalRaces} total • ${stats.openRaces} open • ${
-                            stats.votingRaces
-                        } voting • ${stats.closedRaces} closed
-                                </span>
-                            </li>
-                            <li class="simple-list-item">
-                                <span class="simple-list-name">Candidates</span>
-                                <span class="simple-list-meta">${stats.totalCandidates}</span>
-                            </li>
-                            <li class="simple-list-item">
-                                <span class="simple-list-name">Nominations</span>
-                                <span class="simple-list-meta">${stats.totalNominations}</span>
-                            </li>
-                            <li class="simple-list-item">
-                                <span class="simple-list-name">Votes</span>
-                                <span class="simple-list-meta">${stats.totalVotes}</span>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-                `
-                        : ''
-                }
-                `
-                        : ''
-                }
-
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">🧪 Dev Utilities</h3>
-                    </div>
-                    <div class="card-body">
-                        <p class="card-subtitle" style="margin-bottom: 8px;">
-                            Tools to keep the development database tidy. These do <strong>not</strong> run automatically.
-                        </p>
-                        <button class="btn btn-secondary btn-sm" id="admin-cleanup-duplicates">
-                            🧹 Clean up duplicate users (same email)
-                        </button>
-                        <div id="cleanup-duplicates-result" class="profile-resume-feedback" style="margin-top: 8px;"></div>
-                        <hr style="margin: 12px 0;">
-                        <button class="btn btn-secondary btn-sm" id="admin-reset-db">
-                            💣 Reset Neo4j database and re-seed
-                        </button>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">🌍 Countries & Locations</h3>
-                    </div>
-                    <div class="card-body">
-                        <p class="card-subtitle" style="margin-bottom: 8px;">
-                            Add additional countries (e.g., United States, Bangladesh) so members outside Canada can participate.
-                        </p>
-                        <label>
-                            <span>Country ID</span>
-                            <input id="admin-country-id" class="form-input" placeholder="e.g., us, bd">
-                        </label>
-                        <p class="form-help">
-                            Short identifier used in URLs and relationships (e.g., <code>ca</code> for Canada).
-                        </p>
-                        <label>
-                            <span>Country name</span>
-                            <input id="admin-country-name" class="form-input" placeholder="e.g., United States">
-                        </label>
-                        <label>
-                            <span>Country code (optional)</span>
-                            <input id="admin-country-code" class="form-input" placeholder="e.g., US">
-                        </label>
-                        <p class="form-help">
-                            Defaults to the uppercased ID if left blank.
-                        </p>
-                        <button class="btn btn-secondary btn-sm" id="admin-country-save" style="margin-top: 8px;">
-                            ➕ Add / update country
-                        </button>
-                        <div id="admin-country-feedback" class="profile-resume-feedback" style="margin-top: 8px;"></div>
-                    </div>
-                </div>
-
-                <div class="card" id="admin-adhoc-card">
-                    <div class="card-header">
-                        <h3 class="card-title">👥 Ad-hoc Group Admin</h3>
-                    </div>
-                    <div class="card-body">
-                        <p class="card-subtitle" style="margin-bottom: 8px;">
-                            Create Ad-hoc Groups for a province (for example, "Manitoba Policy Nerds") and optionally
-                            restrict access by email domain (e.g., <code>@manitobachiefs.com</code>).
-                        </p>
-                        <div class="form-group" style="display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; margin-bottom: 8px;">
-                            <label>
-                                <span>Country</span>
-                                <select id="admin-adhoc-country-select" class="form-select">
-                                    <option value="">-- Select country --</option>
-                                </select>
-                            </label>
-                            <label>
-                                <span>Province / Territory</span>
-                                <select id="admin-adhoc-province-select" class="form-select">
-                                    <option value="">-- Select province --</option>
-                                </select>
-                            </label>
                         </div>
-                        <div class="form-group" style="margin-bottom: 8px;">
-                            <label>
-                                <span>Existing Ad-hoc Group in this province</span>
-                                <select id="admin-adhoc-existing-select" class="form-select" disabled>
-                                    <option value="">-- No groups yet --</option>
-                                </select>
-                            </label>
+                    </div>
+                    `
+                            : ''
+                    }
+                    `
+                            : ''
+                    }
+                </section>
+
+                <!-- Ad-hoc Group Admin tab -->
+                <section class="admin-tab-panel" data-admin-tab-panel="adhoc">
+                    <div class="card" id="admin-adhoc-card">
+                        <div class="card-header">
+                            <h3 class="card-title">👥 Ad-hoc Group Admin</h3>
                         </div>
-                        <label>
-                            <span>Group name</span>
-                            <input id="admin-adhoc-name" class="form-input" placeholder="e.g., Manitoba Policy Nerds">
-                        </label>
-                        <label>
-                            <span>Description (optional)</span>
-                            <textarea id="admin-adhoc-description" class="form-textarea" rows="3" placeholder="What is this group about?"></textarea>
-                        </label>
-                        <label>
-                            <span>Email domain (optional)</span>
-                            <input id="admin-adhoc-domain" class="form-input" placeholder="@example.org">
-                        </label>
-                        <p class="form-help">
-                            Only admins or province moderators can create Ad-hoc Groups. In production, access to the
-                            group’s Strategic Plan is limited to members whose email ends with the configured domain.
-                        </p>
-                        <div style="display:flex; flex-wrap:wrap; gap: 8px; margin-top: 8px;">
-                            <button class="btn btn-secondary btn-sm" id="admin-adhoc-create-btn">
-                                ➕ Create Ad-hoc Group
+                        <div class="card-body">
+                            <p class="card-subtitle" style="margin-bottom: 8px;">
+                                Create Ad-hoc Groups for a province (for example, "Manitoba Policy Nerds") and optionally
+                                restrict access by email domain (e.g., <code>@manitobachiefs.com</code>).
+                            </p>
+                            <div class="form-group" style="display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; margin-bottom: 8px;">
+                                <label>
+                                    <span>Country</span>
+                                    <select id="admin-adhoc-country-select" class="form-select">
+                                        <option value="">-- Select country --</option>
+                                    </select>
+                                </label>
+                                <label>
+                                    <span>Province / Territory</span>
+                                    <select id="admin-adhoc-province-select" class="form-select">
+                                        <option value="">-- Select province --</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 8px;">
+                                <label>
+                                    <span>Existing Ad-hoc Group in this province</span>
+                                    <select id="admin-adhoc-existing-select" class="form-select" disabled>
+                                        <option value="">-- No groups yet --</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <label>
+                                <span>Group name</span>
+                                <input id="admin-adhoc-name" class="form-input" placeholder="e.g., Manitoba Policy Nerds">
+                            </label>
+                            <label>
+                                <span>Description (optional)</span>
+                                <textarea id="admin-adhoc-description" class="form-textarea" rows="3" placeholder="What is this group about?"></textarea>
+                            </label>
+                            <label>
+                                <span>Email domain (optional)</span>
+                                <input id="admin-adhoc-domain" class="form-input" placeholder="@example.org">
+                            </label>
+                            <p class="form-help">
+                                Only admins or province moderators can create Ad-hoc Groups. In production, access to the
+                                group’s Strategic Plan is limited to members whose email ends with the configured domain.
+                            </p>
+                            <div style="display:flex; flex-wrap:wrap; gap: 8px; margin-top: 8px;">
+                                <button class="btn btn-secondary btn-sm" id="admin-adhoc-create-btn">
+                                    ➕ Create Ad-hoc Group
+                                </button>
+                                <button class="btn btn-secondary btn-sm" id="admin-adhoc-save-domain-btn" disabled>
+                                    💾 Save domain for selected group
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" id="admin-adhoc-delete-btn" disabled>
+                                    🗑 Delete selected Ad-hoc Group
+                                </button>
+                            </div>
+                            <div id="admin-adhoc-feedback" class="profile-resume-feedback" style="margin-top: 8px;"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- AllLocations tab -->
+                <section class="admin-tab-panel" data-admin-tab-panel="all-locations">
+                    <div class="card" id="admin-alllocations-card">
+                        <div class="card-header">
+                            <h3 class="card-title">🌐 All Locations</h3>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-subtitle" style="margin-bottom: 8px;">
+                                Read-only view of all planets, countries, provinces, ridings, towns, First Nations, and Ad-hoc Groups.
+                                Use this to sanity check the hierarchy that drives Maps, Ideas, and Planning.
+                            </p>
+                            <div id="admin-alllocations-feedback" class="profile-resume-feedback" style="margin-bottom: 8px;"></div>
+                            <div id="admin-alllocations-tree" class="locations-list" style="max-height: 360px; overflow-y:auto; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 8px;">
+                                <p style="margin:0; font-size: 13px; opacity: 0.8;">Loading location hierarchy…</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">🌍 Countries & Locations</h3>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-subtitle" style="margin-bottom: 8px;">
+                                Add additional countries (e.g., United States, Bangladesh) so members outside Canada can participate.
+                            </p>
+                            <label>
+                                <span>Country ID</span>
+                                <input id="admin-country-id" class="form-input" placeholder="e.g., us, bd">
+                            </label>
+                            <p class="form-help">
+                                Short identifier used in URLs and relationships (e.g., <code>ca</code> for Canada).
+                            </p>
+                            <label>
+                                <span>Country name</span>
+                                <input id="admin-country-name" class="form-input" placeholder="e.g., United States">
+                            </label>
+                            <label>
+                                <span>Country code (optional)</span>
+                                <input id="admin-country-code" class="form-input" placeholder="e.g., US">
+                            </label>
+                            <p class="form-help">
+                                Defaults to the uppercased ID if left blank.
+                            </p>
+                            <button class="btn btn-secondary btn-sm" id="admin-country-save" style="margin-top: 8px;">
+                                ➕ Add / update country
                             </button>
-                            <button class="btn btn-secondary btn-sm" id="admin-adhoc-save-domain-btn" disabled>
-                                💾 Save domain for selected group
+                            <div id="admin-country-feedback" class="profile-resume-feedback" style="margin-top: 8px;"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Dev & Locations tab -->
+                <section class="admin-tab-panel" data-admin-tab-panel="dev">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">🧪 Dev Utilities</h3>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-subtitle" style="margin-bottom: 8px;">
+                                Tools to keep the development database tidy. These do <strong>not</strong> run automatically.
+                            </p>
+                            <button class="btn btn-secondary btn-sm" id="admin-cleanup-duplicates">
+                                🧹 Clean up duplicate users (same email)
                             </button>
-                            <button class="btn btn-outline-danger btn-sm" id="admin-adhoc-delete-btn" disabled>
-                                🗑 Delete selected Ad-hoc Group
+                            <div id="cleanup-duplicates-result" class="profile-resume-feedback" style="margin-top: 8px;"></div>
+                            <hr style="margin: 12px 0;">
+                            <button class="btn btn-secondary btn-sm" id="admin-reset-db">
+                                💣 Reset Neo4j database and re-seed
                             </button>
                         </div>
-                        <div id="admin-adhoc-feedback" class="profile-resume-feedback" style="margin-top: 8px;"></div>
                     </div>
-                </div>
 
-                <div class="card" id="admin-alllocations-card">
-                    <div class="card-header">
-                        <h3 class="card-title">🌐 All Locations</h3>
-                    </div>
-                    <div class="card-body">
-                        <p class="card-subtitle" style="margin-bottom: 8px;">
-                            Read-only view of all planets, countries, provinces, ridings, towns, First Nations, and Ad-hoc Groups.
-                            Use this to sanity check the hierarchy that drives Maps, Ideas, and Planning.
-                        </p>
-                        <div id="admin-alllocations-feedback" class="profile-resume-feedback" style="margin-bottom: 8px;"></div>
-                        <div id="admin-alllocations-tree" class="locations-list" style="max-height: 360px; overflow-y:auto; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 8px;">
-                            <p style="margin:0; font-size: 13px; opacity: 0.8;">Loading location hierarchy…</p>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">👥 Location Moderators (Admin)</h3>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-subtitle" style="margin-bottom: 8px;">
+                                Assign moderators to specific locations (countries, provinces, ridings, towns, First Nations, or adhoc groups).
+                            </p>
+                            <div class="form-group" style="display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px;">
+                                <label>
+                                    <span>Location type</span>
+                                    <select id="mod-location-type" class="form-select">
+                                        <option value="federal-ridings">Federal Riding</option>
+                                        <option value="provincial-ridings">Provincial Riding</option>
+                                        <option value="towns">Town</option>
+                                        <option value="first-nations">First Nation</option>
+                                        <option value="adhoc-groups">Adhoc Group</option>
+                                        <option value="provinces">Province</option>
+                                        <option value="countries">Country</option>
+                                    </select>
+                                </label>
+                                <label>
+                                    <span>Country</span>
+                                    <select id="mod-country-select" class="form-select">
+                                        <option value="">-- Select country --</option>
+                                    </select>
+                                </label>
+                                <label>
+                                    <span>Province / State</span>
+                                    <select id="mod-province-select" class="form-select">
+                                        <option value="">-- Select province --</option>
+                                    </select>
+                                </label>
+                                <label>
+                                    <span>Specific location</span>
+                                    <select id="mod-location-select" class="form-select">
+                                        <option value="">-- Select location --</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <p class="form-help" style="margin-top:4px;">
+                                Use the dropdowns to drill down from Country → Province → Location. The internal Location ID will
+                                be filled in automatically for the moderator tools.
+                            </p>
+                            <label>
+                                <span>Location ID (advanced)</span>
+                                <input id="mod-location-id" class="form-input" placeholder="e.g., riding or group ID">
+                            </label>
+                            <p class="form-help" style="margin-top:4px;">
+                                This is normally filled in from the dropdowns above. Only override it if you know the exact ID from the database.
+                            </p>
+                            <label>
+                                <span>Moderator user</span>
+                                <select id="mod-user-select" class="form-select">
+                                    <option value="">-- Select user --</option>
+                                </select>
+                            </label>
+                            <button class="btn btn-secondary btn-sm" id="mod-assign-btn" style="margin-top: 8px;">
+                                ➕ Assign moderator
+                            </button>
+                            <div id="mod-assign-result" class="profile-resume-feedback" style="margin-top: 8px;"></div>
+                            <hr style="margin: 16px 0;">
+                            <button class="btn btn-secondary btn-sm" id="mod-refresh-list-btn">
+                                🔍 Show moderators for location
+                            </button>
+                            <div id="mod-list-result" class="profile-resume-feedback" style="margin-top: 8px;"></div>
+                            <ul id="mod-list" class="locations-list" style="margin-top: 8px; max-height: 160px; overflow-y:auto;"></ul>
                         </div>
                     </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">👥 Location Moderators (Admin)</h3>
-                    </div>
-                    <div class="card-body">
-                        <p class="card-subtitle" style="margin-bottom: 8px;">
-                            Assign moderators to specific locations (countries, provinces, ridings, towns, First Nations, or adhoc groups).
-                        </p>
-                        <div class="form-group" style="display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px;">
-                            <label>
-                                <span>Location type</span>
-                                <select id="mod-location-type" class="form-select">
-                                    <option value="federal-ridings">Federal Riding</option>
-                                    <option value="provincial-ridings">Provincial Riding</option>
-                                    <option value="towns">Town</option>
-                                    <option value="first-nations">First Nation</option>
-                                    <option value="adhoc-groups">Adhoc Group</option>
-                                    <option value="provinces">Province</option>
-                                    <option value="countries">Country</option>
-                                </select>
-                            </label>
-                            <label>
-                                <span>Country</span>
-                                <select id="mod-country-select" class="form-select">
-                                    <option value="">-- Select country --</option>
-                                </select>
-                            </label>
-                            <label>
-                                <span>Province / State</span>
-                                <select id="mod-province-select" class="form-select">
-                                    <option value="">-- Select province --</option>
-                                </select>
-                            </label>
-                            <label>
-                                <span>Specific location</span>
-                                <select id="mod-location-select" class="form-select">
-                                    <option value="">-- Select location --</option>
-                                </select>
-                            </label>
-                        </div>
-                        <p class="form-help" style="margin-top:4px;">
-                            Use the dropdowns to drill down from Country → Province → Location. The internal Location ID will
-                            be filled in automatically for the moderator tools.
-                        </p>
-                        <label>
-                            <span>Location ID (advanced)</span>
-                            <input id="mod-location-id" class="form-input" placeholder="e.g., riding or group ID">
-                        </label>
-                        <p class="form-help" style="margin-top:4px;">
-                            This is normally filled in from the dropdowns above. Only override it if you know the exact ID from the database.
-                        </p>
-                        <label>
-                            <span>Moderator user</span>
-                            <select id="mod-user-select" class="form-select">
-                                <option value="">-- Select user --</option>
-                            </select>
-                        </label>
-                        <button class="btn btn-secondary btn-sm" id="mod-assign-btn" style="margin-top: 8px;">
-                            ➕ Assign moderator
-                        </button>
-                        <div id="mod-assign-result" class="profile-resume-feedback" style="margin-top: 8px;"></div>
-                        <hr style="margin: 16px 0;">
-                        <button class="btn btn-secondary btn-sm" id="mod-refresh-list-btn">
-                            🔍 Show moderators for location
-                        </button>
-                        <div id="mod-list-result" class="profile-resume-feedback" style="margin-top: 8px;"></div>
-                        <ul id="mod-list" class="locations-list" style="margin-top: 8px; max-height: 160px; overflow-y:auto;"></ul>
-                    </div>
-                </div>
+                </section>
             </div>
         `;
 
@@ -453,23 +465,17 @@ App.pages.admin = async function () {
             resultEl.classList.add(isError ? 'error' : 'success');
         };
 
-        // Admin horizontal tabs – scroll to relevant section
+        // Admin horizontal tabs – show only the relevant section
         const adminTabButtons = content.querySelectorAll('.admin-tabs .profile-tab-button');
-        const scrollTargets = {
-            conventions: document.getElementById('admin-conventions-card'),
-            adhoc: document.getElementById('admin-adhoc-card'),
-            'all-locations': document.getElementById('admin-alllocations-card'),
-            dev: document.getElementById('admin-dev-card')
-        };
+        const adminTabPanels = content.querySelectorAll('.admin-tab-panel');
 
         adminTabButtons.forEach((btn) => {
             btn.addEventListener('click', () => {
                 const tab = btn.getAttribute('data-admin-tab');
                 adminTabButtons.forEach((b) => b.classList.toggle('active', b === btn));
-                const target = scrollTargets[tab];
-                if (target && typeof target.scrollIntoView === 'function') {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
+                adminTabPanels.forEach((panel) => {
+                    panel.classList.toggle('active', panel.getAttribute('data-admin-tab-panel') === tab);
+                });
             });
         });
 

@@ -1097,6 +1097,18 @@ a:hover {
   display: block;
 }
 
+.admin-tab-panels {
+  margin-top: 4px;
+}
+
+.admin-tab-panel {
+  display: none;
+}
+
+.admin-tab-panel.active {
+  display: block;
+}
+
 /* Mobile tweaks: keep three-panel layout but add grab space between columns on Ideas page */
 @media (max-width: 768px) {
   .browse-layout[data-page="ideas"] {
