@@ -27,7 +27,8 @@ App.navigate = function(page) {
         App.authUser &&
         typeof App.hasBasicLocationsConfigured === 'function' &&
         !App.hasBasicLocationsConfigured() &&
-        targetPage !== 'profile'
+        targetPage !== 'profile' &&
+        targetPage !== 'admin'
     ) {
         alert('Please set your home locations first. We have opened your profile to the Locations tab.');
         App.profileInitialTab = 'locations';
