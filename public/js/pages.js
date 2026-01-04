@@ -453,12 +453,23 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
         ? 'Hover, click or tap a dot to see First Nation candidates running there. On touch screens, pinch to zoom and drag to pan.'
         : 'Hover, click or tap a dot to see First Nation details and top ideas. On touch screens, pinch to zoom and drag to pan.';
 
+    // Optional small control strip for things like "Re-center map"
+    const controls = document.createElement('div');
+    controls.className = 'province-map-controls';
+    const recenterBtn = document.createElement('button');
+    recenterBtn.type = 'button';
+    recenterBtn.className = 'btn btn-secondary btn-xs';
+    recenterBtn.textContent = 'Re-center map';
+    controls.appendChild(recenterBtn);
+
     // For the Ideas/#browse page, show the dynamic First Nation + ideas text
-    // above the map instead of the static "Map of Manitoba..." title.
+    // (info) above the map instead of the static title. For Candidates, keep
+    // the title then info.
     if (isCandidatesPage) {
         wrapper.appendChild(title);
     }
     wrapper.appendChild(info);
+    wrapper.appendChild(controls);
     wrapper.appendChild(canvas);
     detail.appendChild(wrapper);
 
@@ -571,6 +582,10 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
             scale: 0.3,
             translateX: 0,
             translateY: 0,
+            // Remember the "home" view so we can re-center later
+            initialScale: 0.3,
+            initialTranslateX: 0,
+            initialTranslateY: 0,
             panning: false,
             startX: 0,
             startY: 0,
@@ -827,22 +842,26 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
         if (pointCount > 0) {
             const avgXPercent = sumXPercent / pointCount;
             const avgYPercent = sumYPercent / pointCount;
-
+        
             requestAnimationFrame(() => {
                 const rect = canvas.getBoundingClientRect();
                 if (!rect.width || !rect.height) return;
-
+        
                 // Base translation to bring the average point near the canvas center (50%, 50%)
                 let translateX = ((50 - avgXPercent) / 100) * rect.width;
                 let translateY = ((50 - avgYPercent) / 100) * rect.height;
-
+        
                 // Gentle nudge: shift a bit left and up so the main body of the province
                 // tends to land in a nicer spot (this worked well for Manitoba).
                 translateX -= rect.width * 0.3;    // 30% extra to the left
                 translateY -= rect.height * 0.175; // 17.5% extra upward
-
+        
                 state.translateX = translateX;
                 state.translateY = translateY;
+                // Capture this as our "home" view for the Re-center button.
+                state.initialTranslateX = translateX;
+                state.initialTranslateY = translateY;
+                state.initialScale = state.scale;
                 applyTransform();
             });
         }
@@ -874,17 +893,27 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
         window.addEventListener('mousemove', handleMove);
         window.addEventListener('mouseup', handleUp);
 
+        // Wire up "Re-center map" button to return to the initial province view
+        recenterBtn.addEventListener('click', () => {
+            state.scale = state.initialScale;
+            state.translateX = state.initialTranslateX;
+            state.translateY = state.initialTranslateY;
+            applyTransform();
+        });
+
         // Enable touch support on mobile for pan + pinch zoom
         attachTouchPanAndZoom();
 
-        // Restore mouse wheel zoom for laptop users (zoom around cursor)
+        // Mouse wheel / trackpad zoom for laptop users (zoom around cursor)
         canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
             const rect = canvas.getBoundingClientRect();
             const cx = e.clientX - rect.left;
             const cy = e.clientY - rect.top;
 
-            const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+            // Use a gentler zoom factor so trackpads feel less "jumpy"
+            const baseFactor = 1.07;
+            const zoomFactor = e.deltaY < 0 ? baseFactor : 1 / baseFactor;
             const newScale = Math.min(8, Math.max(0.2, state.scale * zoomFactor));
             if (newScale === state.scale) return;
 
