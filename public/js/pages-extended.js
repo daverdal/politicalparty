@@ -3707,10 +3707,35 @@ App.pages.planning = async function() {
                     }
                 }
             } catch (err) {
+                // Log rich debug info for admins/devs
+                try {
+                    if (typeof App.logClientEvent === 'function') {
+                        App.logClientEvent('error', 'Planning load failed', {
+                            status: err && err.status,
+                            message: err && err.message,
+                            locationId: locId,
+                            locationType: locType
+                        });
+                    }
+                } catch (e) {
+                    // ignore debug logging errors
+                }
+
+                let friendly = err && err.message ? String(err.message) : 'Unknown error.';
+                if (err && (err.status === 401 || err.status === 403)) {
+                    friendly +=
+                        ' You may not have permission to view this Strategic Plan. ' +
+                        'If this is an Ad-hoc Group with an email domain restriction, make sure you are signed in with a matching email or adjust the group settings in Admin → Ad-hoc Group Admin.';
+                }
+
                 sessionContainer.innerHTML = `
                     <div class="card">
                         <div class="card-body">
-                            <p class="empty-text">Error loading planning data: ${err.message}</p>
+                            <p class="empty-text">Error loading planning data: ${friendly}</p>
+                            <p class="form-help" style="margin-top:8px; font-size:11px; opacity:0.8;">
+                                (Debug: status ${err && err.status ? err.status : 'unknown'}, location ${locType ||
+                    'n/a'} → ${locId || 'n/a'})
+                            </p>
                         </div>
                     </div>
                 `;
