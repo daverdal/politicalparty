@@ -73,6 +73,58 @@ async function getAllUsers() {
 }
 
 /**
+ * Ensure a user is allowed to join an Ad-hoc Group based on the group's
+ * allowedEmailDomain setting. If the group has a domain restriction and the
+ * user's email domain does not match, throw an error.
+ */
+async function assertCanJoinAdhocGroup({ userId, groupId }) {
+    const driver = getDriver();
+    const session = driver.session({ database: getDatabase() });
+
+    try {
+        const result = await session.run(
+            `
+            MATCH (ag:AdhocGroup {id: $groupId})
+            OPTIONAL MATCH (u:User {id: $userId})
+            RETURN ag.allowedEmailDomain AS domain, u.email AS email
+        `,
+            { groupId, userId }
+        );
+
+        if (!result.records.length) {
+            // No such group – let the caller surface a generic "location not found"
+            // error if needed.
+            return;
+        }
+
+        const domainVal = result.records[0].get('domain');
+        if (!domainVal) {
+            // No restriction set
+            return;
+        }
+
+        const domain = String(domainVal).toLowerCase();
+        const emailVal = result.records[0].get('email');
+        const email = emailVal ? String(emailVal).toLowerCase() : '';
+
+        if (!email || !email.includes('@')) {
+            throw new Error(
+                `This Ad-hoc Group is restricted to members with email addresses ending in @${domain}.`
+            );
+        }
+
+        const emailDomain = email.split('@').pop();
+        if (emailDomain !== domain) {
+            throw new Error(
+                `This Ad-hoc Group is restricted to members with email addresses ending in @${domain}.`
+            );
+        }
+    } finally {
+        await session.close();
+    }
+}
+
+/**
  * Get a single user by ID with full details
  */
 async function getUserById(userId) {
@@ -166,6 +218,11 @@ async function setUserLocation({ userId, locationId, locationType }) {
     const session = driver.session({ database: getDatabase() });
     
     try {
+        // For Ad-hoc Groups, enforce allowedEmailDomain before changing any relationships.
+        if (locationType === 'AdhocGroup') {
+            await assertCanJoinAdhocGroup({ userId, groupId: locationId });
+        }
+
         // Remove existing location relationship
         await session.run(`
             MATCH (u:User {id: $userId})-[r:LOCATED_IN]->()
@@ -234,6 +291,14 @@ async function setUserLocations({ userId, locations }) {
     const session = driver.session({ database: getDatabase() });
     
     try {
+        // Enforce Ad-hoc Group domain rules before we modify any relationships, so
+        // a failed check doesn't leave the user with zero locations.
+        for (const loc of locations) {
+            if (loc.type === 'AdhocGroup') {
+                await assertCanJoinAdhocGroup({ userId, groupId: loc.id });
+            }
+        }
+
         // Remove ALL existing location relationships
         await session.run(`
             MATCH (u:User {id: $userId})-[r:LOCATED_IN]->()
