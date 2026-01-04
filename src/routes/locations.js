@@ -435,10 +435,10 @@ router.post('/adhoc-groups', authenticate, requireVerifiedUser, async (req, res)
         return res.status(400).json({ error: 'Both name and provinceId are required.' });
     }
 
-    const userId = req.user.id;
-    const isAdmin = req.user.role === 'admin';
-
     try {
+        const userId = req.user.id;
+        const isAdmin = req.user.role === 'admin';
+
         const allowedEmailDomain = normalizeEmailDomain(rawDomain);
         if (rawDomain && !allowedEmailDomain) {
             await session.close();
@@ -550,7 +550,7 @@ router.post('/adhoc-groups', authenticate, requireVerifiedUser, async (req, res)
                 createdByUserId: $createdByUserId
             })
         `,
-            { id, name, description, allowedEmailDomain, createdByUserId: userId }
+            { id, name, description, allowedEmailDomain, createdByUserId: req.user.id }
         );
 
         await session.run(
@@ -564,7 +564,7 @@ router.post('/adhoc-groups', authenticate, requireVerifiedUser, async (req, res)
         // Automatically make the creator a moderator of this adhoc group (via service)
         try {
             await moderatorService.assignModerator({
-                userId,
+                userId: req.user.id,
                 locationId: id,
                 locationType: 'AdhocGroup'
             });
