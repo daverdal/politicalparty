@@ -59,6 +59,7 @@ App.pages.admin = async function () {
             <div class="profile-tabs admin-tabs" style="margin-bottom: 12px;">
                 <button class="profile-tab-button active" data-admin-tab="conventions">Conventions</button>
                 <button class="profile-tab-button" data-admin-tab="adhoc">Ad-hoc Group Admin</button>
+                <button class="profile-tab-button" data-admin-tab="all-locations">AllLocations</button>
                 <button class="profile-tab-button" data-admin-tab="dev">Dev & Locations</button>
             </div>
 
@@ -356,6 +357,22 @@ App.pages.admin = async function () {
                     </div>
                 </div>
 
+                <div class="card" id="admin-alllocations-card">
+                    <div class="card-header">
+                        <h3 class="card-title">🌐 All Locations</h3>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-subtitle" style="margin-bottom: 8px;">
+                            Read-only view of all planets, countries, provinces, ridings, towns, First Nations, and Ad-hoc Groups.
+                            Use this to sanity check the hierarchy that drives Maps, Ideas, and Planning.
+                        </p>
+                        <div id="admin-alllocations-feedback" class="profile-resume-feedback" style="margin-bottom: 8px;"></div>
+                        <div id="admin-alllocations-tree" class="locations-list" style="max-height: 360px; overflow-y:auto; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 8px;">
+                            <p style="margin:0; font-size: 13px; opacity: 0.8;">Loading location hierarchy…</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">👥 Location Moderators (Admin)</h3>
@@ -441,6 +458,7 @@ App.pages.admin = async function () {
         const scrollTargets = {
             conventions: document.getElementById('admin-conventions-card'),
             adhoc: document.getElementById('admin-adhoc-card'),
+            'all-locations': document.getElementById('admin-alllocations-card'),
             dev: document.getElementById('admin-dev-card')
         };
 
@@ -857,6 +875,10 @@ App.pages.admin = async function () {
         const adhocDeleteBtn = document.getElementById('admin-adhoc-delete-btn');
         const adhocFeedback = document.getElementById('admin-adhoc-feedback');
 
+        // All Locations tree
+        const allLocTreeEl = document.getElementById('admin-alllocations-tree');
+        const allLocFeedbackEl = document.getElementById('admin-alllocations-feedback');
+
         let adhocGroupsForProvince = [];
         if (
             countrySaveBtn &&
@@ -906,6 +928,176 @@ App.pages.admin = async function () {
                     countryFeedback.classList.add('error');
                 }
             });
+        }
+
+        // All Locations tree (read-only, collapsible)
+        if (allLocTreeEl && allLocFeedbackEl) {
+            const renderAllLocations = async () => {
+                allLocFeedbackEl.textContent = '';
+                allLocFeedbackEl.classList.remove('error', 'success');
+                allLocTreeEl.innerHTML =
+                    '<p style="margin:0; font-size: 13px; opacity: 0.8;">Loading location hierarchy…</p>';
+
+                try {
+                    const hierarchy = await App.api('/locations');
+                    if (!Array.isArray(hierarchy) || hierarchy.length === 0) {
+                        allLocTreeEl.innerHTML =
+                            '<p style="margin:0; font-size: 13px; opacity: 0.8;">No locations found. Seed the database first.</p>';
+                        return;
+                    }
+
+                    const escapeHtml = (str) =>
+                        String(str || '')
+                            .replace(/&/g, '&amp;')
+                            .replace(/</g, '&lt;')
+                            .replace(/>/g, '&gt;')
+                            .replace(/"/g, '&quot;')
+                            .replace(/'/g, '&#39;');
+
+                    const listItems = await Promise.all(
+                        hierarchy.map(async (row) => {
+                            const country = row.country;
+                            const provinces = Array.isArray(row.provinces) ? row.provinces : [];
+
+                            const provinceBlocks = await Promise.all(
+                                provinces.map(async (prov) => {
+                                    const provId = prov.id;
+                                    let federal = [];
+                                    let provincial = [];
+                                    let towns = [];
+                                    let firstNations = [];
+                                    let adhoc = [];
+                                    try {
+                                        const [
+                                            federalRes,
+                                            provincialRes,
+                                            townsRes,
+                                            firstNationsRes,
+                                            adhocRes
+                                        ] = await Promise.all([
+                                            App.api(
+                                                `/locations/provinces/${encodeURIComponent(
+                                                    provId
+                                                )}/federal-ridings`
+                                            ),
+                                            App.api(
+                                                `/locations/provinces/${encodeURIComponent(
+                                                    provId
+                                                )}/provincial-ridings`
+                                            ),
+                                            App.api(
+                                                `/locations/provinces/${encodeURIComponent(
+                                                    provId
+                                                )}/towns`
+                                            ),
+                                            App.api(
+                                                `/locations/provinces/${encodeURIComponent(
+                                                    provId
+                                                )}/first-nations`
+                                            ),
+                                            App.api(
+                                                `/locations/provinces/${encodeURIComponent(
+                                                    provId
+                                                )}/adhoc-groups`
+                                            )
+                                        ]);
+                                        federal = Array.isArray(federalRes) ? federalRes : [];
+                                        provincial = Array.isArray(provincialRes)
+                                            ? provincialRes
+                                            : [];
+                                        towns = Array.isArray(townsRes) ? townsRes : [];
+                                        firstNations = Array.isArray(firstNationsRes)
+                                            ? firstNationsRes
+                                            : [];
+                                        adhoc = Array.isArray(adhocRes) ? adhocRes : [];
+                                    } catch (e) {
+                                        // Best-effort: show what we have and flag error in feedback
+                                        allLocFeedbackEl.textContent =
+                                            'Some provincial children failed to load. Check server logs for details.';
+                                        allLocFeedbackEl.classList.add('error');
+                                    }
+
+                                    const renderLeafList = (title, items) => {
+                                        if (!items.length) return '';
+                                        return `
+                                            <details>
+                                                <summary style="font-size: 13px;">${escapeHtml(
+                                                    title
+                                                )} (${items.length})</summary>
+                                                <ul style="margin: 4px 0 4px 16px; padding-left: 0; list-style: disc;">
+                                                    ${items
+                                                        .map(
+                                                            (i) =>
+                                                                `<li style="font-size: 12px;">${escapeHtml(
+                                                                    i.name
+                                                                )} <span style="opacity:0.6;">[${
+                                                                    i.id
+                                                                }]</span></li>`
+                                                        )
+                                                        .join('')}
+                                                </ul>
+                                            </details>
+                                        `;
+                                    };
+
+                                    return `
+                                        <details>
+                                            <summary><strong>${escapeHtml(
+                                                prov.name
+                                            )}</strong> <span style="opacity:0.6;">[${escapeHtml(
+                                        prov.id
+                                    )}]</span></summary>
+                                            <div style="margin-left: 12px; margin-top: 4px;">
+                                                ${renderLeafList('Federal ridings', federal)}
+                                                ${renderLeafList('Provincial ridings', provincial)}
+                                                ${renderLeafList('Towns', towns)}
+                                                ${renderLeafList('First Nations', firstNations)}
+                                                ${renderLeafList('Ad-hoc Groups', adhoc)}
+                                            </div>
+                                        </details>
+                                    `;
+                                })
+                            );
+
+                            return `
+                                <li class="locations-list-item">
+                                    <details open>
+                                        <summary>
+                                            <strong>${escapeHtml(country.name)}</strong>
+                                            <span style="opacity:0.6;">[${escapeHtml(
+                                                country.id
+                                            )}]</span>
+                                        </summary>
+                                        <div style="margin-left: 12px; margin-top: 4px;">
+                                            ${
+                                                provinceBlocks.length
+                                                    ? provinceBlocks.join('')
+                                                    : '<p style="font-size: 12px; opacity: 0.8; margin: 4px 0;">No provinces attached.</p>'
+                                            }
+                                        </div>
+                                    </details>
+                                </li>
+                            `;
+                        })
+                    );
+
+                    allLocTreeEl.innerHTML = `<ul style="margin:0; padding-left: 0; list-style: none;">${listItems.join(
+                        ''
+                    )}</ul>`;
+                    allLocFeedbackEl.textContent =
+                        'Hierarchy loaded. Expand items to inspect provinces and children.';
+                    allLocFeedbackEl.classList.add('success');
+                } catch (err) {
+                    allLocTreeEl.innerHTML =
+                        '<p style="margin:0; font-size: 13px; opacity: 0.8;">Unable to load hierarchy.</p>';
+                    allLocFeedbackEl.textContent =
+                        err.message || 'Error loading locations. Check server logs.';
+                    allLocFeedbackEl.classList.add('error');
+                }
+            };
+
+            // Fire once when admin page loads
+            renderAllLocations();
         }
 
         // Ad-hoc Group Admin logic (admin or province moderators)
