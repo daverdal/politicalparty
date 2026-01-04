@@ -315,11 +315,13 @@ router.get('/:type/:id/ideas', async (req, res) => {
     }
     
     try {
-        const numericLimit = limit ? parseInt(limit, 10) : undefined;
+        const numericLimit = (limit !== undefined && limit !== null && limit !== '')
+            ? Number(limit)
+            : undefined;
         const ideas = await locationService.getIdeasForLocation({
             locationId: id,
             locationType,
-            limit: Number.isFinite(numericLimit) ? numericLimit : undefined
+            limit: Number.isFinite(numericLimit) && numericLimit > 0 ? numericLimit : undefined
         });
         res.json(ideas);
     } catch (error) {

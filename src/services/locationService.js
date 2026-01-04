@@ -213,13 +213,18 @@ async function getIdeasForLocation({ locationId, locationType, limit }) {
         }
 
         // Apply a LIMIT (e.g. for "top 10 ideas") if requested
-        if (limit && Number.isFinite(limit)) {
-            query += `\nLIMIT $limit`;
-        }
-        
         const params = { locationId };
-        if (limit && Number.isFinite(limit)) {
-            params.limit = Math.max(1, Math.floor(limit));
+
+        // Apply a LIMIT (e.g. for "top 10 ideas") if requested.
+        // Be defensive about the input type so older callers that might pass
+        // strings like "10.0" or floats don't cause Cypher LIMIT errors.
+        if (limit != null) {
+            const numericLimit = Number(limit);
+            if (Number.isFinite(numericLimit) && numericLimit > 0) {
+                // Use toInteger() in Cypher so LIMIT always receives an integer.
+                query += `\nLIMIT toInteger($limit)`;
+                params.limit = Math.floor(numericLimit);
+            }
         }
 
         const result = await session.run(query, params);

@@ -224,7 +224,14 @@ App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = fal
         // ignore; CSS.escape may not exist in very old browsers
     }
 
-    App.showSelectedBadge(pageId, name);
+    // For Ideas/#browse, show the selected location directly in the list header
+    // instead of in a separate badge row to reduce visual duplication.
+    const listHeader = document.querySelector('#ideas-list-panel .browse-panel-header');
+    if (listHeader) {
+        listHeader.textContent = `Ideas from ${name}`;
+    }
+    // We no longer use the secondary badge row for Ideas.
+    // App.showSelectedBadge(pageId, name);
     App.showDetailEmpty(pageId, '💡', 'Select an idea to view details');
     
     try {
@@ -233,11 +240,10 @@ App.onIdeasLocationSelect = async function(type, id, name, autoSelectFirst = fal
         const list = document.getElementById(`${pageId}-list`);
         const showMapLink = type === 'provinces' || type === 'countries';
         
-        // Always render a toolbar so the middle pane clearly shows where ideas are from.
-        // For provinces/countries also show the Map button.
+        // Always render a toolbar for actions (e.g. Map button).
+        // The "Ideas from {name}" label now lives in the panel header above.
         let html = `
             <div class="panel-toolbar">
-                <span class="panel-toolbar-title">Ideas from ${name}</span>
                 ${showMapLink ? '<button class="map-link-btn" id="ideas-map-link">🗺️ Map</button>' : ''}
             </div>
         `;
@@ -445,11 +451,15 @@ App.showProvinceMap = async function(pageId, provinceId, provinceName) {
     info.className = 'province-map-info';
     info.textContent = isCandidatesPage
         ? 'Hover, click or tap a dot to see First Nation candidates running there. On touch screens, pinch to zoom and drag to pan.'
-        : 'Hover, click or tap a dot to see First Nation details. On touch screens, pinch to zoom and drag to pan.';
+        : 'Hover, click or tap a dot to see First Nation details and top ideas. On touch screens, pinch to zoom and drag to pan.';
 
-    wrapper.appendChild(title);
-    wrapper.appendChild(canvas);
+    // For the Ideas/#browse page, show the dynamic First Nation + ideas text
+    // above the map instead of the static "Map of Manitoba..." title.
+    if (isCandidatesPage) {
+        wrapper.appendChild(title);
+    }
     wrapper.appendChild(info);
+    wrapper.appendChild(canvas);
     detail.appendChild(wrapper);
 
     try {
