@@ -1092,6 +1092,20 @@ App.pages.profile = async function() {
                                         <select id="group-select" class="form-select" multiple disabled>
                                             <option value="">-- Select Group(s) --</option>
                                         </select>
+                                        <div class="location-help" style="margin-top: 4px;">
+                                            To join a private Ad-hoc Group, type its exact name:
+                                        </div>
+                                        <div class="location-selector-row" style="margin-top: 4px; grid-template-columns: minmax(0,1fr) auto; gap: 8px;">
+                                            <input
+                                                id="group-name-input"
+                                                class="form-input"
+                                                type="text"
+                                                placeholder="e.g. Assembly of Manitoba Chiefs"
+                                            >
+                                            <button type="button" class="btn btn-secondary btn-xs" id="group-name-add-btn">
+                                                Add by name
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                                 
@@ -1406,6 +1420,8 @@ App.pages.profile = async function() {
         const saveBtn = document.getElementById('save-location-btn');
         const feedback = document.getElementById('location-feedback');
         const groupFeedback = document.getElementById('group-feedback');
+        const groupNameInput = document.getElementById('group-name-input');
+        const groupNameAddBtn = document.getElementById('group-name-add-btn');
 
         const adhocGroupSelect = document.getElementById('adhoc-group-select');
         const adhocCreateToggle = document.getElementById('adhoc-create-toggle');
@@ -1718,30 +1734,56 @@ App.pages.profile = async function() {
                         firstNationSelect.value = match.id;
                     }
                 }
-                populateDropdown(groupSelect, groups, '-- Select Group(s) --', 'AdhocGroup');
-                populateDropdown(adhocGroupSelect, groups, '-- Select Group --', 'AdhocGroup');
-                currentAdhocGroups = Array.isArray(groups) ? groups : [];
+                const allGroups = Array.isArray(groups) ? groups : [];
+                currentAdhocGroups = allGroups;
 
-                // Preselect the user's existing Ad-hoc Group memberships:
-                // - Locations tab: allow multiple selections in the Group <select>.
-                // - My Ad-hoc Groups tab: select the first matching group, if any.
+                // Only show public (non-domain-restricted) groups in the dropdowns by default.
+                const publicGroups = allGroups.filter((g) => !g.allowedEmailDomain);
+                populateDropdown(groupSelect, publicGroups, '-- Select Group(s) --', 'AdhocGroup');
+                populateDropdown(adhocGroupSelect, publicGroups, '-- Select Group --', 'AdhocGroup');
+
+                // Ensure any groups the user already belongs to are visible and selected,
+                // even if they are domain-restricted (hidden from the general public).
                 if (Array.isArray(existingAdhocGroups) && existingAdhocGroups.length > 0) {
-                    const matchingGroups = Array.isArray(groups)
-                        ? groups.filter((g) =>
-                              existingAdhocGroups.some((loc) => loc.id === g.id)
-                          )
-                        : [];
+                    const groupIdsInSelect = groupSelect
+                        ? new Set(Array.from(groupSelect.options || []).map((opt) => opt.value))
+                        : new Set();
 
-                    if (groupSelect && matchingGroups.length > 0) {
-                        const ids = new Set(matchingGroups.map((g) => g.id));
-                        Array.from(groupSelect.options || []).forEach((opt) => {
-                            if (!opt.value) return;
-                            opt.selected = ids.has(opt.value);
-                        });
-                    }
+                    existingAdhocGroups.forEach((loc) => {
+                        if (!groupSelect || !loc || !loc.id || !loc.name) return;
+                        if (!groupIdsInSelect.has(loc.id)) {
+                            const opt = document.createElement('option');
+                            opt.value = loc.id;
+                            opt.textContent = loc.name;
+                            opt.selected = true;
+                            groupSelect.appendChild(opt);
+                            groupIdsInSelect.add(loc.id);
+                        } else {
+                            // If it already exists, ensure it's selected.
+                            const existingOpt = Array.from(groupSelect.options || []).find(
+                                (opt) => opt.value === loc.id
+                            );
+                            if (existingOpt) existingOpt.selected = true;
+                        }
+                    });
 
-                    if (adhocGroupSelect && !adhocGroupSelect.value && matchingGroups[0]) {
-                        adhocGroupSelect.value = matchingGroups[0].id;
+                    // For the single-select in "My Ad-hoc Groups", pick the first membership if none selected.
+                    if (adhocGroupSelect && !adhocGroupSelect.value) {
+                        const firstMembership = existingAdhocGroups[0];
+                        const opt =
+                            Array.from(adhocGroupSelect.options || []).find(
+                                (o) => o.value === firstMembership.id
+                            ) || null;
+                        if (opt) {
+                            adhocGroupSelect.value = firstMembership.id;
+                        } else {
+                            // If it's not in the public list, append it so the user can see their membership.
+                            const extraOpt = document.createElement('option');
+                            extraOpt.value = firstMembership.id;
+                            extraOpt.textContent = firstMembership.name;
+                            adhocGroupSelect.appendChild(extraOpt);
+                            adhocGroupSelect.value = firstMembership.id;
+                        }
                     }
                 }
                 updateAdhocSecurityControls();
@@ -1762,6 +1804,70 @@ App.pages.profile = async function() {
                 saveBtn.disabled = !hasAnySelection();
             });
         });
+
+        // Allow joining a hidden / domain-restricted Ad-hoc Group by exact name.
+        if (groupNameAddBtn && groupNameInput && groupSelect) {
+            const handleAddByName = () => {
+                if (groupFeedback) {
+                    groupFeedback.innerHTML = '';
+                }
+                const raw = groupNameInput.value.trim();
+                if (!raw) {
+                    if (groupFeedback) {
+                        groupFeedback.innerHTML =
+                            '<span class="error">Please enter the Ad-hoc Group name.</span>';
+                    }
+                    return;
+                }
+
+                const lower = raw.toLowerCase();
+                const match =
+                    currentAdhocGroups &&
+                    currentAdhocGroups.find(
+                        (g) => (g.name || '').toLowerCase() === lower
+                    );
+
+                if (!match) {
+                    if (groupFeedback) {
+                        groupFeedback.innerHTML =
+                            '<span class="error">No Ad-hoc Group with that exact name was found in this province.</span>';
+                    }
+                    return;
+                }
+
+                // Ensure an option exists for this group and mark it selected.
+                let opt = Array.from(groupSelect.options || []).find(
+                    (o) => o.value === match.id
+                );
+                if (!opt) {
+                    opt = document.createElement('option');
+                    opt.value = match.id;
+                    opt.textContent = match.name;
+                    opt.selected = true;
+                    groupSelect.appendChild(opt);
+                } else {
+                    opt.selected = true;
+                }
+
+                groupNameInput.value = '';
+
+                if (groupFeedback) {
+                    groupFeedback.innerHTML =
+                        '<span class="success">Group added. Click "Save Locations" to join.</span>';
+                }
+                if (saveBtn) {
+                    saveBtn.disabled = !hasAnySelection();
+                }
+            };
+
+            groupNameAddBtn.addEventListener('click', handleAddByName);
+            groupNameInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddByName();
+                }
+            });
+        }
         
         // Save button - save ALL selected locations
         saveBtn?.addEventListener('click', async () => {
