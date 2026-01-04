@@ -1174,59 +1174,23 @@ App.pages.profile = async function() {
                             <div class="location-selector-section">
                                 <h4>My Ad-hoc Groups</h4>
                                 <p class="location-help">
-                                    Create and manage Ad-hoc Groups for your province. You can also restrict access
-                                    to players whose email matches a specific domain (for example:
-                                    <code>@manitobachiefs.com</code>).
+                                    Ad-hoc Groups are special community groups attached to a province (for example,
+                                    “Manitoba Policy Nerds”). When an admin or seed script creates them for your
+                                    province, they will appear here and in your Locations tab.
                                 </p>
 
                                 <div class="location-selector-row">
                                     <label>Ad-hoc Group</label>
                                     <select id="adhoc-group-select" class="form-select" disabled>
-                                        <option value="">-- Select Group --</option>
+                                        <option value="">-- No groups available yet --</option>
                                     </select>
                                 </div>
 
-                                <div class="location-selector-row">
-                                    <button type="button" class="btn btn-secondary btn-sm" id="adhoc-create-toggle">
-                                        ➕ Create a new Ad-hoc Group in this province
-                                    </button>
-                                </div>
-
-                                <div id="adhoc-create-container" class="location-selector-row" style="display:none; flex-direction: column; gap: 6px;">
-                                    <label>
-                                        <span>Group name</span>
-                                        <input id="adhoc-name" class="form-input" placeholder="e.g., Manitoba Policy Nerds">
-                                    </label>
-                                    <label>
-                                        <span>Description (optional)</span>
-                                        <textarea id="adhoc-description" class="form-textarea" rows="3" placeholder="What is this group about?"></textarea>
-                                    </label>
-                                    <button class="btn btn-primary btn-sm" id="adhoc-create-btn">
-                                        Create group
-                                    </button>
-                                    <div id="adhoc-create-feedback" class="profile-resume-feedback"></div>
-                                </div>
-
-                                <div id="adhoc-domain-container" style="display:none;">
-                                    <div class="location-selector-row">
-                                        <label style="flex: 1 1 auto;">
-                                            <span>Email domain for this group (optional)</span>
-                                            <input id="adhoc-domain" class="form-input" placeholder="@example.org">
-                                        </label>
-                                        <button type="button" class="btn btn-secondary btn-sm" id="adhoc-domain-save-btn" disabled>
-                                            Save domain rule
-                                        </button>
-                                    </div>
-                                    <div id="adhoc-domain-feedback" class="profile-resume-feedback"></div>
-                                </div>
-
-                                <div class="location-selector-row">
-                                    <button type="button" class="btn btn-outline-danger btn-sm" id="adhoc-delete-btn" disabled>
-                                        🗑 Delete this Ad-hoc Group
-                                    </button>
-                                    <span class="form-help">Only available for groups you created.</span>
-                                </div>
-                                <div id="adhoc-delete-feedback" class="profile-resume-feedback"></div>
+                                <p class="location-help">
+                                    If you need a new Ad-hoc Group for your organization, please contact an admin. The
+                                    group’s domain security (e.g., <code>@manitobachiefs.com</code>) can be configured
+                                    when the group is created.
+                                </p>
                             </div>
                         </section>
 
