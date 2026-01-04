@@ -6160,9 +6160,7 @@ App.declineNomination = async function(convId, raceId) {
         return;
     }
     if (!confirm('Are you sure you want to decline this nomination?')) return;
-        return;
-    }
-    
+
     try {
         const { data } = await App.apiPost(`/conventions/${convId}/decline-nomination`, { userId: App.authUser.id, raceId });
         if (data.success) {
@@ -6181,9 +6179,7 @@ App.withdrawFromRace = async function(convId, raceId) {
         return;
     }
     if (!confirm('Are you sure you want to withdraw from this race?')) return;
-        return;
-    }
-    
+
     try {
         const { data } = await App.apiPost(`/conventions/${convId}/withdraw`, { userId: App.authUser.id, raceId });
         if (data.success) {
