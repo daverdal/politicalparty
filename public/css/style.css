@@ -213,6 +213,47 @@ html, body {
   color: var(--text-muted);
 }
 
+/* Auth summary in sidebar */
+.auth-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.auth-summary-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-summary-label {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.auth-summary-email {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.auth-summary-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.auth-summary-status {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(0, 212, 170, 0.08);
+  color: var(--success);
+}
+
 * {
   margin: 0;
   padding: 0;

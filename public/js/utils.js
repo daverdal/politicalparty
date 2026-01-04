@@ -11,8 +11,23 @@ window.App = window.App || {};
 
 App.api = async function(endpoint) {
     const response = await fetch(`/api${endpoint}`);
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
-    return response.json();
+
+    let data = null;
+    try {
+        data = await response.json();
+    } catch (err) {
+        data = null;
+    }
+
+    if (!response.ok) {
+        const message =
+            (data && (data.error || data.message)) || `API error: ${response.status}`;
+        const error = new Error(message);
+        error.status = response.status;
+        throw error;
+    }
+
+    return data;
 };
 
 App.apiPost = async function(endpoint, data) {

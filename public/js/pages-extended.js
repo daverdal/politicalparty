@@ -1157,6 +1157,30 @@ App.pages.profile = async function() {
                             `
                                     : ''
                             }
+
+                            <!-- Nominations Section (Informational) - only visible on Nominations & Badges tab -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">📬 My Nominations</h3>
+                                    ${nominations[0]?.nominationCount > 0 ? `<span class="badge success">${nominations[0].nominationCount} supporters</span>` : ''}
+                                </div>
+                                <div class="card-body">
+                                    ${nominations[0]?.nominationCount === 0 || !nominations[0]?.nominations?.length ? `
+                                        <p class="empty-text">No one has nominated you yet. Nominations are a way for members to show their support - you don't need them to run!</p>
+                                    ` : `
+                                        <p class="nominations-help">These members have nominated you. Nominations are permanent and show voter support.</p>
+                                        <div class="nominations-list">
+                                            ${nominations[0].nominations.map(nom => `
+                                                <div class="nomination-item">
+                                                    <span class="nominator-name">👍 ${nom.nominatorName}</span>
+                                                    ${nom.message ? `<span class="nominator-message">"${nom.message}"</span>` : ''}
+                                                    <span class="nomination-date">${nom.createdAt ? new Date(nom.createdAt).toLocaleDateString() : ''}</span>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    `}
+                                </div>
+                            </div>
                         </section>
 
                         <section class="profile-tab-panel ${initialTab === 'resume' ? 'active' : ''}" data-tab="resume">
@@ -1258,30 +1282,6 @@ App.pages.profile = async function() {
                     </div>
                 </div>
             ` : ''}
-            
-            <!-- Nominations Section (Informational) -->
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">📬 My Nominations</h3>
-                    ${nominations[0]?.nominationCount > 0 ? `<span class="badge success">${nominations[0].nominationCount} supporters</span>` : ''}
-                </div>
-                <div class="card-body">
-                    ${nominations[0]?.nominationCount === 0 || !nominations[0]?.nominations?.length ? `
-                        <p class="empty-text">No one has nominated you yet. Nominations are a way for members to show their support - you don't need them to run!</p>
-                    ` : `
-                        <p class="nominations-help">These members have nominated you. Nominations are permanent and show voter support.</p>
-                        <div class="nominations-list">
-                            ${nominations[0].nominations.map(nom => `
-                                <div class="nomination-item">
-                                    <span class="nominator-name">👍 ${nom.nominatorName}</span>
-                                    ${nom.message ? `<span class="nominator-message">"${nom.message}"</span>` : ''}
-                                    <span class="nomination-date">${nom.createdAt ? new Date(nom.createdAt).toLocaleDateString() : ''}</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    `}
-                </div>
-            </div>
         `;
         
         // Wire Create Referendum form in Admin card (reuses shared helper)
@@ -6222,6 +6222,18 @@ App.deleteConvention = async function(convId) {
         App.showAdminResult('Error: ' + err.message);
     }
 };
+
+// Mark the extended bundle as loaded when this file is included via a static
+// <script> tag. This prevents App.loadExtendedBundleIfMissing() from
+// dynamically re-fetching and eval'ing pages-extended.js later, which would
+// otherwise override page implementations (like App.pages.admin) that are
+// defined in later scripts such as admin-page.js.
+try {
+    window.App = window.App || {};
+    App._extendedBundleLoaded = true;
+} catch (e) {
+    // Ignore if window/App are not available for some reason.
+}
 
 // ============================================
 // CANDIDACY & NOMINATION ACTIONS
