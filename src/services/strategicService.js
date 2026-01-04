@@ -76,7 +76,7 @@ async function assertAdhocGroupDomainAccess({ userId, locationId }) {
 
         if (!email || !email.includes('@')) {
             const err = new Error(
-                `This Ad-hoc Group is restricted to members with email addresses ending in @${domain}.`
+                'This Ad-hoc Group can only be accessed with an approved work email address.'
             );
             err.statusCode = 403;
             throw err;
@@ -85,7 +85,7 @@ async function assertAdhocGroupDomainAccess({ userId, locationId }) {
         const emailDomain = email.split('@').pop();
         if (emailDomain !== domain) {
             const err = new Error(
-                `This Ad-hoc Group is restricted to members with email addresses ending in @${domain}.`
+                'This Ad-hoc Group can only be accessed with an approved work email address.'
             );
             err.statusCode = 403;
             throw err;

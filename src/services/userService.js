@@ -109,14 +109,14 @@ async function assertCanJoinAdhocGroup({ userId, groupId }) {
 
         if (!email || !email.includes('@')) {
             throw new Error(
-                `This Ad-hoc Group is restricted to members with email addresses ending in @${domain}.`
+                'This Ad-hoc Group can only be joined with an approved work email address.'
             );
         }
 
         const emailDomain = email.split('@').pop();
         if (emailDomain !== domain) {
             throw new Error(
-                `This Ad-hoc Group is restricted to members with email addresses ending in @${domain}.`
+                'This Ad-hoc Group can only be joined with an approved work email address.'
             );
         }
     } finally {
