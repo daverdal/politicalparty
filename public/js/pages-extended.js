@@ -1065,6 +1065,16 @@ App.pages.profile = async function() {
                                 </div>
                                 
                                 <div class="location-selector-row">
+                                    <label>First Nation</label>
+                                    <select id="first-nation-select" class="form-select" disabled><option value="">-- Select First Nation --</option></select>
+                                </div>
+
+                                <div class="location-selector-row">
+                                    <label>Town</label>
+                                    <select id="town-select" class="form-select" disabled><option value="">-- Select Town --</option></select>
+                                </div>
+
+                                <div class="location-selector-row">
                                     <label>Federal Riding</label>
                                     <select id="federal-riding-select" class="form-select" disabled><option value="">-- Select Federal Riding --</option></select>
                                 </div>
@@ -1072,16 +1082,6 @@ App.pages.profile = async function() {
                                 <div class="location-selector-row">
                                     <label>Provincial Riding</label>
                                     <select id="provincial-riding-select" class="form-select" disabled><option value="">-- Select Provincial Riding --</option></select>
-                                </div>
-                                
-                                <div class="location-selector-row">
-                                    <label>Town</label>
-                                    <select id="town-select" class="form-select" disabled><option value="">-- Select Town --</option></select>
-                                </div>
-                                
-                                <div class="location-selector-row">
-                                    <label>First Nation</label>
-                                    <select id="first-nation-select" class="form-select" disabled><option value="">-- Select First Nation --</option></select>
                                 </div>
 
                                 <!-- Ad-hoc Group (AMC, etc.) -->
