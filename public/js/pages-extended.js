@@ -42,7 +42,7 @@ App.updateAuthUi = function() {
         const verifiedText = isVerified ? '✅ Verified' : '✉️ Not verified – please verify your email.';
         const verifyButtonHtml = isVerified
             ? ''
-            : '<button class="btn btn-outline btn-sm" id="auth-resend-verification-btn">Resend verification email</button>';
+            : '<button class="btn btn-secondary btn-sm" id="auth-resend-verification-btn">Resend verification email</button>';
 
         container.innerHTML = `
             <div class="auth-summary">
@@ -53,7 +53,7 @@ App.updateAuthUi = function() {
                 <div class="auth-summary-meta">
                     <span class="auth-summary-status">${verifiedText}</span>
                     ${verifyButtonHtml}
-                    <button class="btn btn-outline btn-sm" id="auth-change-password-btn">Change password</button>
+                    <button class="btn btn-secondary btn-sm" id="auth-change-password-btn">Change password</button>
                     <button class="btn btn-secondary btn-sm" id="auth-logout-btn">Sign out</button>
                 </div>
             </div>
