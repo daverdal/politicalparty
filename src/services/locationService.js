@@ -201,7 +201,7 @@ async function getIdeasForLocation({ locationId, locationType, limit }) {
                 OPTIONAL MATCH (supporter:User)-[:SUPPORTED]->(idea)
                 WITH idea, u, count(DISTINCT supporter) as supportCount
                 RETURN DISTINCT idea, u as author, supportCount
-                ORDER BY supportCount DESC
+                ORDER BY idea.createdAt DESC, supportCount DESC
             `;
         } else if (locationType === 'Province') {
             // Include users located directly in the Province OR in any child
@@ -218,7 +218,7 @@ async function getIdeasForLocation({ locationId, locationType, limit }) {
                 OPTIONAL MATCH (supporter:User)-[:SUPPORTED]->(idea)
                 WITH idea, u, count(DISTINCT supporter) as supportCount
                 RETURN DISTINCT idea, u as author, supportCount
-                ORDER BY supportCount DESC
+                ORDER BY idea.createdAt DESC, supportCount DESC
             `;
         } else {
             // Leaf node - direct match
@@ -228,7 +228,7 @@ async function getIdeasForLocation({ locationId, locationType, limit }) {
                 OPTIONAL MATCH (supporter:User)-[:SUPPORTED]->(idea)
                 WITH idea, u, count(DISTINCT supporter) as supportCount
                 RETURN idea, u as author, supportCount
-                ORDER BY supportCount DESC
+                ORDER BY idea.createdAt DESC, supportCount DESC
             `;
         }
 
