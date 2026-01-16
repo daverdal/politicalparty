@@ -695,7 +695,13 @@ App.showPostIdeaModal = function() {
                         <span>Tags (optional, comma-separated)</span>
                         <input type="text" name="tags" placeholder="e.g. healthcare, transit, environment">
                     </label>
-                    <button type="submit" class="btn btn-primary auth-submit-btn">Post Idea</button>
+                    <button 
+                        type="submit" 
+                        class="btn btn-primary auth-submit-btn"
+                        style="margin-top: 16px; margin-bottom: 16px;"
+                    >
+                        Post Idea
+                    </button>
                     <div class="form-group dev-only" style="margin-top: 12px;">
                         <label>Optional: Add a short voice note (ideas)</label>
                         <div class="voice-note-controls">
