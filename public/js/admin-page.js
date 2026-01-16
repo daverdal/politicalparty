@@ -21,9 +21,10 @@ App.pages.admin = async function () {
     content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
 
     try {
-        const [conventions, autoMode] = await Promise.all([
+        const [conventions, autoMode, ideaVoting] = await Promise.all([
             App.api('/admin/conventions'),
-            App.api('/admin/auto-mode')
+            App.api('/admin/auto-mode'),
+            App.api('/admin/idea-voting')
         ]);
 
         // Track which convention is being managed in a small client-side state bucket
@@ -159,6 +160,17 @@ App.pages.admin = async function () {
                             }</p>
                             <button class="btn btn-secondary btn-sm" id="admin-auto-toggle">
                                 ${autoMode.enabled ? 'Disable auto-mode' : 'Enable auto-mode'}
+                            </button>
+                            <hr style="margin: 12px 0;">
+                            <p class="card-subtitle">Idea voting (likes on ideas): ${
+                                ideaVoting && ideaVoting.open ? '✅ Open' : '⏱ Closed'
+                            }</p>
+                            <button class="btn btn-secondary btn-sm" id="admin-idea-voting-toggle">
+                                ${
+                                    ideaVoting && ideaVoting.open
+                                        ? 'Close idea voting'
+                                        : 'Open idea voting'
+                                }
                             </button>
                             <hr style="margin: 12px 0;">
                             <button class="btn btn-secondary btn-sm" id="admin-advance-phase">
@@ -537,6 +549,33 @@ App.pages.admin = async function () {
                     }
                 } catch (err) {
                     showResult(err.message || 'Error toggling auto-mode.', true);
+                }
+            });
+        }
+
+        // Global Idea voting (likes) toggle
+        const ideaVotingBtn = document.getElementById('admin-idea-voting-toggle');
+        if (ideaVotingBtn) {
+            ideaVotingBtn.addEventListener('click', async () => {
+                try {
+                    const nextOpen = !(ideaVoting && ideaVoting.open);
+                    const { response, data } = await App.apiPost('/admin/idea-voting', {
+                        open: nextOpen
+                    });
+                    if (!response.ok) {
+                        showResult(
+                            (data && data.error) || 'Failed to update idea voting status.',
+                            true
+                        );
+                    } else {
+                        const msg = nextOpen
+                            ? 'Idea voting opened. Participants can now like ideas.'
+                            : 'Idea voting closed. New likes are temporarily disabled.';
+                        showResult(msg);
+                        App.pages.admin();
+                    }
+                } catch (err) {
+                    showResult(err.message || 'Error updating idea voting status.', true);
                 }
             });
         }

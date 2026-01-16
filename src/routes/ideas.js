@@ -7,6 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const ideaService = require('../services/ideaService');
+const adminService = require('../services/adminService');
 
 // GET /api/ideas - Get all ideas
 router.get('/', async (req, res) => {
@@ -70,8 +71,34 @@ router.delete('/:id', async (req, res) => {
 // POST /api/ideas/:id/support - Support an idea
 router.post('/:id/support', async (req, res) => {
     try {
+        // Respect global idea voting toggle (controlled via Admin page).
+        const votingStatus = adminService.getIdeaVotingStatus
+            ? adminService.getIdeaVotingStatus()
+            : { open: true };
+
+        if (!votingStatus.open) {
+            return res.status(400).json({
+                error:
+                    'Idea liking is currently closed. The facilitator will open voting once all ideas are in.'
+            });
+        }
+
+        const userId = req.body.userId;
+        if (!userId) {
+            return res.status(400).json({ error: 'userId is required' });
+        }
+
+        // Simple fairness rule: members must contribute at least one idea
+        // before they can like/support other ideas.
+        const hasPosted = await ideaService.hasPostedAtLeastOneIdea(userId);
+        if (!hasPosted) {
+            return res.status(400).json({
+                error: 'Please add at least one idea before liking or supporting others.'
+            });
+        }
+
         const success = await ideaService.supportIdea({
-            userId: req.body.userId,
+            userId,
             ideaId: req.params.id
         });
         if (!success) {

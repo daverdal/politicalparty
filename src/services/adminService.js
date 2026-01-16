@@ -47,6 +47,16 @@ let schedulerInterval = null;
 let lastCheck = null;
 let lastAction = null;
 
+// ============================================
+// IDEA VOTING TOGGLE (GLOBAL)
+// ============================================
+
+// Simple in-memory flag that controls whether idea "likes"/supports
+// are allowed. This is intentionally global (not per-location) and
+// defaults to CLOSED so an admin can explicitly open voting for a
+// brainstorming session.
+let ideaVotingOpen = false;
+
 // Start the scheduler automatically when this module loads
 setTimeout(() => {
     if (autoModeEnabled && !schedulerInterval) {
@@ -253,6 +263,24 @@ function toggleAutoMode(enabled) {
         message: autoModeEnabled 
             ? '🤖 Auto-mode enabled! System will check dates every hour.' 
             : '🎮 Manual mode enabled. Use buttons to control phases.'
+    };
+}
+
+// ============================================
+// IDEA VOTING TOGGLE (GLOBAL) API
+// ============================================
+
+function getIdeaVotingStatus() {
+    return {
+        open: !!ideaVotingOpen
+    };
+}
+
+function setIdeaVotingStatus(open) {
+    ideaVotingOpen = !!open;
+    return {
+        success: true,
+        open: ideaVotingOpen
     };
 }
 
@@ -985,6 +1013,10 @@ module.exports = {
     // Constants
     WAVE_PROVINCES,
     WAVE_NAMES,
-    VALID_STATUSES
+    VALID_STATUSES,
+
+    // Idea voting toggle
+    getIdeaVotingStatus,
+    setIdeaVotingStatus
 };
 

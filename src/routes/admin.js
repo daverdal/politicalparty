@@ -29,6 +29,17 @@ router.post('/auto-mode', (req, res) => {
     res.json(adminService.toggleAutoMode(enabled));
 });
 
+// GET /api/admin/idea-voting - Get global idea voting (likes) status
+router.get('/idea-voting', (req, res) => {
+    res.json(adminService.getIdeaVotingStatus());
+});
+
+// POST /api/admin/idea-voting - Open/close global idea voting
+router.post('/idea-voting', (req, res) => {
+    const { open } = req.body || {};
+    res.json(adminService.setIdeaVotingStatus(open));
+});
+
 // GET /api/admin/convention/:id - Get convention admin info
 router.get('/convention/:id', async (req, res) => {
     try {

@@ -120,6 +120,27 @@ async function deleteIdea(ideaId) {
     }
 }
 
+// Check whether a user has posted at least one idea anywhere in the system.
+async function hasPostedAtLeastOneIdea(userId) {
+    const session = getSession();
+    try {
+        const result = await session.run(
+            `
+            MATCH (u:User {id: $userId})-[:POSTED]->(:Idea)
+            RETURN count(*) AS cnt
+        `,
+            { userId }
+        );
+
+        if (!result.records.length) return false;
+        const raw = result.records[0].get('cnt');
+        const count = typeof raw?.toNumber === 'function' ? raw.toNumber() : Number(raw || 0);
+        return count > 0;
+    } finally {
+        await session.close();
+    }
+}
+
 async function supportIdea({ userId, ideaId }) {
     const session = getSession();
     try {
@@ -182,6 +203,7 @@ module.exports = {
     createIdea,
     updateIdea,
     deleteIdea,
+    hasPostedAtLeastOneIdea,
     supportIdea,
     unsupportIdea,
     getRelatedIdeas,
