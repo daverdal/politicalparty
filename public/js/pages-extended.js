@@ -673,7 +673,13 @@ App.showPostIdeaModal = function() {
                 <form id="post-idea-form" class="auth-form">
                     <label>
                         <span>Title</span>
-                        <input type="text" name="title" required maxlength="140" placeholder="Short, clear idea title">
+                        <input 
+                            type="text" 
+                            name="title" 
+                            class="post-idea-title"
+                            required 
+                            maxlength="140" 
+                            placeholder="Short, clear idea title">
                     </label>
                     <label>
                         <span>Description</span>
