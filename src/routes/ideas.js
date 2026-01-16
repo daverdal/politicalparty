@@ -8,9 +8,10 @@ const express = require('express');
 const router = express.Router();
 const ideaService = require('../services/ideaService');
 const adminService = require('../services/adminService');
+const { authenticate } = require('../middleware/auth');
 
-// GET /api/ideas - Get all ideas
-router.get('/', async (req, res) => {
+// GET /api/ideas - Get all ideas (authenticated users only)
+router.get('/', authenticate, async (req, res) => {
     try {
         const ideas = await ideaService.getAllIdeas();
         res.json(ideas);
@@ -19,8 +20,8 @@ router.get('/', async (req, res) => {
     }
 });
 
-// GET /api/ideas/:id - Get idea by ID
-router.get('/:id', async (req, res) => {
+// GET /api/ideas/:id - Get idea by ID (authenticated users only)
+router.get('/:id', authenticate, async (req, res) => {
     try {
         const idea = await ideaService.getIdeaById(req.params.id);
         if (!idea) {
@@ -32,8 +33,8 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// POST /api/ideas - Create a new idea
-router.post('/', async (req, res) => {
+// POST /api/ideas - Create a new idea (authenticated users only)
+router.post('/', authenticate, async (req, res) => {
     try {
         const idea = await ideaService.createIdea(req.body);
         res.status(201).json(idea);
@@ -42,8 +43,8 @@ router.post('/', async (req, res) => {
     }
 });
 
-// PUT /api/ideas/:id - Update an idea
-router.put('/:id', async (req, res) => {
+// PUT /api/ideas/:id - Update an idea (authenticated users only)
+router.put('/:id', authenticate, async (req, res) => {
     try {
         const idea = await ideaService.updateIdea(req.params.id, req.body);
         if (!idea) {
@@ -55,8 +56,8 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// DELETE /api/ideas/:id - Delete an idea
-router.delete('/:id', async (req, res) => {
+// DELETE /api/ideas/:id - Delete an idea (authenticated users only)
+router.delete('/:id', authenticate, async (req, res) => {
     try {
         const deleted = await ideaService.deleteIdea(req.params.id);
         if (!deleted) {

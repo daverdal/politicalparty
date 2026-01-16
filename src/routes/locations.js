@@ -295,7 +295,8 @@ router.get('/provinces/:id/adhoc-groups', async (req, res) => {
 
 // GET /api/locations/:type/:id/ideas - Get ideas for a location (with hierarchy bubbling)
 // Optional query param: ?limit=10 to get only the top N ideas by support
-router.get('/:type/:id/ideas', async (req, res) => {
+// Authenticated users only so AMC ideas are not visible publicly.
+router.get('/:type/:id/ideas', authenticate, async (req, res) => {
     const { type, id } = req.params;
     const { limit } = req.query;
     
