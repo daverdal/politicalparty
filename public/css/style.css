@@ -165,29 +165,35 @@ html, body {
   box-shadow: 0 0 5px rgba(51, 255, 51, 0.3);
 }
 
-/* VT100-style blinking cursor effect on Post Idea title */
-.post-idea-title {
-  caret-color: #33ff33; /* bright green caret regardless of theme */
+/* VT100-style horizontal blinking focus for all text inputs & textareas */
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+textarea:focus {
+  caret-color: #33ff33; /* bright green caret */
+  position: relative;
+  outline: none;
+  animation: vt100-underline-blink 0.9s steps(2, start) infinite;
+  box-shadow: inset 0 -2px 0 0 #33ff33;
 }
 
-.post-idea-title:focus {
-  animation: vt100-input-blink 1.1s steps(2, start) infinite;
-  box-shadow: 0 0 0 1px #33ff33, 0 0 10px rgba(51, 255, 51, 0.9);
-}
-
-.post-idea-title:not(:focus) {
+input[type="text"]:not(:focus),
+input[type="email"]:not(:focus),
+input[type="password"]:not(:focus),
+textarea:not(:focus) {
   animation: none;
+  box-shadow: none;
 }
 
-@keyframes vt100-input-blink {
+@keyframes vt100-underline-blink {
   0% {
-    box-shadow: 0 0 0 1px #33ff33, 0 0 10px rgba(51, 255, 51, 0.9);
+    box-shadow: inset 0 -2px 0 0 #33ff33;
   }
   50% {
-    box-shadow: 0 0 0 1px transparent, 0 0 0 rgba(0, 0, 0, 0);
+    box-shadow: inset 0 -2px 0 0 transparent;
   }
   100% {
-    box-shadow: 0 0 0 1px #33ff33, 0 0 10px rgba(51, 255, 51, 0.9);
+    box-shadow: inset 0 -2px 0 0 #33ff33;
   }
 }
 
