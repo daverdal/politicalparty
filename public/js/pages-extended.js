@@ -695,7 +695,8 @@ App.showPostIdeaModal = function() {
                         <span>Tags (optional, comma-separated)</span>
                         <input type="text" name="tags" placeholder="e.g. healthcare, transit, environment">
                     </label>
-                    <div class="form-group dev-only">
+                    <button type="submit" class="btn btn-primary auth-submit-btn">Post Idea</button>
+                    <div class="form-group dev-only" style="margin-top: 12px;">
                         <label>Optional: Add a short voice note (ideas)</label>
                         <div class="voice-note-controls">
                             <button type="button" class="btn btn-secondary btn-sm" id="idea-voice-record">🎙 Record</button>
@@ -708,7 +709,6 @@ App.showPostIdeaModal = function() {
                             Experimental and dev-only: recordings stay in this browser for up to 2 days and are not uploaded yet.
                         </p>
                     </div>
-                    <button type="submit" class="btn btn-primary auth-submit-btn">Post Idea</button>
                     <div class="auth-feedback" id="post-idea-feedback"></div>
                 </form>
             </div>
