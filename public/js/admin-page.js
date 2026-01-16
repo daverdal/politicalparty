@@ -958,7 +958,9 @@ App.pages.admin = async function () {
                                 </td>
                                 <td>${role}</td>
                                 <td>${verified}</td>
-                                <td>${locationLabel}</td>
+                                <td style="max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    ${locationLabel}
+                                </td>
                                 <td>${points}</td>
                                 <td>
                                     <button 
@@ -971,7 +973,7 @@ App.pages.admin = async function () {
                                     </button>
                                     <button 
                                         type="button" 
-                                        class="btn btn-outline-danger btn-xs admin-user-delete"
+                                        class="btn btn-secondary btn-xs admin-user-delete"
                                         data-user-id="${u.id}"
                                         data-user-email="${email}"
                                         style="margin-left:4px;"
@@ -992,9 +994,9 @@ App.pages.admin = async function () {
                                     <th>User</th>
                                     <th>Role</th>
                                     <th>Verified</th>
-                                    <th>Location</th>
+                                    <th style="width: 260px;">Location</th>
                                     <th>Points</th>
-                                    <th style="width: 190px;">Actions</th>
+                                    <th style="width: 180px;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
