@@ -59,6 +59,7 @@ App.pages.admin = async function () {
 
             <div class="profile-tabs admin-tabs" style="margin-bottom: 12px;">
                 <button class="profile-tab-button active" data-admin-tab="conventions">Conventions</button>
+                <button class="profile-tab-button" data-admin-tab="users">Users</button>
                 <button class="profile-tab-button" data-admin-tab="adhoc">Ad-hoc Group Admin</button>
                 <button class="profile-tab-button" data-admin-tab="all-locations">AllLocations</button>
                 <button class="profile-tab-button" data-admin-tab="dev">Dev & Locations</button>
@@ -256,6 +257,24 @@ App.pages.admin = async function () {
                     `
                             : ''
                     }
+                </section>
+
+                <!-- Users tab -->
+                <section class="admin-tab-panel" data-admin-tab-panel="users">
+                    <div class="card" id="admin-users-card">
+                        <div class="card-header">
+                            <h3 class="card-title">👤 Users</h3>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-subtitle" style="margin-bottom: 8px;">
+                                View AMC users, reset passwords, or remove test accounts. Changes here affect login access.
+                            </p>
+                            <div id="admin-users-feedback" class="profile-resume-feedback" style="margin-bottom: 8px;"></div>
+                            <div id="admin-users-table-wrapper">
+                                <p class="empty-text">Loading users…</p>
+                            </div>
+                        </div>
+                    </div>
                 </section>
 
                 <!-- Ad-hoc Group Admin tab -->
@@ -900,6 +919,214 @@ App.pages.admin = async function () {
                     showResult(err.message || 'Error resetting database.', true);
                 }
             });
+        }
+
+        // Users tab – list and admin actions
+        const usersTableWrapper = document.getElementById('admin-users-table-wrapper');
+        const usersFeedbackEl = document.getElementById('admin-users-feedback');
+
+        if (usersTableWrapper) {
+            const renderUsersTable = (users) => {
+                if (!users || !users.length) {
+                    usersTableWrapper.innerHTML =
+                        '<p class="empty-text">No users found yet.</p>';
+                    return;
+                }
+
+                const rows = users
+                    .map((u) => {
+                        const name = u.name || '(no name)';
+                        const email = u.email || '';
+                        const role = u.role || 'member';
+                        const verified = u.verifiedAt ? 'Yes' : 'No';
+                        const locationLabel =
+                            (u.location && (u.location.name || u.location.id)) ||
+                            (u.region || '—');
+                        const points =
+                            typeof u.points === 'number' ? u.points : (u.points || 0);
+
+                        return `
+                            <tr data-user-id="${u.id}">
+                                <td>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <div class="avatar sm">${App.getInitials(name)}</div>
+                                        <div>
+                                            <div style="font-weight:500;">${name}</div>
+                                            <div style="font-size:12px; opacity:0.8;">${email}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>${role}</td>
+                                <td>${verified}</td>
+                                <td>${locationLabel}</td>
+                                <td>${points}</td>
+                                <td>
+                                    <button 
+                                        type="button" 
+                                        class="btn btn-secondary btn-xs admin-user-reset-pw"
+                                        data-user-id="${u.id}"
+                                        data-user-email="${email}"
+                                    >
+                                        Reset password
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        class="btn btn-outline-danger btn-xs admin-user-delete"
+                                        data-user-id="${u.id}"
+                                        data-user-email="${email}"
+                                        style="margin-left:4px;"
+                                    >
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    })
+                    .join('');
+
+                usersTableWrapper.innerHTML = `
+                    <div class="table-wrapper">
+                        <table class="simple-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Role</th>
+                                    <th>Verified</th>
+                                    <th>Location</th>
+                                    <th>Points</th>
+                                    <th style="width: 190px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rows}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                const resetButtons = usersTableWrapper.querySelectorAll(
+                    '.admin-user-reset-pw'
+                );
+                resetButtons.forEach((btn) => {
+                    btn.addEventListener('click', async () => {
+                        const userId = btn.getAttribute('data-user-id');
+                        const email = btn.getAttribute('data-user-email') || '(no email)';
+                        const newPassword = window.prompt(
+                            `Enter a temporary password for ${email} (at least 8 characters):`
+                        );
+                        if (!newPassword) return;
+                        if (newPassword.length < 8) {
+                            alert('Password must be at least 8 characters long.');
+                            return;
+                        }
+
+                        btn.disabled = true;
+                        const originalText = btn.textContent;
+                        btn.textContent = 'Saving…';
+
+                        try {
+                            const { response, data } = await App.apiPost(
+                                `/users/${encodeURIComponent(userId)}/admin-password`,
+                                { newPassword }
+                            );
+                            if (!response.ok) {
+                                const msg =
+                                    (data && data.error) ||
+                                    'Failed to update password for this user.';
+                                showResult(msg, true);
+                            } else {
+                                showResult(
+                                    `Password updated for ${email || 'that user'}. New password must be shared manually.`
+                                );
+                            }
+                        } catch (err) {
+                            showResult(
+                                err.message || 'Error while updating password.',
+                                true
+                            );
+                        } finally {
+                            btn.disabled = false;
+                            btn.textContent = originalText;
+                        }
+                    });
+                });
+
+                const deleteButtons = usersTableWrapper.querySelectorAll(
+                    '.admin-user-delete'
+                );
+                deleteButtons.forEach((btn) => {
+                    btn.addEventListener('click', async () => {
+                        const userId = btn.getAttribute('data-user-id');
+                        const email = btn.getAttribute('data-user-email') || '(no email)';
+
+                        if (
+                            !window.confirm(
+                                `Delete user ${email}? This will permanently remove their account, ideas, and relationships.`
+                            )
+                        ) {
+                            return;
+                        }
+
+                        btn.disabled = true;
+                        const originalText = btn.textContent;
+                        btn.textContent = 'Deleting…';
+
+                        try {
+                            const { response, data } = await App.apiDelete(
+                                `/users/${encodeURIComponent(userId)}`
+                            );
+                            if (!response.ok) {
+                                const msg =
+                                    (data && data.error) ||
+                                    'Failed to delete this user. Check server logs.';
+                                showResult(msg, true);
+                            } else {
+                                showResult(
+                                    data && data.message
+                                        ? data.message
+                                        : `Deleted user ${email}.`
+                                );
+                                // Remove user from cached list and re-render
+                                if (Array.isArray(App.allUsers)) {
+                                    App.allUsers = App.allUsers.filter(
+                                        (u) => u.id !== userId
+                                    );
+                                    renderUsersTable(App.allUsers);
+                                }
+                            }
+                        } catch (err) {
+                            showResult(
+                                err.message || 'Error while deleting user.',
+                                true
+                            );
+                        } finally {
+                            btn.disabled = false;
+                            btn.textContent = originalText;
+                        }
+                    });
+                });
+            };
+
+            (async () => {
+                try {
+                    usersFeedbackEl.textContent = '';
+                    usersFeedbackEl.classList.remove('error', 'success');
+
+                    if (!Array.isArray(App.allUsers) || !App.allUsers.length) {
+                        App.allUsers = await App.api('/users');
+                    }
+
+                    renderUsersTable(App.allUsers);
+                } catch (err) {
+                    usersTableWrapper.innerHTML =
+                        '<p class="empty-text">Unable to load users for admin view.</p>';
+                    if (usersFeedbackEl) {
+                        usersFeedbackEl.textContent =
+                            err.message || 'Error loading users. Check server logs.';
+                        usersFeedbackEl.classList.add('error');
+                    }
+                }
+            })();
         }
 
         // Countries & locations

@@ -83,6 +83,14 @@ App.apiPut = async function(endpoint, data) {
     return { response, data: await response.json() };
 };
 
+App.apiDelete = async function(endpoint) {
+    const response = await fetch(`/api${endpoint}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+    });
+    return { response, data: await response.json().catch(() => ({})) };
+};
+
 // ============================================
 // FORMATTING
 // ============================================

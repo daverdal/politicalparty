@@ -8,6 +8,7 @@ const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
 const userService = require('../services/userService');
+const authService = require('../services/authService');
 const { getSession } = require('../config/db');
 const { authenticate, requireVerifiedUser, requireAdmin } = require('../middleware/auth');
 const notificationService = require('../services/notificationService');
@@ -143,6 +144,31 @@ router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
         res.status(500).json({ error: error.message });
     } finally {
         await session.close();
+    }
+});
+
+// POST /api/users/:id/admin-password - Admin: set a user's password directly
+router.post('/:id/admin-password', authenticate, requireAdmin, async (req, res) => {
+    const { newPassword } = req.body || {};
+
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
+        return res
+            .status(400)
+            .json({ error: 'New password is required and must be at least 8 characters long.' });
+    }
+
+    try {
+        const updated = await authService.changePassword(req.params.id, newPassword);
+        if (!updated) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        return res.json({
+            success: true,
+            message: 'Password updated for this user.'
+        });
+    } catch (error) {
+        return res.status(500).json({ error: error.message || 'Failed to update password.' });
     }
 });
 
