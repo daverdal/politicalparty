@@ -677,7 +677,13 @@ App.showPostIdeaModal = function() {
                     </label>
                     <label>
                         <span>Description</span>
-                        <textarea name="description" rows="4" required placeholder="Describe your idea and why it matters"></textarea>
+                        <textarea
+                            name="description"
+                            rows="6"
+                            required
+                            placeholder="Describe your idea and why it matters"
+                            style="width:100%; background:#000000; color:#3bff3b; border:1px solid #3bff3b; padding:10px; font-size:14px;"
+                        ></textarea>
                     </label>
                     <label>
                         <span>Tags (optional, comma-separated)</span>
