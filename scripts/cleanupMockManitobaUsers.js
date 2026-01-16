@@ -50,8 +50,10 @@ async function cleanupMockManitobaUsers() {
             // Find users located in Manitoba or any of its child locations
             UNWIND allLocs AS loc
             MATCH (u:User)-[:LOCATED_IN]->(loc)
-            WHERE u.email IS NOT NULL
-              AND NOT toLower(u.email) ENDS WITH $keepDomain
+            // Treat any user whose email is NULL or does NOT end with the AMC domain
+            // as a mock/test user that can be safely removed.
+            WHERE u.email IS NULL
+               OR NOT toLower(u.email) ENDS WITH $keepDomain
 
             // Collect users and any ideas they have posted
             OPTIONAL MATCH (u)-[:POSTED]->(idea:Idea)
