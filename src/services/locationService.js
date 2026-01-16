@@ -183,8 +183,20 @@ async function getIdeasForLocation({ locationId, locationType, limit }) {
         
         // Different queries based on location type for hierarchy bubbling
         if (locationType === 'Country') {
+            // Include users located directly in the Country, in any of its Provinces,
+            // or in any child locations of those Provinces (First Nations, towns, ridings, etc.).
             query = `
-                MATCH (c:Country {id: $locationId})-[:HAS_PROVINCE]->(prov:Province)-[]->(childLoc)<-[:LOCATED_IN]-(u:User)
+                MATCH (c:Country {id: $locationId})
+                OPTIONAL MATCH (c)-[:HAS_PROVINCE]->(prov:Province)
+                OPTIONAL MATCH (prov)-[]->(childLoc)
+                WITH c,
+                     collect(DISTINCT prov) AS provinces,
+                     collect(DISTINCT childLoc) AS children
+                WITH [c]
+                     + [p IN provinces WHERE p IS NOT NULL]
+                     + [loc IN children WHERE loc IS NOT NULL] AS allLocs
+                UNWIND allLocs AS loc
+                MATCH (u:User)-[:LOCATED_IN]->(loc)
                 MATCH (u)-[:POSTED]->(idea:Idea)
                 OPTIONAL MATCH (supporter:User)-[:SUPPORTED]->(idea)
                 WITH idea, u, count(DISTINCT supporter) as supportCount
@@ -192,8 +204,16 @@ async function getIdeasForLocation({ locationId, locationType, limit }) {
                 ORDER BY supportCount DESC
             `;
         } else if (locationType === 'Province') {
+            // Include users located directly in the Province OR in any child
+            // locations of that Province (First Nations, towns, ridings, etc.).
             query = `
-                MATCH (prov:Province {id: $locationId})-[]->(childLoc)<-[:LOCATED_IN]-(u:User)
+                MATCH (prov:Province {id: $locationId})
+                OPTIONAL MATCH (prov)-[]->(childLoc)
+                WITH prov,
+                     collect(DISTINCT childLoc) AS children
+                WITH [prov] + [loc IN children WHERE loc IS NOT NULL] AS allLocs
+                UNWIND allLocs AS loc
+                MATCH (u:User)-[:LOCATED_IN]->(loc)
                 MATCH (u)-[:POSTED]->(idea:Idea)
                 OPTIONAL MATCH (supporter:User)-[:SUPPORTED]->(idea)
                 WITH idea, u, count(DISTINCT supporter) as supportCount
